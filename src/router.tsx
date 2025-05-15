@@ -1,7 +1,8 @@
 import { HashRouter, Routes, Route } from "react-router-dom";
-import LoginPage from "./pages/loginPage";
-import SignUpPage from "./pages/signupPage";
+import LoginPage from "./pages/auth/loginPage";
+import SignUpPage from "./pages/auth/signupPage";
 import SplashScreen from "./pages/SplashScreen";
+import MainDashboard from "./pages/dashboard/mainDashboard";
 
 const AppRouter = () => {
   // const [loading, setLoading] = useState(false);
@@ -25,6 +26,13 @@ const AppRouter = () => {
         <Route path="/" element={<SplashScreen />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/dashboard" element={<MainDashboard />} />
+        {/* Add other routes here */}
+        {/* Example: */}
+        {/* <Route path="/profile" element={<ProfilePage />} /> */}
+        {/* <Route path="/settings" element={<SettingsPage />} /> */}
+
+        {/* Uncomment and add your other routes as needed */}
         {/* <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/employee" element={<EmployeePage />} />
         <Route path="/payment" element={<PaymentPage />} />
