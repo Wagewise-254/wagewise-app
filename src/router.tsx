@@ -2,7 +2,8 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/auth/loginPage";
 import SignUpPage from "./pages/auth/signupPage";
 import SplashScreen from "./pages/SplashScreen";
-import MainDashboard from "./pages/dashboard/mainDashboard";
+import MainDashboard from "./pages/dashboard/main/mainDashboard";
+import EmployeePage from "./pages/dashboard/employee/employeePage";
 
 const AppRouter = () => {
   // const [loading, setLoading] = useState(false);
@@ -27,6 +28,7 @@ const AppRouter = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/dashboard" element={<MainDashboard />} />
+        <Route path="/employee" element={<EmployeePage />} />
         {/* Add other routes here */}
         {/* Example: */}
         {/* <Route path="/profile" element={<ProfilePage />} /> */}
