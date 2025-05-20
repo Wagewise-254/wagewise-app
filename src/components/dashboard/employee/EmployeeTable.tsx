@@ -53,15 +53,56 @@ export interface Employee {
   department?: string | null; // Allow null
   employee_status: string;
   // Include other relevant fields you want to display
+  // Include all fields that might be needed for the Edit form
+  other_names?: string | null;
+  job_type: string;
+  id_type: string;
+  id_number: string;
+  kra_pin: string;
+  shif_number?: string | null;
+  nssf_number?: string | null;
+  date_of_birth?: string | null; // Dates might be strings from backend
+  gender: string;
+  marital_status?: string | null;
+  citizenship?: string | null;
+  has_disability?: boolean | null;
+  date_joined?: string | null; // Dates might be strings from backend
+  employee_status_effective_date?: string | null; // Dates might be strings from backend
+  end_of_probation_date?: string | null; // Dates might be strings from backend
+  contract_start_date?: string | null; // Dates might be strings from backend
+  contract_end_date?: string | null; // Dates might be strings from backend
+  termination_date?: string | null; // Dates might be strings from backend
+  termination_reason?: string | null;
+  basic_salary: number;
+  salary_effective_date?: string | null; // Dates might be strings from backend
+  payment_method: string;
+  bank_name?: string | null;
+  bank_branch?: string | null;
+  bank_code?: string | null;
+  bank_account_number?: string | null;
+  mpesa_phone_number?: string | null;
+  is_helb_paying?: boolean | null;
+  benefits?: boolean | null;
+  extra_deductions?: boolean | null;
+  paye_tax_exemption?: boolean | null;
+  disability_tax_exemption?: boolean | null;
+  physical_address?: string | null;
+  postal_address?: string | null;
+  county?: string | null;
+  postal_code?: string | null;
+  next_of_kin_name?: string | null;
+  next_of_kin_relationship?: string | null;
+  next_of_kin_phone?: string | null;
 }
 
 interface EmployeeTableProps {
   searchTerm: string; // Search term passed from EmployeePage
   onDataChange: () => void; // Callback when data is added/imported/deleted/edited (to refetch)
+  onEditEmployee: (employee: Employee) => void; // Callback to open the Edit dialog
   // We might add props for pagination state/callbacks later for server-side
 }
 
-const EmployeeTable: React.FC<EmployeeTableProps> = ({ searchTerm, onDataChange }) => {
+const EmployeeTable: React.FC<EmployeeTableProps> = ({ searchTerm, onDataChange, onEditEmployee }) => {
   const { accessToken } = useAuthStore();
 
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -175,12 +216,12 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({ searchTerm, onDataChange 
         cell: ({ row }) => {
           const employee = row.original; // Get the original employee data for this row
 
-          // --- Handle Edit and Delete Actions ---
-          const handleEdit = () => {
-            console.log("Edit employee:", employee.id);
-            // TODO: Implement Edit Dialog logic here
-            // You'll likely need to open an EditEmployeeDialog and pass the employee data
+         // --- Handle Edit and Delete Actions ---
+          const handleEditClick = () => {
+            console.log("Editing employee:", employee.id);
+            onEditEmployee(employee); // Call the parent's edit handler
           };
+
 
           const handleDeleteClick = () => {
             console.log("Attempting to delete employee:", employee.id);
@@ -189,7 +230,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({ searchTerm, onDataChange 
 
           return (
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleEdit} disabled={loading}>
+              <Button variant="outline" size="sm" onClick={handleEditClick} disabled={loading}>
                 <Edit className="h-4 w-4" />
               </Button>
               <Button variant="destructive" size="sm" onClick={handleDeleteClick} disabled={loading}>
@@ -200,7 +241,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({ searchTerm, onDataChange 
         },
       },
     ],
-    [loading] // Memoize columns, re-create if loading state changes (to disable buttons)
+    [loading,onEditEmployee] // Memoize columns, re-create if loading state changes (to disable buttons)
   );
 
   // --- TanStack Table Instance ---

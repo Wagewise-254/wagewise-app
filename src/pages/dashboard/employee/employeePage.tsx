@@ -1,38 +1,37 @@
-// src/pages/dashboard/employee/EmployeePage.tsx
+// src/pages/dashboard/employee/EmployeePage.tsx - Updated with Edit Dialog
 
 import React, { useState } from 'react';
 import SideNav from '@/components/dashboard/layout/sideNav';
-//import { API_BASE_URL } from '@/config';
-import { Button } from '@/components/ui/button'; // Import Button
-import { Input } from '@/components/ui/input'; // Import Input for search
-//import { toast } from 'sonner'; // Import toast for notifications
+// Keep necessary imports like API_BASE_URL, Button, Input, toast, etc.
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+//import { toast } from 'sonner'; // Ensure toast is imported
 import ImportEmployeesDialog from '@/components/dashboard/employee/ImportEmployeesDialog'; // Import the import dialog
-// import {
-//   DropdownMenu,
-//   DropdownMenuContent,
-//   DropdownMenuItem,
-//   DropdownMenuLabel,
-//   DropdownMenuSeparator,
-//   DropdownMenuTrigger,
-// } from "@/components/ui/dropdown-menu";
 import { FileDown } from 'lucide-react'; // Icon for download
 // Import the new ExportEmployeesDialog
 import ExportEmployeesDialog from '@/components/dashboard/employee/ExportEmployeesDialog';
-// Import the new AddEmployeeDialog
+// Import the AddEmployeeDialog using your specified path
 import AddEmployeeDialog from '@/components/dashboard/employee/AddEmployeeSteps/AddEmployeeDialog';
-// Import the new EmployeeTable component
-import EmployeeTable from '@/components/dashboard/employee/EmployeeTable';
+// Import the new EmployeeTable component and the Employee type from it
+import EmployeeTable, { Employee } from '@/components/dashboard/employee/EmployeeTable';
+// Import the EditEmployeeDialog using your specified path
+import EditEmployeeDialog from "@/components/dashboard/employee/AddEmployeeSteps/EditEmployeeDialog";
 
 
-//import EmployeeForm from "@/components/dashboard/employee/EmployeeForm";
+// Use the Employee type from EmployeeTable for consistency
+// type EmployeeDataForEdit = Employee; // No need to redefine if Employee is sufficient
+
 const EmployeePage = () => {
 
-  // State to control the visibility of the import dialog
+  // State to control the visibility of dialogs
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  // State to control the visibility of the export dialog
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false); // NEW STATE
-  // State to control the visibility of the add employee dialog
-  const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false); // NEW STATE
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
+  // State for the Edit Employee Dialog
+  const [isEditEmployeeDialogOpen, setIsEditEmployeeDialogOpen] = useState(false);
+  // State to hold the data of the employee being edited
+  // Use the Employee type imported from EmployeeTable
+  const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
 
 
   // State for the search input
@@ -42,92 +41,106 @@ const EmployeePage = () => {
   // This state is just toggled to notify the table useEffect to refetch
   const [refetchTrigger, setRefetchTrigger] = useState(0);
 
-  // Placeholder for handling search logic (will implement with table later)
+  // Handle search input change
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
-    // Implement filtering logic here based on searchTerm
+    // Client-side filtering is handled by passing searchTerm to EmployeeTable
+    // For server-side, this would potentially trigger a fetch
   };
-  // The handleExport logic will be moved to the ExportEmployeesDialog component
 
- // Function to trigger a data refetch in the table
+  // Function to trigger a data refetch in the table
   // This function will be called after successful Add or Import or Delete or Edit
   const handleDataChange = () => {
       console.log("Employee data changed. Triggering refetch.");
-      setRefetchTrigger(prev => prev + 1); // Increment state to trigger useEffect in EmployeeTable
-      console.log("Refetch trigger set to:", refetchTrigger);
+      // Increment state to trigger useEffect in EmployeeTable.
+      // The value itself doesn't matter, just that it changes.
+      setRefetchTrigger(prev => prev + 1);
+      console.log("Refetch Triggered:", refetchTrigger);
   };
 
-  return (
-    <div className="flex h-screen bg-gray-100"> {/* Added background color */}
-      <SideNav />
-      <div className="flex-1 flex flex-col p-6 overflow-hidden"> {/* Added padding and overflow */}
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">Employee Management</h1>
+  // Function to handle opening the Edit dialog
+  // Accepts the Employee object directly from the table row
+  const handleEditEmployee = (employee: Employee) => {
+      // Set the employee data directly. The 'id' is already correct here.
+      setEmployeeToEdit(employee);
+      setIsEditEmployeeDialogOpen(true); // Open the dialog
+  };
 
-        {/* Top bar: Search, Add Employee, Import, Export */}
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4"> {/* Added gap */}
+  // Function to handle closing the Edit dialog
+  const handleCloseEditDialog = () => {
+      setIsEditEmployeeDialogOpen(false);
+      setEmployeeToEdit(null); // Clear the employee data when closing
+  };
+
+
+return (
+  <div className="flex h-screen bg-gray-100">
+    <SideNav />
+    <div className="flex-1 flex flex-col p-6 overflow-hidden">
+      <h1 className="text-3xl font-bold mb-6 text-gray-800">Employee Management</h1>
+
+      {/* Main Card Container */}
+      <div className="bg-white rounded-2xl shadow-md p-6 flex flex-col gap-6 h-full overflow-hidden">
+        
+        {/* Top bar: Search and Buttons */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           {/* Search Input */}
-          <div className="w-full sm:w-1/3"> {/* Adjusted width */}
+          <div className="w-full sm:w-1/3">
             <Input
               placeholder="Search employees..."
               value={searchTerm}
               onChange={handleSearch}
-              className="w-full bg-white"
+              className="w-full"
             />
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3"> {/* Added gap */}
-            {/* Add Employee Button (will open a dialog later) */}
-            <Button onClick={() => setIsAddEmployeeDialogOpen(true)}> {/* Use NEW STATE */}
-                Add Employee
-            </Button>
-            {/* Import Employees Button */}
-            <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
-              Import Employees
-            </Button>
-
-            {/* Export Employees Dropdown */}
-            <Button variant="outline" onClick={() => setIsExportDialogOpen(true)}> {/* Use NEW STATE */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button onClick={() => setIsAddEmployeeDialogOpen(true)}>Add Employee</Button>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>Import</Button>
+            <Button variant="outline" onClick={() => setIsExportDialogOpen(true)}>
               <FileDown className="mr-2 h-4 w-4" />
               Export
             </Button>
-
           </div>
         </div>
 
-         {/* Employee Table Component */}
-        <div className="flex-1 overflow-auto "> {/* Make table container scrollable */}
-           <EmployeeTable
-               searchTerm={searchTerm} // Pass the search term down
-               onDataChange={handleDataChange} // Pass the refetch trigger callback
-               // We will pass pagination state/callbacks here later for server-side
-           />
+        {/* Employee Table with scrollable area */}
+        <div className="flex-1 overflow-auto">
+          <EmployeeTable
+            searchTerm={searchTerm}
+            onDataChange={handleDataChange}
+            onEditEmployee={handleEditEmployee}
+          />
         </div>
-
-        {/* Import Employees Dialog */}
-        <ImportEmployeesDialog
-          isOpen={isImportDialogOpen}
-          onClose={() => setIsImportDialogOpen(false)}
-        // onImportSuccess={() => { /* Optionally refetch employee data after import */ }}
-        />
-
-        {/* NEW: Export Employees Dialog */}
-        <ExportEmployeesDialog
-          isOpen={isExportDialogOpen} // Controlled by new state
-          onClose={() => setIsExportDialogOpen(false)} // Close handler
-        // Pass API_BASE_URL and toast if needed, or handle logic internally
-        // handleExport is now internal to the dialog
-        />
-
-         {/* NEW: Add Employee Dialog */}
-        <AddEmployeeDialog
-            isOpen={isAddEmployeeDialogOpen} // Controlled by new state
-            onClose={() => setIsAddEmployeeDialogOpen(false)} // Close handler
-            onEmployeeAdded={handleDataChange} // Call handleDataChange on successful add
-        />
-
       </div>
+
+      {/* Dialogs */}
+      <ImportEmployeesDialog
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+        onImportSuccess={handleDataChange}
+      />
+      <ExportEmployeesDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setIsExportDialogOpen(false)}
+      />
+      <AddEmployeeDialog
+        isOpen={isAddEmployeeDialogOpen}
+        onClose={() => setIsAddEmployeeDialogOpen(false)}
+        onEmployeeAdded={handleDataChange}
+      />
+      {employeeToEdit && (
+        <EditEmployeeDialog
+          isOpen={isEditEmployeeDialogOpen}
+          onClose={handleCloseEditDialog}
+          employeeData={employeeToEdit}
+          onEmployeeUpdated={handleDataChange}
+        />
+      )}
     </div>
-  );
+  </div>
+);
 }
+
 export default EmployeePage;

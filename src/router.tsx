@@ -4,6 +4,7 @@ import SignUpPage from "./pages/auth/signupPage";
 import SplashScreen from "./pages/SplashScreen";
 import MainDashboard from "./pages/dashboard/main/mainDashboard";
 import EmployeePage from "./pages/dashboard/employee/employeePage";
+import TaxPage from "./pages/dashboard/tax/TaxPage";
 
 const AppRouter = () => {
   // const [loading, setLoading] = useState(false);
@@ -29,6 +30,7 @@ const AppRouter = () => {
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/dashboard" element={<MainDashboard />} />
         <Route path="/employee" element={<EmployeePage />} />
+        <Route path="/tax" element={<TaxPage />} />
         {/* Add other routes here */}
         {/* Example: */}
         {/* <Route path="/profile" element={<ProfilePage />} /> */}
@@ -39,7 +41,7 @@ const AppRouter = () => {
         <Route path="/employee" element={<EmployeePage />} />
         <Route path="/payment" element={<PaymentPage />} />
         <Route path="/report" element={<ReportPage />} />
-        <Route path="/tax" element={<TaxPage />} />
+       
         <Route path="/account" element={<AccountPage />} /> */}
 
       </Routes>
