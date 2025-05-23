@@ -30,8 +30,7 @@ import useAuthStore from "@/store/authStore";
 const navItems = [
   { name: "Dashboard", path: "/dashboard" /*, icon: HomeIcon */ },
   { name: "Employees", path: "/employee" /*, icon: UsersIcon */ },
-  { name: "Payroll Processing", path: "/payroll/process" /*, icon: DollarSignIcon */ },
-  { name: "Payroll History", path: "/payroll/history" /*, icon: ClockIcon */ },
+  { name: "Payroll", path: "/payroll" /*, icon: DollarSignIcon */ },
   { name: "Reports", path: "/reports" /*, icon: BarChartIcon */ },
   { name: "Tax Settings", path: "/tax" /*, icon: FileTextIcon */ },
   { name: "Company Settings", path: "/settings" /*, icon: SettingsIcon */ },
