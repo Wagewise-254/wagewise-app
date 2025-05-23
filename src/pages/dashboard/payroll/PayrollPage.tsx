@@ -1,8 +1,9 @@
-// src/pages/dashboard/payroll/PayrollPage.tsx - Consolidated with Tabs
+// src/pages/dashboard/payroll/PayrollPage.tsx - Updated with Active Tab Indicator
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import SideNav from '@/components/dashboard/layout/sideNav';
-import { Button } from '@/components/ui/button'; // Assuming Button component is available
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils'; // Make sure this import path is correct for your project
 
 // Import the new section components
 import ProcessPayrollSection from '@/components/dashboard/payroll/ProcessPayrollSection';
@@ -38,6 +39,10 @@ const PayrollPage = () => {
     }
   };
 
+  // Define Tailwind classes for active and inactive tabs
+  const activeTabClasses = "border-b-2 border-[#7F5EFD] text-[#7F5EFD] font-semibold";
+  const inactiveTabClasses = "text-gray-600 hover:text-gray-800";
+
   return (
     <div className="flex h-screen bg-gray-100">
       <SideNav />
@@ -45,21 +50,34 @@ const PayrollPage = () => {
         <h1 className="text-3xl font-bold mb-6 text-gray-800">Payroll Management</h1>
 
         {/* Mini-Navigation (Tabs) */}
-        <div className="flex space-x-4 border-b pb-2 mb-6">
+        {/* Adjusted border-b and removed pb-2 */}
+        <div className="flex space-x-4 border-b border-gray-200 mb-6">
           <Button
-            variant={currentTab === 'process' ? 'secondary' : 'ghost'}
+            variant="ghost" // Use ghost variant for full custom styling control
+            className={cn(
+              "relative px-4 py-3 rounded-none transition-colors duration-200", // Base styles
+              currentTab === 'process' ? activeTabClasses : inactiveTabClasses
+            )}
             onClick={() => setCurrentTab('process')}
           >
             Process Payroll
           </Button>
           <Button
-            variant={currentTab === 'history' ? 'secondary' : 'ghost'}
+            variant="ghost"
+            className={cn(
+              "relative px-4 py-3 rounded-none transition-colors duration-200",
+              currentTab === 'history' ? activeTabClasses : inactiveTabClasses
+            )}
             onClick={() => setCurrentTab('history')}
           >
             Payroll History
           </Button>
           <Button
-            variant={currentTab === 'reports' ? 'secondary' : 'ghost'}
+            variant="ghost"
+            className={cn(
+              "relative px-4 py-3 rounded-none transition-colors duration-200",
+              currentTab === 'reports' ? activeTabClasses : inactiveTabClasses
+            )}
             onClick={() => setCurrentTab('reports')}
           >
             Reports & Files

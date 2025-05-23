@@ -1,8 +1,9 @@
-// src/pages/dashboard/reports/ReportsPage.tsx
+// src/pages/dashboard/reports/ReportsPage.tsx - Updated with Active Tab Indicator
 
 import { useState } from 'react';
 import SideNav from '@/components/dashboard/layout/sideNav';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils'; // Make sure this import path is correct for your project
 
 // Import report section components
 import OverviewReportSection from '@/components/dashboard/reports/OverviewReportSection';
@@ -32,6 +33,10 @@ const ReportsPage = () => {
     }
   };
 
+  // Define Tailwind classes for active and inactive tabs
+  const activeTabClasses = "border-b-2 border-[#7F5EFD] text-[#7F5EFD] font-semibold";
+  const inactiveTabClasses = "text-gray-600 hover:text-gray-800";
+
   return (
     <div className="flex h-screen bg-gray-100">
       <SideNav />
@@ -39,27 +44,44 @@ const ReportsPage = () => {
         <h1 className="text-3xl font-bold mb-6 text-gray-800">Company Reports & Analytics</h1>
 
         {/* Mini-Navigation (Tabs) */}
-        <div className="flex space-x-4 border-b pb-2 mb-6">
+        {/* Adjusted border-b and removed pb-2 */}
+        <div className="flex space-x-4 border-b border-gray-200 mb-6">
           <Button
-            variant={currentReportTab === 'overview' ? 'secondary' : 'ghost'}
+            variant="ghost" // Use ghost variant for full custom styling control
+            className={cn(
+              "relative px-4 py-3 rounded-none transition-colors duration-200", // Base styles
+              currentReportTab === 'overview' ? activeTabClasses : inactiveTabClasses
+            )}
             onClick={() => setCurrentReportTab('overview')}
           >
             Overview
           </Button>
           <Button
-            variant={currentReportTab === 'employees' ? 'secondary' : 'ghost'}
+            variant="ghost"
+            className={cn(
+              "relative px-4 py-3 rounded-none transition-colors duration-200",
+              currentReportTab === 'employees' ? activeTabClasses : inactiveTabClasses
+            )}
             onClick={() => setCurrentReportTab('employees')}
           >
             Employee Reports
           </Button>
           <Button
-            variant={currentReportTab === 'payroll' ? 'secondary' : 'ghost'}
+            variant="ghost"
+            className={cn(
+              "relative px-4 py-3 rounded-none transition-colors duration-200",
+              currentReportTab === 'payroll' ? activeTabClasses : inactiveTabClasses
+            )}
             onClick={() => setCurrentReportTab('payroll')}
           >
             Payroll Reports
           </Button>
           <Button
-            variant={currentReportTab === 'tax' ? 'secondary' : 'ghost'}
+            variant="ghost"
+            className={cn(
+              "relative px-4 py-3 rounded-none transition-colors duration-200",
+              currentReportTab === 'tax' ? activeTabClasses : inactiveTabClasses
+            )}
             onClick={() => setCurrentReportTab('tax')}
           >
             Tax Reports

@@ -7,6 +7,7 @@ import EmployeePage from "./pages/dashboard/employee/employeePage";
 import TaxPage from "./pages/dashboard/tax/TaxPage";
 import PayrollPage from "./pages/dashboard/payroll/PayrollPage";
 import ReportsPage from "./pages/dashboard/reports/ReportsPage";
+import AccountPage from "./pages/dashboard/account/AccountPage";
 
 const AppRouter = () => {
   // const [loading, setLoading] = useState(false);
@@ -35,6 +36,14 @@ const AppRouter = () => {
         <Route path="/tax" element={<TaxPage />} />
         <Route path="/payroll" element={<PayrollPage />} />
         <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/account" element={<AccountPage />} />
+        {/* Add other routes here */}
+        {/* Example: */}
+        {/* <Route path="/profile" element={<ProfilePage />} /> */}
+        {/* <Route path="/settings" element={<SettingsPage />} /> */}
+
+        {/* Uncomment and add your other routes as needed */}
+        {/* <Route path="/dashboard" element={<DashboardPage />} />
         {/* Add other routes here */}
         {/* Example: */}
         {/* <Route path="/profile" element={<ProfilePage />} /> */}

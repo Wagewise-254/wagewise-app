@@ -33,7 +33,7 @@ const navItems = [
   { name: "Payroll", path: "/payroll" /*, icon: DollarSignIcon */ },
   { name: "Reports", path: "/reports" /*, icon: BarChartIcon */ },
   { name: "Tax Settings", path: "/tax" /*, icon: FileTextIcon */ },
-  { name: "Company Settings", path: "/settings" /*, icon: SettingsIcon */ },
+  { name: "Account", path: "/account" /*, icon: SettingsIcon */ },
 ];
 
 const SideNav = () => {

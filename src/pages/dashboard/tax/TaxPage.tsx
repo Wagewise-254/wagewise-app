@@ -1,9 +1,10 @@
-// src/pages/dashboard/tax/TaxPage.tsx
+// src/pages/dashboard/tax/TaxPage.tsx - Updated with Active Tab Indicator
 
 import { useState } from 'react';
 import SideNav from '@/components/dashboard/layout/sideNav';
 import { Button } from '@/components/ui/button';
 import HelbManagementSection from '@/components/dashboard/tax/HelbManagementSection';
+import { cn } from '@/lib/utils'; // Make sure this import path is correct for your project
 
 type TaxTab = 'overview' | 'tax' | 'deductions' | 'bonuses' | 'helb';
 
@@ -57,6 +58,10 @@ const TaxPage = () => {
         }
     };
 
+    // Define Tailwind classes for active and inactive tabs
+    const activeTabClasses = "border-b-2 border-[#7F5EFD] text-[#7F5EFD] font-semibold";
+    const inactiveTabClasses = "text-gray-600 hover:text-gray-800";
+
     return (
         <div className="flex h-screen bg-gray-100">
             <SideNav />
@@ -64,12 +69,57 @@ const TaxPage = () => {
                 <h1 className="text-3xl font-bold mb-6 text-gray-800">Tax & Bonuses</h1>
 
                 {/* Mini-Sidenav for Tax Sections */}
-                <div className="flex space-x-4 border-b pb-2 mb-6">
-                    <Button variant={currentTaxTab === 'overview' ? 'secondary' : 'ghost'} onClick={() => setCurrentTaxTab('overview')}>Overview</Button>
-                    <Button variant={currentTaxTab === 'tax' ? 'secondary' : 'ghost'} onClick={() => setCurrentTaxTab('tax')}>Tax</Button>
-                    <Button variant={currentTaxTab === 'deductions' ? 'secondary' : 'ghost'} onClick={() => setCurrentTaxTab('deductions')}>Deductions</Button>
-                    <Button variant={currentTaxTab === 'bonuses' ? 'secondary' : 'ghost'} onClick={() => setCurrentTaxTab('bonuses')}>Bonuses</Button>
-                    <Button variant={currentTaxTab === 'helb' ? 'secondary' : 'ghost'} onClick={() => setCurrentTaxTab('helb')}>HELB</Button>
+                <div className="flex space-x-4 border-b border-gray-200 mb-6"> {/* Adjusted border-b and removed pb-2 */}
+                    <Button
+                        variant="ghost" // Use ghost variant for full custom styling control
+                        className={cn(
+                            "relative px-4 py-3 rounded-none transition-colors duration-200", // Base styles
+                            currentTaxTab === 'overview' ? activeTabClasses : inactiveTabClasses
+                        )}
+                        onClick={() => setCurrentTaxTab('overview')}
+                    >
+                        Overview
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            "relative px-4 py-3 rounded-none transition-colors duration-200",
+                            currentTaxTab === 'tax' ? activeTabClasses : inactiveTabClasses
+                        )}
+                        onClick={() => setCurrentTaxTab('tax')}
+                    >
+                        Tax
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            "relative px-4 py-3 rounded-none transition-colors duration-200",
+                            currentTaxTab === 'deductions' ? activeTabClasses : inactiveTabClasses
+                        )}
+                        onClick={() => setCurrentTaxTab('deductions')}
+                    >
+                        Deductions
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            "relative px-4 py-3 rounded-none transition-colors duration-200",
+                            currentTaxTab === 'bonuses' ? activeTabClasses : inactiveTabClasses
+                        )}
+                        onClick={() => setCurrentTaxTab('bonuses')}
+                    >
+                        Bonuses
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            "relative px-4 py-3 rounded-none transition-colors duration-200",
+                            currentTaxTab === 'helb' ? activeTabClasses : inactiveTabClasses
+                        )}
+                        onClick={() => setCurrentTaxTab('helb')}
+                    >
+                        HELB
+                    </Button>
                 </div>
 
                 {/* Content Area */}
