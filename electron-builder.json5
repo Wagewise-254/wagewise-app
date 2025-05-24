@@ -41,5 +41,10 @@
     ],
     "icon": "public/walletIcon-512.png",
     "artifactName": "${productName}-Linux-${version}.${ext}"
+  },
+  "publish": {
+    "provider": "github",
+    "owner": "Wagewise-254",
+    "repo": "wagewise-app" 
   }
 }

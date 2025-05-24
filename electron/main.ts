@@ -1,19 +1,18 @@
-// src/main.ts - Cleaned for Render Deployment
+// src/main/index.ts - Optimizer Fix
 
-import { app, BrowserWindow } from 'electron'; // 'session' is still useful for general webPreferences, but its specific localtunnel use is removed
-//import { autoUpdater } from 'electron-updater'; // Keep commented out for now
+import { app, BrowserWindow, dialog } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-//import fs from 'fs'; // Not needed for this current logic
+import { fileURLToPath } from 'node:url'; // Corrected import for fileURLToPath
+import log from 'electron-log';
 
 // electron-vite utilities
-import { electronApp, is } from '@electron-toolkit/utils'; // Re-added optimizer
+import { electronApp, is } from '@electron-toolkit/utils'; // maximizeAndRestore is on electronApp
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 process.env.APP_ROOT = path.join(__dirname, '..');
 
-// 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
 export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron');
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist');
@@ -27,12 +26,12 @@ let mainWindow: BrowserWindow | null;
  */
 const createMainWindow = () => {
   mainWindow = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'), // Ensure this icon path is correct
+    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     width: 1200,
     height: 800,
     show: false, // Prevent flashing on startup
     webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs'), // Ensure this path is correct for your preload script
+      preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: !is.dev, // Enable webSecurity in production builds, disable in dev
@@ -41,7 +40,6 @@ const createMainWindow = () => {
 
   mainWindow.maximize();
 
-  // Test active push message to Renderer-process.
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow?.webContents.send('main-process-message', (new Date).toLocaleString());
   });
@@ -49,14 +47,10 @@ const createMainWindow = () => {
   if (VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(VITE_DEV_SERVER_URL);
   } else {
-    // win.loadFile('dist/index.html')
     mainWindow.loadFile(path.join(RENDERER_DIST, 'index.html'));
   }
 };
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
@@ -65,28 +59,86 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {
     createMainWindow();
   }
 });
 
-// Run update check only in production (commented out as per your request)
+// --- AUTO-UPDATER LOGIC ---
+const setupAutoUpdater = () => {
+  log.transports.file.level = 'info';
+  autoUpdater.logger = log;
+
+  autoUpdater.autoDownload = false;
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('⬆️ Update available:', info.version);
+    if (mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update Available',
+        message: `A new version of Wagewise (${info.version}) is available. Do you want to download it now?`,
+        buttons: ['Download Now', 'Later'],
+      }).then((result) => {
+        if (result.response === 0) {
+          autoUpdater.downloadUpdate();
+          if (mainWindow) {
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'Downloading Update',
+              message: 'Downloading update in the background. You will be prompted when it\'s ready to install.',
+              buttons: ['OK'],
+            });
+          }
+        }
+      });
+    }
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    console.log('No updates available.');
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    let log_message = `Download speed: ${progressObj.bytesPerSecond}`;
+    log_message += ` - Downloaded ${progressObj.percent}%`;
+    log_message += ` (${progressObj.transferred}/${progressObj.total})`;
+    console.log(log_message);
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('⬇️ Update downloaded:', info.version);
+    if (mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update Ready',
+        message: 'The update has been downloaded. Restart Wagewise to apply the update.',
+        buttons: ['Restart Now', 'Later'],
+      }).then((result) => {
+        if (result.response === 0) {
+          autoUpdater.quitAndInstall();
+        }
+      });
+    }
+  });
+
+  autoUpdater.on('error', (error) => {
+    console.error('❌ Update Error:', error);
+    if (mainWindow) {
+      dialog.showErrorBox('Update Error', `Failed to check for updates: ${error.message}`);
+    }
+  });
+
+  autoUpdater.checkForUpdates();
+};
+// --- END AUTO-UPDATER LOGIC ---
+
 app.whenReady().then(() => {
-  // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron'); // From electron-vite utilities
-
-  // Default open or close DevTools in development and ignore for production.
-  // optimizer.maximizeAndRestore(); // Removed: This method does not exist on optimizer
-
-  // --- REMOVED LOCAL TUNNEL BYPASS LOGIC ---
-  // The session.defaultSession.webRequest.onBeforeSendHeaders logic is removed
-  // as it's no longer needed when connecting directly to a public backend.
+  electronApp.setAppUserModelId('com.electron');
 
   createMainWindow();
 
   if (!VITE_DEV_SERVER_URL) {
-    // checkForUpdates(); // Commented out
+    setupAutoUpdater();
   }
 });
