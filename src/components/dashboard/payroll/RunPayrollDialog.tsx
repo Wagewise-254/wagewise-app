@@ -28,7 +28,7 @@ interface RunPayrollFormInputs {
 
 const RunPayrollDialog: React.FC<RunPayrollDialogProps> = ({ isOpen, onClose, onPayrollRunSuccess }) => {
     const { accessToken } = useAuthStore();
-    const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<RunPayrollFormInputs>();
+    const { handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<RunPayrollFormInputs>();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
@@ -76,7 +76,7 @@ const RunPayrollDialog: React.FC<RunPayrollDialogProps> = ({ isOpen, onClose, on
 
             onPayrollRunSuccess(); // Call success callback
             // toast.success is called by the parent component now via onPayrollRunSuccess
-            // toast.success(response.data.message || "Payroll run initiated successfully!");
+             toast.success(response.data.message || "Payroll run initiated successfully!");
 
         } catch (err: unknown) {
             console.error("Error running payroll:", err);

@@ -1,6 +1,36 @@
-import { app, BrowserWindow } from "electron";
+import { app, session, BrowserWindow } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+const is = {
+  dev: !app.isPackaged
+};
+const platform = {
+  isWindows: process.platform === "win32",
+  isMacOS: process.platform === "darwin",
+  isLinux: process.platform === "linux"
+};
+const electronApp = {
+  setAppUserModelId(id) {
+    if (platform.isWindows)
+      app.setAppUserModelId(is.dev ? process.execPath : id);
+  },
+  setAutoLaunch(auto) {
+    if (platform.isLinux)
+      return false;
+    const isOpenAtLogin = () => {
+      return app.getLoginItemSettings().openAtLogin;
+    };
+    if (isOpenAtLogin() !== auto) {
+      app.setLoginItemSettings({ openAtLogin: auto });
+      return isOpenAtLogin() === auto;
+    } else {
+      return true;
+    }
+  },
+  skipProxy() {
+    return session.defaultSession.setProxy({ mode: "direct" });
+  }
+};
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -11,15 +41,18 @@ let mainWindow;
 const createMainWindow = () => {
   mainWindow = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+    // Ensure this icon path is correct
     width: 1200,
     height: 800,
     show: false,
     // Prevent flashing on startup
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
+      // Ensure this path is correct for your preload script
       nodeIntegration: false,
-      contextIsolation: true
-      //webSecurity: false, // Disable in dev, enable in production
+      contextIsolation: true,
+      webSecurity: !is.dev
+      // Enable webSecurity in production builds, disable in dev
     }
   });
   mainWindow.maximize();
@@ -44,6 +77,7 @@ app.on("activate", () => {
   }
 });
 app.whenReady().then(() => {
+  electronApp.setAppUserModelId("com.electron");
   createMainWindow();
 });
 export {

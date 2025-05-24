@@ -1,14 +1,8 @@
-// @see - https://www.electron.build/configuration/configuration
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   "appId": "com.ashley.wagewise",
   "asar": true,
   "productName": "Wagewise",
-  "description": "A simple and efficient desktop payroll application.", // Add description
-  "author": { 
-    "name": "Ashley Chiteri",
-    "email": "wagewise.dev@gmail.com"
-  },
   "directories": {
     "output": "release/${version}"
   },
@@ -16,11 +10,11 @@
     "dist",
     "dist-electron"
   ],
-  "icon": "public/walletIcon-512.png",
   "mac": {
     "target": [
       "dmg"
     ],
+    "icon": "public/icons/apple-touch-icon.png",
     "artifactName": "${productName}-Mac-${version}-Installer.${ext}"
   },
   "win": {
@@ -32,6 +26,7 @@
         ]
       }
     ],
+    "icon": "public/icons/android-chrome-512x512.png",
     "artifactName": "${productName}-Windows-${version}-Setup.${ext}"
   },
   "nsis": {
@@ -44,6 +39,7 @@
     "target": [
       "AppImage"
     ],
+    "icon": "public/walletIcon-512.png",
     "artifactName": "${productName}-Linux-${version}.${ext}"
   }
 }

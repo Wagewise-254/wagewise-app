@@ -50,7 +50,6 @@ interface PayrollReportData {
 const PIE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF00FF', '#00FFFF', '#FF0088'];
 const BAR_FILL_COLOR_GROSS = '#4F46E5'; // Indigo for Gross Pay
 const BAR_FILL_COLOR_NET = '#10B981'; // Emerald for Net Pay
-const BAR_FILL_COLOR_DEDUCTIONS = '#EF4444'; // Red for Deductions
 
 const PayrollReportSection: React.FC = () => {
   const { accessToken } = useAuthStore();
@@ -190,7 +189,7 @@ const PayrollReportSection: React.FC = () => {
                     labelLine={false}
                     label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                   >
-                    {payrollReportData.latestPayrollBreakdown.map((entry, index) => (
+                    {payrollReportData.latestPayrollBreakdown.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                     ))}
                   </Pie>
