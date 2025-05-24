@@ -1,8 +1,8 @@
-// src/components/dashboard/payroll/PayrollReportsSection.tsx - Updated with File Generation
+// src/components/dashboard/payroll/PayrollReportsSection.tsx - Updated with Select.Item Fix
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { FileText, Banknote, FileDown, Loader2 } from 'lucide-react'; // Icons for reports/files
+import { FileText, Banknote, FileDown, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
@@ -53,9 +53,13 @@ const PayrollReportsSection: React.FC = () => {
           // Optionally pre-select the latest payroll run
           if (response.data.payrollRuns.length > 0) {
             setSelectedPayrollRunId(response.data.payrollRuns[0].id);
+          } else {
+            // If no payroll runs, ensure selectedPayrollRunId is null
+            setSelectedPayrollRunId(null);
           }
         } else {
           setPayrollRuns([]);
+          setSelectedPayrollRunId(null); // Ensure null if unexpected format
           console.warn("Unexpected response format for payroll runs fetch in reports:", response.data);
         }
       } catch (err: unknown) {
@@ -67,6 +71,7 @@ const PayrollReportsSection: React.FC = () => {
           setError('An unexpected error occurred while fetching payroll runs for reports.');
         }
         setPayrollRuns([]);
+        setSelectedPayrollRunId(null); // Ensure null on error
       } finally {
         setLoadingRuns(false);
       }
@@ -224,15 +229,20 @@ const PayrollReportsSection: React.FC = () => {
         </Label>
         <Select
           onValueChange={setSelectedPayrollRunId}
-          value={selectedPayrollRunId || ''}
+          value={selectedPayrollRunId || ''} // Ensure value is '' if null, for placeholder
           disabled={loadingRuns || loadingReport}
         >
           <SelectTrigger id="payrollRunSelect" className="w-full">
             <SelectValue placeholder={loadingRuns ? "Loading payroll runs..." : "Select a payroll run"} />
           </SelectTrigger>
           <SelectContent>
+            {/* REMOVED: The problematic SelectItem with value="" */}
             {payrollRuns.length === 0 && !loadingRuns && (
-                <SelectItem disabled value="">No payroll runs available</SelectItem>
+              // Display a disabled SelectItem if no runs are available, but give it a non-empty value
+              // This item is purely for display within the dropdown, not for selection.
+              <SelectItem value="no-runs-placeholder" disabled>
+                No payroll runs available
+              </SelectItem>
             )}
             {payrollRuns.map((run) => (
               <SelectItem key={run.id} value={run.id}>

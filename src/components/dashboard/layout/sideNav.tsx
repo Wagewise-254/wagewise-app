@@ -18,7 +18,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-
 // Assuming you have a logo file
 import logo from "../../../assets/reverse-logo.png"; // Adjust path as needed
 
@@ -37,18 +36,13 @@ const navItems = [
 ];
 
 const SideNav = () => {
-  // State to control the open/closed state of the mobile sheet
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  // State to control the open/closed state of the logout confirmation dialog
-  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
-  // Get the current location to highlight the active link
+  const [isLogoutConfirmOpen, setIsLogoutConfirm] = useState(false);
   const location = useLocation();
-  // Hook for programmatic navigation
   const navigate = useNavigate();
-  // State to track if the current view is mobile size
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [appVersion, setAppVersion] = useState(''); // State to hold the app version
 
-  // Access the logout action from your Zustand store
   const logout = useAuthStore((state) => state.logout);
 
   // Effect to handle window resizing and update isMobile state
@@ -56,7 +50,6 @@ const SideNav = () => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      // If resizing to desktop, ensure the mobile sheet is closed
       if (!mobile) {
         setIsSheetOpen(false);
       }
@@ -67,32 +60,33 @@ const SideNav = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Function to close the sheet when a link is clicked (on mobile)
+  // Effect to get and set the app version
+  useEffect(() => {
+    // CORRECTED: Access the version using import.meta.env
+    if (import.meta.env.VITE_APP_VERSION) {
+      setAppVersion(import.meta.env.VITE_APP_VERSION);
+    }
+  }, []); // Run once on component mount
+
   const handleLinkClick = () => {
     if (isMobile) {
       setIsSheetOpen(false);
     }
   };
 
-  // Function to initiate the logout process by opening the confirmation dialog
   const handleLogoutInitiate = () => {
-    setIsLogoutConfirmOpen(true); // Open the confirmation dialog
-    // Optionally close the mobile sheet immediately when logout is initiated
+    setIsLogoutConfirm(true);
     if (isMobile) {
       setIsSheetOpen(false);
     }
   };
 
-  // Function to perform the actual logout after confirmation
   const handleLogoutConfirm = () => {
-    logout(); // Call the logout action from the Zustand store
-    toast.success("Logged out successfully!"); // Show success message
-    navigate("/login"); // Redirect the user to the login page after logging out
-    // The dialog will close automatically when AlertDialogAction is clicked
+    logout();
+    toast.success("Logged out successfully!");
+    navigate("/login");
   };
 
-
-  // Render the desktop sidebar
   const renderDesktopSidebar = () => (
     <div className="hidden md:flex md:flex-col h-screen w-[230px] bg-[#7F5EFD] text-white p-5 shadow-lg">
       {/* Logo Section */}
@@ -102,7 +96,7 @@ const SideNav = () => {
       <Separator className="bg-white/20 mb-6" />
 
       {/* Navigation Links */}
-      <nav className="flex flex-col space-y-2 flex-grow"> {/* Added flex-grow to push logout to bottom */}
+      <nav className="flex flex-col space-y-2 flex-grow">
         {navItems.map((item) => (
           <Button
             key={item.path}
@@ -116,29 +110,33 @@ const SideNav = () => {
             onClick={handleLinkClick}
           >
             <Link to={item.path}>
-              {/* {item.icon && <item.icon className="mr-2 h-4 w-4" />} */}
               {item.name}
             </Link>
           </Button>
         ))}
       </nav>
 
-      {/* Logout Button - Placed at the bottom */}
-      <div className="mt-auto pt-6"> {/* Use mt-auto to push to bottom */}
-         <Separator className="bg-white/20 mb-6" /> {/* Separator above logout */}
+      {/* Logout Button and Version - Placed at the bottom */}
+      <div className="mt-auto pt-6">
+        <Separator className="bg-white/20 mb-6" />
         <Button
           variant="ghost"
-          className="justify-start w-full text-white hover:bg-red-600 hover:text-white" // Styled differently for logout
-          onClick={handleLogoutInitiate} // Call the initiate function
+          className="justify-start w-full text-white hover:bg-red-600 hover:text-white"
+          onClick={handleLogoutInitiate}
         >
-          <LogOut className="mr-2 h-4 w-4" /> {/* Logout icon */}
+          <LogOut className="mr-2 h-4 w-4" />
           Logout
         </Button>
+        {/* App Version Display */}
+        {appVersion && (
+          <div className="text-center text-white/70 text-sm mt-4">
+            Version {appVersion}
+          </div>
+        )}
       </div>
     </div>
   );
 
-  // Render the mobile sheet (drawer)
   const renderMobileSheet = () => (
     <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
       <SheetTrigger asChild>
@@ -156,12 +154,12 @@ const SideNav = () => {
         <div className="flex justify-center mb-6">
           <img src={logo} alt="WageWise Logo" className="w-[100px] h-[100px] object-contain" />
         </div>
-         <Separator className="bg-white/20 mb-6" />
+        <Separator className="bg-white/20 mb-6" />
 
         {/* Navigation Links */}
-        <nav className="flex flex-col space-y-2 flex-grow"> {/* Added flex-grow */}
+        <nav className="flex flex-col space-y-2 flex-grow">
           {navItems.map((item) => (
-             <Button
+            <Button
               key={item.path}
               asChild
               variant="ghost"
@@ -173,36 +171,40 @@ const SideNav = () => {
               onClick={handleLinkClick}
             >
               <Link to={item.path}>
-                 {/* {item.icon && <item.icon className="mr-2 h-4 w-4" />} */}
                 {item.name}
               </Link>
             </Button>
           ))}
         </nav>
 
-         {/* Logout Button - Placed at the bottom */}
-         <div className="mt-auto pt-6"> {/* Use mt-auto to push to bottom */}
-            <Separator className="bg-white/20 mb-6" /> {/* Separator above logout */}
-            <Button
-              variant="ghost"
-              className="justify-start w-full text-white hover:bg-red-600 hover:text-white" // Styled differently for logout
-              onClick={handleLogoutInitiate} // Call the initiate function
-            >
-              <LogOut className="mr-2 h-4 w-4" /> {/* Logout icon */}
-              Logout
-            </Button>
-         </div>
+        {/* Logout Button and Version - Placed at the bottom */}
+        <div className="mt-auto pt-6">
+          <Separator className="bg-white/20 mb-6" />
+          
+          <Button
+            variant="ghost"
+            className="justify-start w-full text-white hover:bg-red-600 hover:text-white"
+            onClick={handleLogoutInitiate}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+          </Button>
+          {/* App Version Display */}
+          {appVersion && (
+            <div className=" bg-amber-300 text-center text-white/70 text-sm mt-4">
+              Version {appVersion} 
+            </div>
+          )}
+        </div>
       </SheetContent>
     </Sheet>
   );
 
   return (
     <>
-      {/* Render either the desktop sidebar or the mobile sheet based on screen size */}
       {isMobile ? renderMobileSheet() : renderDesktopSidebar()}
 
-      {/* Logout Confirmation Dialog */}
-      <AlertDialog open={isLogoutConfirmOpen} onOpenChange={setIsLogoutConfirmOpen}>
+      <AlertDialog open={isLogoutConfirmOpen} onOpenChange={setIsLogoutConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>

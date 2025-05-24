@@ -4,11 +4,13 @@
   "description": "A desktop application for simplifiying payroll processes.",
   "author": "Ashley Chiteri",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
+    "postinstall": "electron-builder install-app-deps",
+    "release": "npm run build && electron-builder --publish always",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
