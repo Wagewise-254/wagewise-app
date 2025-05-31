@@ -1,94 +1,99 @@
-// src/pages/dashboard/payroll/PayrollPage.tsx - Updated with Active Tab Indicator
+// src/pages/dashboard/payroll/PayrollPage.tsx
 
 import { useState } from 'react';
 import SideNav from '@/components/dashboard/layout/sideNav';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils'; // Make sure this import path is correct for your project
+import { cn } from '@/lib/utils';
 
-// Import the new section components
 import ProcessPayrollSection from '@/components/dashboard/payroll/ProcessPayrollSection';
 import PayrollHistorySection from '@/components/dashboard/payroll/PayrollHistorySection';
 import PayrollReportsSection from '@/components/dashboard/payroll/PayrollReportsSection';
+import PayrollRunDetailsView from '@/components/dashboard/payroll/PayrollRunDetailsView'; // Import the new view
 
-// Define the possible tabs for the mini-navigation
-type PayrollTab = 'process' | 'history' | 'reports';
+type PayrollTab = 'process' | 'history' | 'reports' | 'details'; // Added 'details' tab
 
 const PayrollPage = () => {
-  // State to manage the currently active tab
   const [currentTab, setCurrentTab] = useState<PayrollTab>('process');
-  // State to trigger refetch in PayrollHistorySection when a new payroll is run
   const [refetchHistoryTrigger, setRefetchHistoryTrigger] = useState(0);
+  const [selectedRunIdForDetailsView, setSelectedRunIdForDetailsView] = useState<string | null>(null);
 
-  // Callback to be passed to ProcessPayrollSection to trigger history refetch
-  const handlePayrollRunSuccess = () => {
-    setRefetchHistoryTrigger(prev => prev + 1); // Increment to trigger useEffect in history
-    setCurrentTab('history'); // Optionally switch to history tab after running payroll
+  const handlePayrollProcessingComplete = (success: boolean, message?: string) => {
+    if (success) {
+      setRefetchHistoryTrigger(prev => prev + 1);
+      setCurrentTab('history'); 
+    } else {
+       if (message && message.toLowerCase().includes('already exists')) {
+            // No tab change
+        } else {
+            setCurrentTab('history'); 
+        }
+    }
   };
 
-  // Function to render content based on the active tab
+  const handleViewPayrollRunDetails = (runId: string) => {
+    setSelectedRunIdForDetailsView(runId);
+    setCurrentTab('details');
+  };
+
   const renderTabContent = () => {
     switch (currentTab) {
       case 'process':
-        return <ProcessPayrollSection onPayrollRunSuccess={handlePayrollRunSuccess} />;
+        return <ProcessPayrollSection onPayrollRunSuccess={handlePayrollProcessingComplete} />;
       case 'history':
-        return <PayrollHistorySection refetchTrigger={refetchHistoryTrigger} />;
+        return <PayrollHistorySection 
+                    refetchTrigger={refetchHistoryTrigger} 
+                    onViewDetails={handleViewPayrollRunDetails} // Pass the handler
+                />;
       case 'reports':
-        return <PayrollReportsSection />; // Pass any necessary props later
+        return <PayrollReportsSection />;
+      case 'details':
+        return <PayrollRunDetailsView payrollRunId={selectedRunIdForDetailsView} />;
       default:
         return null;
     }
   };
 
-  // Define Tailwind classes for active and inactive tabs
   const activeTabClasses = "border-b-2 border-[#7F5EFD] text-[#7F5EFD] font-semibold";
-  const inactiveTabClasses = "text-gray-600 hover:text-gray-800";
+  const inactiveTabClasses = "text-gray-500 hover:text-gray-700";
 
   return (
     <div className="flex h-screen bg-gray-100">
       <SideNav />
-      <div className="flex-1 flex flex-col p-6 overflow-hidden">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">Payroll Management</h1>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <h1 className="text-3xl font-bold mb-4 mt-4 ml-4 text-gray-800">Payroll Management</h1>
 
-        {/* Mini-Navigation (Tabs) */}
-        {/* Adjusted border-b and removed pb-2 */}
-        <div className="flex space-x-4 border-b border-gray-200 mb-6">
-          <Button
-            variant="ghost" // Use ghost variant for full custom styling control
-            className={cn(
-              "relative px-4 py-3 rounded-none transition-colors duration-200", // Base styles
-              currentTab === 'process' ? activeTabClasses : inactiveTabClasses
-            )}
-            onClick={() => setCurrentTab('process')}
-          >
-            Process Payroll
-          </Button>
-          <Button
-            variant="ghost"
-            className={cn(
-              "relative px-4 py-3 rounded-none transition-colors duration-200",
-              currentTab === 'history' ? activeTabClasses : inactiveTabClasses
-            )}
-            onClick={() => setCurrentTab('history')}
-          >
-            Payroll History
-          </Button>
-          <Button
-            variant="ghost"
-            className={cn(
-              "relative px-4 py-3 rounded-none transition-colors duration-200",
-              currentTab === 'reports' ? activeTabClasses : inactiveTabClasses
-            )}
-            onClick={() => setCurrentTab('reports')}
-          >
-            Reports & Files
-          </Button>
+        <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
+            <div className="flex space-x-4 border-b border-gray-200 mb-6">
+            {[
+                { id: 'process', label: 'Process Payroll' },
+                { id: 'history', label: 'Payroll History' },
+                { id: 'reports', label: 'Reports & Files' },
+                // Conditionally render details tab or handle empty state in the component itself
+                 { id: 'details', label: 'Run Details' } 
+            ].map((tab) => (
+                <Button
+                key={tab.id}
+                variant="ghost"
+                disabled={tab.id === 'details' && !selectedRunIdForDetailsView && currentTab !== 'details'} // Disable if no run selected and not current
+                className={cn(
+                   "relative px-4 py-3 rounded-none transition-colors duration-200",
+                    currentTab === tab.id ? `${activeTabClasses} bg-purple-50` : `${inactiveTabClasses} hover:bg-gray-100`,
+                    (tab.id === 'details' && !selectedRunIdForDetailsView && currentTab !== 'details') ? "opacity-50 cursor-not-allowed" : ""
+                )}
+                onClick={() => {
+                    if (tab.id === 'details' && !selectedRunIdForDetailsView && currentTab !== 'details') return; // Prevent click if disabled
+                    setCurrentTab(tab.id as PayrollTab);
+                }}
+                >
+                {tab.label}
+                </Button>
+            ))}
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-transparent"> {/* Changed bg-white from here */}
+            {renderTabContent()}
+            </div>
         </div>
-
-        {/* Content Area based on selected tab */}
-        <div className="flex-1 overflow-auto">
-          {renderTabContent()}
-        </div>
-
       </div>
     </div>
   );
