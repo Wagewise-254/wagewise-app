@@ -26,7 +26,7 @@ let mainWindow: BrowserWindow | null;
  */
 const createMainWindow = () => {
   mainWindow = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    icon: path.join(process.env.VITE_PUBLIC, '/icons/favicon.ico'),
     width: 1200,
     height: 800,
     show: false, // Prevent flashing on startup
@@ -39,6 +39,8 @@ const createMainWindow = () => {
   });
 
   mainWindow.maximize();
+  // Hide menu bar completely
+  mainWindow.setMenu(null); // Removes the full menu
 
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow?.webContents.send('main-process-message', (new Date).toLocaleString());

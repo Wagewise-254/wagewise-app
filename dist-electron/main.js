@@ -16326,7 +16326,7 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path$m.join(process.env.APP_ROOT
 let mainWindow;
 const createMainWindow = () => {
   mainWindow = new BrowserWindow({
-    icon: path$m.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+    icon: path$m.join(process.env.VITE_PUBLIC, "/icons/favicon.ico"),
     width: 1200,
     height: 800,
     show: false,
@@ -16340,6 +16340,7 @@ const createMainWindow = () => {
     }
   });
   mainWindow.maximize();
+  mainWindow.setMenu(null);
   mainWindow.webContents.on("did-finish-load", () => {
     mainWindow == null ? void 0 : mainWindow.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
   });
