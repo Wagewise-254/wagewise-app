@@ -1,20 +1,14 @@
-// src/components/dashboard/employee/AddEmployeeStep2.tsx
+// src/components/dashboard/employee/AddEmployeeStep3.tsx
 
 import React from 'react';
 import { useFormContext, Controller } from 'react-hook-form'; // Use useFormContext
-import { DateTime } from 'luxon'; // Import Luxon
-import { CalendarIcon } from 'lucide-react'; // Import icon
 
 // Import Shadcn UI components
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils'; // Assuming you have a utility for className merging
 
 
 // Define the form data structure (needs to match the main form)
@@ -33,22 +27,27 @@ interface AddEmployeeFormData {
     nssf_number?: string;
     date_of_birth: Date | undefined;
     gender: string;
-    marital_status?: string; // Optional
-    citizenship?: string; // Optional
-    has_disability?: boolean; // Optional
+    marital_status?: string;
+    citizenship?: string;
+    has_disability?: boolean;
     date_joined: Date | undefined;
-    job_title?: string; // Optional
-    department?: string; // Optional
+    job_title?: string;
+    department?: string;
     job_type: string;
     employee_status: string;
-    employee_status_effective_date?: Date | undefined; // Optional
-    end_of_probation_date?: Date | undefined; // Optional
-    contract_start_date?: Date | undefined; // Optional
-    contract_end_date?: Date | undefined; // Optional
-    termination_date?: Date | undefined; // Optional
-    termination_reason?: string; // Optional
+    employee_status_effective_date?: Date | undefined;
+    end_of_probation_date?: Date | undefined;
+    contract_start_date?: Date | undefined;
+    contract_end_date?: Date | undefined;
+    termination_date?: Date | undefined;
+    termination_reason?: string;
     basic_salary: number;
-    salary_effective_date?: Date | undefined; // Optional
+    salary_effective_date?: Date | undefined;
+    // payroll_frequency: string; // Required in this step
+    // default_work_days: number; // Required in this step
+    // default_work_hours: number; // Required in this step
+    // nssf_scheme: string; // Required in this step
+    // shif_rate_option: string; // Required in this step
     payment_method: string;
     bank_name?: string; // Optional
     bank_branch?: string; // Optional
@@ -60,282 +59,192 @@ interface AddEmployeeFormData {
     extra_deductions?: boolean; // Optional
     paye_tax_exemption?: boolean; // Optional
     disability_tax_exemption?: boolean; // Optional
-    physical_address?: string; // Optional
-    postal_address?: string; // Optional
-    county?: string; // Optional
-    postal_code?: string; // Optional
-    next_of_kin_name?: string; // Optional
-    next_of_kin_relationship?: string; // Optional
-    next_of_kin_phone?: string; // Optional
-    //logo?: string; // Optional
+    physical_address?: string;
+    postal_address?: string;
+    county?: string;
+    postal_code?: string;
+    next_of_kin_name?: string;
+    next_of_kin_relationship?: string;
+    next_of_kin_phone?: string;
+    logo?: string;
 }
 
 
-const AddEmployeeStep2: React.FC = () => {
+const AddEmployeeStep3: React.FC = () => {
     // Use useFormContext to access form methods provided by FormProvider
     const { register, control, formState: { errors } } = useFormContext<AddEmployeeFormData>();
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <h3 className="col-span-full text-lg font-semibold mb-2">Additional Details</h3>
-            <div>
-                <Label htmlFor="marital_status">Marital Status (Optional)</Label>
+            {/*  */}
+
+             <h3 className="col-span-full text-lg font-semibold mt-4 mb-2">Banking Details (Optional)</h3>
+             <div>
+                <Label htmlFor="bank_name">Bank Name (Optional)</Label>
+                <Input id="bank_name" {...register("bank_name")} />
+                 {errors.bank_name && <p className="text-red-500 text-sm mt-1">{errors.bank_name.message}</p>}
+            </div>
+             <div>
+                <Label htmlFor="bank_branch">Bank Branch (Optional)</Label>
+                <Input id="bank_branch" {...register("bank_branch")} />
+                 {errors.bank_branch && <p className="text-red-500 text-sm mt-1">{errors.bank_branch.message}</p>}
+            </div>
+             <div>
+                <Label htmlFor="bank_code">Bank Code (Optional)</Label>
+                <Input id="bank_code" {...register("bank_code")} />
+                 {errors.bank_code && <p className="text-red-500 text-sm mt-1">{errors.bank_code.message}</p>}
+            </div>
+             <div>
+                <Label htmlFor="bank_account_number">Bank Account Number (Optional)</Label>
+                <Input id="bank_account_number" {...register("bank_account_number")} />
+                 {errors.bank_account_number && <p className="text-red-500 text-sm mt-1">{errors.bank_account_number.message}</p>}
+            </div>
+             <div>
+                <Label htmlFor="mpesa_phone_number">M-Pesa Phone Number (Optional)</Label>
+                <Input id="mpesa_phone_number" {...register("mpesa_phone_number")} />
+                 {errors.mpesa_phone_number && <p className="text-red-500 text-sm mt-1">{errors.mpesa_phone_number.message}</p>}
+            </div>
+
+             <h3 className="col-span-full text-lg font-semibold mt-4 mb-2">Tax & Benefits (Optional)</h3>
+             <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="flex items-center space-x-2">
+                    <Controller
+                        name="is_helb_paying"
+                        control={control}
+                        render={({ field }) => (
+                            <Checkbox
+                                id="is_helb_paying"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                            />
+                        )}
+                    />
+                    <Label htmlFor="is_helb_paying">Is HELB Paying?</Label>
+                     {errors.is_helb_paying && <p className="text-red-500 text-sm mt-1">{errors.is_helb_paying.message}</p>}
+                </div>
+                 <div className="flex items-center space-x-2">
+                    <Controller
+                        name="benefits"
+                        control={control}
+                        render={({ field }) => (
+                            <Checkbox
+                                id="benefits"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                            />
+                        )}
+                    />
+                    <Label htmlFor="benefits">Receives Benefits?</Label>
+                     {errors.benefits && <p className="text-red-500 text-sm mt-1">{errors.benefits.message}</p>}
+                </div>
+                 <div className="flex items-center space-x-2">
+                    <Controller
+                        name="extra_deductions"
+                        control={control}
+                        render={({ field }) => (
+                            <Checkbox
+                                id="extra_deductions"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                            />
+                        )}
+                    />
+                    <Label htmlFor="extra_deductions">Has Extra Deductions?</Label>
+                     {errors.extra_deductions && <p className="text-red-500 text-sm mt-1">{errors.extra_deductions.message}</p>}
+                </div>
+                 <div className="flex items-center space-x-2">
+                    <Controller
+                        name="paye_tax_exemption"
+                        control={control}
+                        render={({ field }) => (
+                            <Checkbox
+                                id="paye_tax_exemption"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                            />
+                        )}
+                    />
+                    <Label htmlFor="paye_tax_exemption">PAYE Tax Exemption?</Label>
+                     {errors.paye_tax_exemption && <p className="text-red-500 text-sm mt-1">{errors.paye_tax_exemption.message}</p>}
+                </div>
+                 <div className="flex items-center space-x-2">
+                    <Controller
+                        name="disability_tax_exemption"
+                        control={control}
+                        render={({ field }) => (
+                            <Checkbox
+                                id="disability_tax_exemption"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                            />
+                        )}
+                    />
+                    <Label htmlFor="disability_tax_exemption">Disability Tax Exemption?</Label>
+                     {errors.disability_tax_exemption && <p className="text-red-500 text-sm mt-1">{errors.disability_tax_exemption.message}</p>}
+                </div>
+             </div>
+
+             <h3 className="col-span-full text-lg font-semibold mt-4 mb-2">Address & Next of Kin (Optional)</h3>
+             <div>
+                <Label htmlFor="physical_address">Physical Address (Optional)</Label>
+                 <Textarea id="physical_address" {...register("physical_address")} />
+                 {errors.physical_address && <p className="text-red-500 text-sm mt-1">{errors.physical_address.message}</p>}
+            </div>
+             <div>
+                <Label htmlFor="postal_address">Postal Address (Optional)</Label>
+                 <Textarea id="postal_address" {...register("postal_address")} />
+                 {errors.postal_address && <p className="text-red-500 text-sm mt-1">{errors.postal_address.message}</p>}
+            </div>
+             <div>
+                <Label htmlFor="county">County (Optional)</Label>
                  <Controller
-                    name="marital_status"
+                    name="county"
                     control={control}
                     render={({ field }) => (
                         <Select onValueChange={field.onChange} value={field.value || ''}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
+                                <SelectValue placeholder="Select county" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="single">Single</SelectItem>
-                                <SelectItem value="married">Married</SelectItem>
-                                <SelectItem value="divorced">Divorced</SelectItem>
-                                <SelectItem value="widowed">Widowed</SelectItem>
+                                <SelectItem value="kiambu">Kiambu</SelectItem>
+                                <SelectItem value="nairobi">Nairobi</SelectItem>
+                                <SelectItem value="mombasa">Mombasa</SelectItem>
+                                {/* Add more counties */}
                             </SelectContent>
                         </Select>
                     )}
                 />
-                 {errors.marital_status && <p className="text-red-500 text-sm mt-1">{errors.marital_status.message}</p>}
+                 {errors.county && <p className="text-red-500 text-sm mt-1">{errors.county.message}</p>}
             </div>
              <div>
-                <Label htmlFor="citizenship">Citizenship (Optional)</Label>
-                 <Input id="citizenship" {...register("citizenship")} placeholder="e.g., Kenyan" />
-                 {errors.citizenship && <p className="text-red-500 text-sm mt-1">{errors.citizenship.message}</p>}
-            </div>
-             <div className="col-span-full flex items-center space-x-2">
-                <Controller
-                    name="has_disability"
-                    control={control}
-                    render={({ field }) => (
-                        <Checkbox
-                            id="has_disability"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                        />
-                    )}
-                />
-                <Label htmlFor="has_disability">Has Disability?</Label>
-                 {errors.has_disability && <p className="text-red-500 text-sm mt-1">{errors.has_disability.message}</p>}
+                <Label htmlFor="postal_code">Postal Code (Optional)</Label>
+                 <Input id="postal_code" {...register("postal_code")} />
+                 {errors.postal_code && <p className="text-red-500 text-sm mt-1">{errors.postal_code.message}</p>}
             </div>
 
-             <h3 className="col-span-full text-lg font-semibold mt-4 mb-2">Job Information</h3>
+             <h3 className="col-span-full text-lg font-semibold mt-4 mb-2">Next of Kin (Optional)</h3>
              <div>
-                <Label htmlFor="job_title">Job Title (Optional)</Label>
-                <Input id="job_title" {...register("job_title")} />
-                 {errors.job_title && <p className="text-red-500 text-sm mt-1">{errors.job_title.message}</p>}
+                <Label htmlFor="next_of_kin_name">Next of Kin Name (Optional)</Label>
+                 <Input id="next_of_kin_name" {...register("next_of_kin_name")} />
+                 {errors.next_of_kin_name && <p className="text-red-500 text-sm mt-1">{errors.next_of_kin_name.message}</p>}
             </div>
              <div>
-                <Label htmlFor="department">Department (Optional)</Label>
-                 <Input id="department" {...register("department")} />
-                 {errors.department && <p className="text-red-500 text-sm mt-1">{errors.department.message}</p>}
+                <Label htmlFor="next_of_kin_relationship">Next of Kin Relationship (Optional)</Label>
+                 <Input id="next_of_kin_relationship" {...register("next_of_kin_relationship")} />
+                 {errors.next_of_kin_relationship && <p className="text-red-500 text-sm mt-1">{errors.next_of_kin_relationship.message}</p>}
             </div>
              <div>
-                <Label htmlFor="employee_status_effective_date">Status Effective Date (Optional)</Label>
-                 <Controller
-                    name="employee_status_effective_date"
-                    control={control}
-                    render={({ field }) => (
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                     {/* Use Luxon for display formatting */}
-                                    {field.value ? DateTime.fromJSDate(field.value).toFormat('MMM dd, yyyy') : <span>Pick a date</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    )}
-                />
-                {errors.employee_status_effective_date && <p className="text-red-500 text-sm mt-1">{errors.employee_status_effective_date.message}</p>}
+                <Label htmlFor="next_of_kin_phone">Next of Kin Phone (Optional)</Label>
+                 <Input id="next_of_kin_phone" {...register("next_of_kin_phone")} />
+                 {errors.next_of_kin_phone && <p className="text-red-500 text-sm mt-1">{errors.next_of_kin_phone.message}</p>}
             </div>
-             <div>
-                <Label htmlFor="end_of_probation_date">End of Probation Date (Optional)</Label>
-                 <Controller
-                    name="end_of_probation_date"
-                    control={control}
-                    render={({ field }) => (
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                     {/* Use Luxon for display formatting */}
-                                    {field.value ? DateTime.fromJSDate(field.value).toFormat('MMM dd, yyyy') : <span>Pick a date</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    )}
-                />
-                 {errors.end_of_probation_date && <p className="text-red-500 text-sm mt-1">{errors.end_of_probation_date.message}</p>}
-            </div>
-             <div>
-                <Label htmlFor="contract_start_date">Contract Start Date (Optional)</Label>
-                 <Controller
-                    name="contract_start_date"
-                    control={control}
-                    render={({ field }) => (
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                     {/* Use Luxon for display formatting */}
-                                    {field.value ? DateTime.fromJSDate(field.value).toFormat('MMM dd, yyyy') : <span>Pick a date</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    )}
-                />
-                 {errors.contract_start_date && <p className="text-red-500 text-sm mt-1">{errors.contract_start_date.message}</p>}
-            </div>
-             <div>
-                <Label htmlFor="contract_end_date">Contract End Date (Optional)</Label>
-                 <Controller
-                    name="contract_end_date"
-                    control={control}
-                    render={({ field }) => (
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                     {/* Use Luxon for display formatting */}
-                                    {field.value ? DateTime.fromJSDate(field.value).toFormat('MMM dd, yyyy') : <span>Pick a date</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    )}
-                />
-                 {errors.contract_end_date && <p className="text-red-500 text-sm mt-1">{errors.contract_end_date.message}</p>}
-            </div>
-             <div>
-                <Label htmlFor="termination_date">Termination Date (Optional)</Label>
-                 <Controller
-                    name="termination_date"
-                    control={control}
-                    render={({ field }) => (
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                     {/* Use Luxon for display formatting */}
-                                    {field.value ? DateTime.fromJSDate(field.value).toFormat('MMM dd, yyyy') : <span>Pick a date</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    )}
-                />
-                 {errors.termination_date && <p className="text-red-500 text-sm mt-1">{errors.termination_date.message}</p>}
-            </div>
-             <div>
-                <Label htmlFor="termination_reason">Termination Reason (Optional)</Label>
-                 <Textarea id="termination_reason" {...register("termination_reason")} />
-                 {errors.termination_reason && <p className="text-red-500 text-sm mt-1">{errors.termination_reason.message}</p>}
-            </div>
-             <div>
-                <Label htmlFor="salary_effective_date">Salary Effective Date (Optional)</Label>
-                 <Controller
-                    name="salary_effective_date"
-                    control={control}
-                    render={({ field }) => (
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !field.value && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                     {/* Use Luxon for display formatting */}
-                                    {field.value ? DateTime.fromJSDate(field.value).toFormat('MMM dd, yyyy') : <span>Pick a date</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    )}
-                />
-                 {errors.salary_effective_date && <p className="text-red-500 text-sm mt-1">{errors.salary_effective_date.message}</p>}
-            </div>
+             {/* Add logo field if needed */}
+             {/* <div>
+                <Label htmlFor="logo">Employee Photo URL (Optional)</Label>
+                <Input id="logo" {...register("logo")} />
+             </div> */}
         </div>
     );
 };
 
-export default AddEmployeeStep2;
+export default AddEmployeeStep3;

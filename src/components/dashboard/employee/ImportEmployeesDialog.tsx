@@ -1,20 +1,20 @@
-// src/components/dashboard/employee/ImportEmployeesDialog.tsx - Import Dialog
+// src/components/dashboard/employee/ImportEmployeesDialog.tsx - Updated
 
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone'; // For drag and drop
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Loader2, UploadCloud, FileText } from 'lucide-react'; // Icons
-//import Link from 'next/link'; // Assuming you are using Next.js Link, adjust if using react-router-dom Link
 
 // Import Shadcn UI components
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress'; // Assuming you have Progress component
+import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // **NEW: Import Select components**
 
-import { API_BASE_URL } from '@/config'; // Adjust path as needed
-import useAuthStore from '@/store/authStore'; // Import auth store to get access token
+import { API_BASE_URL } from '@/config';
+import useAuthStore from '@/store/authStore';
 
 interface ImportEmployeesDialogProps {
     isOpen: boolean;
@@ -29,45 +29,45 @@ const ImportEmployeesDialog: React.FC<ImportEmployeesDialogProps> = ({ isOpen, o
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [importError, setImportError] = useState<string | null>(null);
+    // **NEW STATE: To control the import action (e.g., 'new' or 'update')**
+    const [importAction, setImportAction] = useState<'new' | 'update'>('new'); // Default to 'new'
 
     // --- Dropzone Setup ---
     const onDrop = useCallback((acceptedFiles: File[]) => {
-        // Process the accepted files (usually just one for an Excel import)
         if (acceptedFiles.length > 0) {
             const uploadedFile = acceptedFiles[0];
-             // Basic file type check (can be more robust)
+            // **UPDATED: Include 'text/csv' as allowed type**
             const allowedTypes = [
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
                 'application/vnd.ms-excel', // .xls
+                'text/csv', // .csv
             ];
             if (allowedTypes.includes(uploadedFile.type)) {
-                 setFile(uploadedFile);
-                 setImportError(null); // Clear previous errors
+                setFile(uploadedFile);
+                setImportError(null); // Clear previous errors
             } else {
-                 setFile(null);
-                 setImportError("Invalid file type. Please upload an Excel file (.xlsx, .xls).");
-                 toast.error("Invalid file type. Only Excel files are allowed.");
+                setFile(null);
+                setImportError("Invalid file type. Please upload an Excel (.xlsx, .xls) or CSV (.csv) file.");
+                toast.error("Invalid file type. Only Excel or CSV files are allowed.");
             }
         }
     }, []);
 
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, multiple: false }); // Only accept one file
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, multiple: false });
     // --- End Dropzone Setup ---
-
 
     // --- Handle File Upload to Backend ---
     const handleUpload = async () => {
         if (!file) {
-            setImportError("Please select an Excel file to upload.");
+            setImportError("Please select a file to upload.");
             toast.error("No file selected.");
             return;
         }
 
         if (!accessToken) {
-             setImportError("Authentication token is missing. Please log in again.");
-             toast.error("Authentication token missing.");
-             // Consider redirecting to login here
-             return;
+            setImportError("Authentication token is missing. Please log in again.");
+            toast.error("Authentication token missing.");
+            return;
         }
 
         setIsUploading(true);
@@ -75,16 +75,18 @@ const ImportEmployeesDialog: React.FC<ImportEmployeesDialogProps> = ({ isOpen, o
         setImportError(null);
 
         const formData = new FormData();
-        formData.append('excelFile', file); // 'excelFile' must match the field name in multer config on backend
+        // **UPDATED: Changed 'excelFile' to 'file' to match backend's Multer configuration**
+        formData.append('file', file);
+        // **NEW: Append the selected import action to the FormData**
+       formData.append('import_action', importAction); // Change to snake_case to match backend
 
         try {
             const response = await axios.post(`${API_BASE_URL}/employees/import`, formData, {
                 headers: {
-                    Authorization: `Bearer ${accessToken}`, // Include the access token
-                    'Content-Type': 'multipart/form-data', // Important for file uploads
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'multipart/form-data',
                 },
                 onUploadProgress: (progressEvent) => {
-                    // Calculate and update upload progress
                     if (progressEvent.total) {
                         const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                         setUploadProgress(percentCompleted);
@@ -95,18 +97,15 @@ const ImportEmployeesDialog: React.FC<ImportEmployeesDialogProps> = ({ isOpen, o
             console.log("Import successful:", response.data);
             toast.success(response.data.message || "Employee data imported successfully!");
 
-            // Optional: Call parent callback on success
             onImportSuccess?.();
-
-            // Close the dialog on success
-            handleCloseDialog();
+            handleCloseDialog(); // Close the dialog on success
 
         } catch (err: unknown) {
             console.error("Import error:", err);
             setIsUploading(false); // Stop loading
 
             if (axios.isAxiosError(err) && err.response && typeof err.response.data === 'object') {
-                 interface ErrorResponse {
+                interface ErrorResponse {
                     error?: string;
                     message?: string;
                     details?: Record<string, unknown>; // To capture backend validation details
@@ -117,7 +116,6 @@ const ImportEmployeesDialog: React.FC<ImportEmployeesDialogProps> = ({ isOpen, o
                 setImportError(backendErrorMessage);
                 toast.error(backendErrorMessage);
 
-                // Log detailed errors from backend if available
                 if (backendError.details) {
                     console.error("Import Details:", backendError.details);
                     // You might want to display these details to the user in the UI
@@ -132,27 +130,48 @@ const ImportEmployeesDialog: React.FC<ImportEmployeesDialogProps> = ({ isOpen, o
     };
     // --- End Handle File Upload ---
 
-    // --- Handle Template Download ---
-    const handleDownloadTemplate = () => {
-        // Assuming your template is in the public/assets folder or served statically
-        // You might need a backend route to serve the asset if it's not public
-        //const templatePath = '/assets/employee_import_template.xlsx'; // Adjust path if necessary
-        const templatePath = './src/assets/employee_import_template.xlsx'; // Adjust path if necessary
-        // Using a simple anchor tag for download
-        const link = document.createElement('a');
-        link.href = templatePath;
-        link.download = 'employee_import_template.xlsx'; // Suggested filename
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        //add timer of 3 seconds before showing the toast
-        setTimeout(() => {
-           toast.success("Template downloaded successfully!");
-        }, 3500); // Dismiss the toast after 3 seconds
+    // --- Handle Dynamic Template Download ---
+    // **UPDATED: Fetch template from backend API**
+    const handleDownloadTemplate = async () => {
+        if (!accessToken) {
+            toast.error("Authentication token missing. Cannot download template.");
+            return;
+        }
 
+        try {
+            toast.info("Preparing template download...");
+            const response = await fetch(`${API_BASE_URL}/employees/export/excel`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
 
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown template download error' }));
+                console.error("Template download failed:", response.status, errorData);
+                const errorMessage = errorData.error || `Failed to download template: HTTP ${response.status}`;
+                toast.error(errorMessage);
+                return;
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'employee_import_template.xlsx'; // Suggested filename
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url); // Clean up
+            a.remove();
+
+            toast.success("Excel template downloaded successfully!");
+
+        } catch (error) {
+            console.error("Error downloading template:", error);
+            toast.error("An unexpected error occurred while downloading the template.");
+        }
     };
-    // --- End Handle Template Download ---
+    // --- End Handle Dynamic Template Download ---
 
     // --- Reset state when dialog closes ---
     const handleCloseDialog = () => {
@@ -160,55 +179,71 @@ const ImportEmployeesDialog: React.FC<ImportEmployeesDialogProps> = ({ isOpen, o
         setIsUploading(false);
         setUploadProgress(0);
         setImportError(null);
+        setImportAction('new'); // **NEW: Reset import action on close**
         onClose(); // Call the parent's onClose
     };
 
     return (
-        // Use Shadcn UI Dialog component
-        <Dialog open={isOpen} onOpenChange={handleCloseDialog}> {/* Use handleCloseDialog here */}
+        <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
             <DialogContent className="sm:max-w-[425px] md:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Import Employees from Excel</DialogTitle>
+                    <DialogTitle>Import Employees</DialogTitle>
                     <DialogDescription>
-                        Download the template, fill it with employee data, and upload the file.
+                        Streamline your employee data management by importing from an Excel or CSV file.
                     </DialogDescription>
                 </DialogHeader>
 
-                {/* Template Download Link/Button */}
+                {/* **NEW SECTION: Template Download** */}
                 <div className="mb-4">
-                    <Label>Download Template:</Label>
-                    {/* Using a simple button for download */}
-                    <Button variant="outline" className="mt-2 w-full" onClick={handleDownloadTemplate}>
+                    <Label className="text-sm font-medium">Step 1: Download Template</Label>
+                    <p className="text-xs text-gray-500 mb-2">Use this template to ensure correct column headers and data format.</p>
+                    <Button variant="outline" className="w-full" onClick={handleDownloadTemplate} disabled={isUploading}>
                         <FileText className="mr-2 h-4 w-4" />
-                        Download Excel Template
+                        Download Employee Excel Template
                     </Button>
-                     {/* If using Next.js Link for internal assets */}
-                     {/* <Link href="/assets/employee_import_template.xlsx" download>
-                         <Button variant="outline" className="mt-2 w-full">
-                            <FileText className="mr-2 h-4 w-4" />
-                            Download Excel Template
-                         </Button>
-                     </Link> */}
+                </div>
+
+                {/* **NEW SECTION: Import Action Selection** */}
+                <div className="mb-4">
+                    <Label htmlFor="import-action" className="text-sm font-medium">Step 2: Choose Import Action</Label>
+                    <Select value={importAction} onValueChange={(value: 'new' | 'update') => setImportAction(value)} disabled={isUploading}>
+                        <SelectTrigger id="import-action" className="w-full mt-2">
+                            <SelectValue placeholder="Select import action" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="new">Add New Employees</SelectItem>
+                            <SelectItem value="update">Update Existing Employees</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                        {importAction === 'new'
+                            ? "New employee records will be created. Duplicates (by employee number or email) will be skipped."
+                            : "Existing employee records will be updated. Records not found will be skipped."
+                        }
+                    </p>
                 </div>
 
 
-                {/* File Dropzone Area */}
-                <div
-                    {...getRootProps()}
-                    className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer transition-colors ${
-                        isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                >
-                    <input {...getInputProps()} />
-                    <UploadCloud className="mx-auto h-12 w-12 text-gray-400" />
-                    {isDragActive ? (
-                        <p className="mt-2 text-gray-600">Drop the file here ...</p>
-                    ) : (
-                        <p className="mt-2 text-gray-600">Drag 'n' drop an Excel file here, or click to select file</p>
-                    )}
-                     {file && (
-                        <p className="mt-2 text-sm text-gray-800">Selected file: {file.name}</p>
-                    )}
+                {/* **UPDATED SECTION: File Dropzone Area with correct label and disabled state** */}
+                <div className="mb-4">
+                    <Label className="text-sm font-medium">Step 3: Upload Your File</Label>
+                    <div
+                        {...getRootProps()}
+                        className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer transition-colors mt-2 ${
+                            isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+                        } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        <input {...getInputProps()} disabled={isUploading} />
+                        <UploadCloud className="mx-auto h-12 w-12 text-gray-400" />
+                        {isDragActive ? (
+                            <p className="mt-2 text-gray-600">Drop the file here ...</p>
+                        ) : (
+                            <p className="mt-2 text-gray-600">Drag 'n' drop an Excel or CSV file here, or click to select file</p>
+                        )}
+                        {file && (
+                            <p className="mt-2 text-sm text-gray-800">Selected file: **{file.name}**</p>
+                        )}
+                    </div>
                 </div>
 
                 {/* Error Message */}
@@ -219,23 +254,22 @@ const ImportEmployeesDialog: React.FC<ImportEmployeesDialogProps> = ({ isOpen, o
                 {/* Upload Progress */}
                 {isUploading && (
                     <div className="mt-4">
-                        <Label>Uploading...</Label>
+                        <Label>Upload progress:</Label>
                         <Progress value={uploadProgress} className="w-full mt-2" />
-                         <p className="text-center text-sm text-gray-600 mt-1">{uploadProgress}%</p>
+                        <p className="text-center text-sm text-gray-600 mt-1">{uploadProgress}%</p>
                     </div>
                 )}
-
 
                 <DialogFooter className="mt-4">
                     <Button variant="outline" onClick={handleCloseDialog} disabled={isUploading}>
                         Cancel
                     </Button>
+                    {/* **UPDATED Button text based on importAction** */}
                     <Button onClick={handleUpload} disabled={!file || isUploading}>
                         {isUploading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
-                        Upload and Import
+                        {importAction === 'new' ? 'Upload and Add' : 'Upload and Update'}
                     </Button>
                 </DialogFooter>
-
             </DialogContent>
         </Dialog>
     );

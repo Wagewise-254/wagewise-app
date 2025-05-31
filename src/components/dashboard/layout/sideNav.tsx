@@ -19,7 +19,9 @@ import {
 } from "@/components/ui/alert-dialog";
 
 // Assuming you have a logo file
-import logo from "../../../assets/reverse-logo.png"; // Adjust path as needed
+
+import logo from "/icons/android-chrome-512x512.png"; // Adjust path as needed
+
 
 // Import your Zustand auth store
 import useAuthStore from "@/store/authStore";
@@ -91,7 +93,7 @@ const SideNav = () => {
     <div className="hidden md:flex md:flex-col h-screen w-[230px] bg-[#7F5EFD] text-white p-5 shadow-lg">
       {/* Logo Section */}
       <div className="flex justify-center mb-6">
-        <img src={logo} alt="WageWise Logo" className="w-[100px] h-[100px] object-contain" />
+        <img src={logo} alt="WageWise" className="w-[100px] h-[100px] object-contain" />
       </div>
       <Separator className="bg-white/20 mb-6" />
 

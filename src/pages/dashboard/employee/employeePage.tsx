@@ -96,8 +96,10 @@ return (
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button onClick={() => setIsAddEmployeeDialogOpen(true)}>Add Employee</Button>
+          <div className="flex flex-col sm:flex-row gap-3 ">
+            <div className="cursor-not-allowed">
+              <Button  onClick={() => setIsAddEmployeeDialogOpen(true)} disabled>Add Employee</Button>
+            </div>          
             <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>Import</Button>
             <Button variant="outline" onClick={() => setIsExportDialogOpen(true)}>
               <FileDown className="mr-2 h-4 w-4" />
