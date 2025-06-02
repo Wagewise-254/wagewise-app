@@ -16340,7 +16340,6 @@ const createMainWindow = () => {
     }
   });
   mainWindow.maximize();
-  mainWindow.setMenu(null);
   mainWindow.webContents.on("did-finish-load", () => {
     mainWindow == null ? void 0 : mainWindow.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
   });

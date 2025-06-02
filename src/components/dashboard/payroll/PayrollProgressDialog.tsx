@@ -265,7 +265,7 @@ const PayrollProgressDialog: React.FC<PayrollProgressDialogProps> = ({
     accessToken,
     onProcessingComplete,
     payrollMonthYear,
-    isProcessComplete /*,logMessages, progressDetails (removed to avoid loop with setProgressDetails) */,
+    isProcessComplete /* ,logMessages, progressDetails (removed to avoid loop with setProgressDetails) */,
   ]);
 
   useEffect(() => {
@@ -425,7 +425,7 @@ const PayrollProgressDialog: React.FC<PayrollProgressDialogProps> = ({
                       {msg.includes("Failed") ||
                       msg.includes("Error") ||
                       msg.includes("failed") ? (
-                        <span className="text-red-400">{msg}</span>
+                        <span className="text-yellow-400">{msg}</span>
                       ) : msg.includes("Warning") || msg.includes("issues") ? (
                         <span className="text-yellow-400">{msg}</span>
                       ) : (

@@ -62,7 +62,7 @@ const PayrollPage = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <h1 className="text-3xl font-bold mb-4 mt-4 ml-4 text-gray-800">Payroll Management</h1>
 
-        <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
+        <div className="flex flex-1 flex-col p-4 md:p-6 overflow-hidden">
             <div className="flex space-x-4 border-b border-gray-200 mb-6">
             {[
                 { id: 'process', label: 'Process Payroll' },
@@ -90,7 +90,7 @@ const PayrollPage = () => {
             ))}
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-transparent"> {/* Changed bg-white from here */}
+            <div className="flex-1 overflow-y-auto bg-transparent rounded-md"> {/* Changed bg-white from here */}
             {renderTabContent()}
             </div>
         </div>

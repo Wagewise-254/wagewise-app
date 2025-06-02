@@ -3,14 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Eye, RefreshCw, FileText } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
 import {
   ColumnDef,
   flexRender,
@@ -24,22 +17,10 @@ import {
 import axios from "axios";
 import { API_BASE_URL } from "@/config";
 import useAuthStore from "@/store/authStore";
-//import PayrollDetailsDialog from './PayrollDetailsDialog';
 import { formatKshCompact, getStatusBadgeClass } from "@/lib/formatters"; // Import formatters
 import { Input } from "@/components/ui/input"; // For global filter
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"; // For Page Size
-import {
-  ChevronsLeft,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsRight,
-} from "lucide-react"; // Pagination icons
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // For Page Size
+import { ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react"; // Pagination icons
 import { getFilteredRowModel as tanstackGetFilteredRowModel } from "@tanstack/react-table";
 
 // Extended PayrollRun interface to match backend response from /payroll endpoint

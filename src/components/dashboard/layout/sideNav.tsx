@@ -130,11 +130,6 @@ const SideNav = () => {
           Logout
         </Button>
         {/* App Version Display */}
-        {appVersion && (
-          <div className="text-center text-white/70 text-sm mt-4">
-            Version {appVersion}
-          </div>
-        )}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
-import { Loader2, DownloadCloud, Search, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Info } from 'lucide-react';
+import { Loader2, DownloadCloud, Search, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, ListFilter, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,6 +14,7 @@ import {
 } from '@tanstack/react-table';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { API_BASE_URL } from '@/config';
 import useAuthStore from '@/store/authStore';
@@ -89,16 +90,28 @@ interface PayrollRunDetail {
   };
 }
 
+interface PayrollRunOption { // For the dropdown
+  id: string;
+  payroll_month: string;
+  payroll_number: string;
+  run_date: string;
+  status: string;
+}
+
 
 interface PayrollRunDetailsViewProps {
   payrollRunId: string | null; // The ID of the payroll run to display
 }
 
-const PayrollRunDetailsView: React.FC<PayrollRunDetailsViewProps> = ({ payrollRunId }) => {
-  const { accessToken } = useAuthStore();
+const PayrollRunDetailsView: React.FC<PayrollRunDetailsViewProps> = ({ payrollRunId: initialPayrollRunId }) => {
+   const { accessToken } = useAuthStore();
+  const [currentSelectedRunId, setCurrentSelectedRunId] = useState<string | null>(initialPayrollRunId);
+  const [availableRuns, setAvailableRuns] = useState<PayrollRunOption[]>([]);
+  const [loadingRuns, setLoadingRuns] = useState(true);
+
   const [payrollRunSummary, setPayrollRunSummary] = useState<PayrollRunSummary | null>(null);
   const [payrollDetails, setPayrollDetails] = useState<PayrollRunDetail[]>([]);
-  const [loading, setLoading] = useState(false); // Initially false, true when fetching
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadingPayslipId, setDownloadingPayslipId] = useState<string | null>(null);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -107,19 +120,46 @@ const PayrollRunDetailsView: React.FC<PayrollRunDetailsViewProps> = ({ payrollRu
     pageIndex: 0,
     pageSize: 10,
   });
-
-  const fetchPayrollRunFullDetails = useCallback(async () => {
-    if (!payrollRunId || !accessToken) {
-      setPayrollRunSummary(null);
-      setPayrollDetails([]);
-      setLoading(false);
-      return;
+  const fetchAvailablePayrollRuns = useCallback(async () => {
+    if (!accessToken) return;
+    setLoadingRuns(true);
+    try {
+      const response = await axios.get<{ payrollRuns: PayrollRunOption[] }>(`${API_BASE_URL}/payroll`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const completedRuns = (response.data.payrollRuns || []).filter(run =>
+        ['Payslips_Sent', 'Calculation_Complete', 'Paid', 'Finalized'].includes(run.status)
+      ).sort((a, b) => new Date(b.run_date).getTime() - new Date(a.run_date).getTime()); // Sort by date desc
+      
+      setAvailableRuns(completedRuns);
+      if (!initialPayrollRunId && completedRuns.length > 0) {
+        setCurrentSelectedRunId(completedRuns[0].id); // Default to latest completed if no initial ID
+      } else if (initialPayrollRunId) {
+        setCurrentSelectedRunId(initialPayrollRunId);
+      }
+    } catch (err) {
+      toast.error("Failed to fetch payroll run list for selection.");
+      console.error("Error fetching available payroll runs:", err);
+    } finally {
+      setLoadingRuns(false);
     }
-    setLoading(true); 
-    setError(null);
+  }, [accessToken, initialPayrollRunId]);
+
+  useEffect(() => {
+    fetchAvailablePayrollRuns();
+  }, [fetchAvailablePayrollRuns]);
+ 
+
+
+  const fetchPayrollRunFullDetails = useCallback(async (runIdToFetch: string | null) => {
+    if (!runIdToFetch || !accessToken) {
+      setPayrollRunSummary(null); setPayrollDetails([]); setLoadingDetails(false); return;
+    }
+    setLoadingDetails(true); setError(null);
+
     try {
       const response = await axios.get<{payrollRun: PayrollRunSummary, payrollDetails: PayrollRunDetail[]}>(
-        `${API_BASE_URL}/payroll/${payrollRunId}`,
+        `${API_BASE_URL}/payroll/${runIdToFetch}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       if (response.data) {
@@ -176,23 +216,22 @@ const PayrollRunDetailsView: React.FC<PayrollRunDetailsViewProps> = ({ payrollRu
         }
         setPayrollRunSummary(null);
         setPayrollDetails([]);
-    } finally { setLoading(false); }
-  }, [payrollRunId, accessToken]);
+    } finally { setLoadingDetails(false); }
+  }, [ accessToken]);
 
   useEffect(() => {
     setGlobalFilter('');
     setPagination({ pageIndex: 0, pageSize: 10 });
     setSorting([]);
-    if (payrollRunId) {
-        fetchPayrollRunFullDetails();
+    if (currentSelectedRunId) {
+        fetchPayrollRunFullDetails(currentSelectedRunId);
     } else {
-        // Clear data if no payrollRunId is provided
-        setPayrollRunSummary(null);
-        setPayrollDetails([]);
-        setLoading(false);
+        setPayrollRunSummary(null); setPayrollDetails([]); setLoadingDetails(false);
     }
-  }, [payrollRunId, fetchPayrollRunFullDetails]);
+  }, [currentSelectedRunId, fetchPayrollRunFullDetails]);
 
+  // handleDownloadIndividualPayslip and columns definitions remain the same as your last enhanced version
+  // ... (ensure handleDownloadIndividualPayslip and columns are correctly defined here, as in PayrollDetailsDialog previous version)
   const handleDownloadIndividualPayslip = useCallback(
     async (runDetail: PayrollRunDetail) => {
       if (!accessToken) { toast.error("Authentication required."); return; }
@@ -299,110 +338,140 @@ const PayrollRunDetailsView: React.FC<PayrollRunDetailsViewProps> = ({ payrollRu
     getSortedRowModel: getSortedRowModel(),
   });
 
-  if (!payrollRunId && !loading) {
-    return (
-      <div className="p-6 md:p-8 text-center text-gray-500">
-        <Info className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-xl font-semibold mb-2">Select a Payroll Run</h3>
-        <p>Please select a payroll run from the 'Payroll History' tab to view its details.</p>
-      </div>
-    );
+  if (loadingRuns && !currentSelectedRunId) { // Show loader only if fetching initial run list and no run selected
+    return <div className="flex flex-1 justify-center items-center p-10"><Loader2 className="animate-spin h-8 w-8 text-[#7F5EFD]" /> <span className="ml-3">Loading payroll runs...</span></div>;
   }
 
   return (
-    <div className="h-full flex flex-col bg-white rounded-b-lg shadow-sm"> {/* Fits within PayrollPage's content area */}
-        {loading && ( <div className="flex flex-1 justify-center items-center"><Loader2 className="animate-spin h-10 w-10 text-[#7F5EFD]" /><span className="ml-3 text-gray-600">Loading...</span></div> )}
-        {!loading && error && ( <div className="flex-1 text-center text-red-600 p-10 bg-red-50"><p className="font-semibold">Error!</p><p>{error}</p><Button variant="outline" className="mt-4" onClick={fetchPayrollRunFullDetails}>Retry</Button></div> )}
+   <Card className=" flex flex-col shadow-md rounded-b-lg border-t-0"> {/* Removed rounded-b-lg if PayrollPage already has it */}
+      <CardHeader className="border-b  p-4 rounded-t-lg"> {/* Added some padding */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <CardTitle className="text-lg md:text-xl font-semibold text-gray-700">
+                Payroll Run Details
+            </CardTitle>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Select
+                    value={currentSelectedRunId || ""}
+                    onValueChange={(value) => setCurrentSelectedRunId(value)}
+                    disabled={loadingRuns || loadingDetails}
+                >
+                    <SelectTrigger className="w-full sm:w-[280px] h-9 text-sm focus:border-[#7F5EFD] focus:ring-[#7F5EFD]">
+                        <SelectValue placeholder={loadingRuns ? "Loading runs..." : "Select a Payroll Run"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableRuns.length === 0 && !loadingRuns && <SelectItem value="no-runs" disabled>No completed runs found</SelectItem>}
+                        {availableRuns.map(run => (
+                            <SelectItem key={run.id} value={run.id} className="text-sm">
+                                {run.payroll_month} ({run.payroll_number})
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <Button variant="outline" size="icon" onClick={() => fetchPayrollRunFullDetails(currentSelectedRunId)} disabled={loadingDetails || !currentSelectedRunId} className="h-9 w-9">
+                    <RefreshCw className={`h-4 w-4 ${loadingDetails ? 'animate-spin':''}`} />
+                </Button>
+            </div>
+        </div>
+        {currentSelectedRunId && !loadingDetails && !payrollRunSummary && !error && (
+             <p className="text-sm text-gray-500 mt-2">Select a run to view details.</p>
+        )}
+      </CardHeader>
 
-        {!loading && !error && payrollRunSummary && (
-          <>
-            {/* Summary Section - Card like appearance */}
-            <div className="p-4 md:p-5 border-b border-gray-200 bg-slate-50">
-              <h3 className="text-lg md:text-xl font-semibold mb-3 text-gray-700">
-                Details for: {payrollRunSummary.payroll_month} ({payrollRunSummary.payroll_number})
-              </h3>
-              <dl className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-2 text-xs md:text-sm">
-                {/* ... (summary dl list as before) ... */}
-                <div className="flex flex-col"><dt className="font-medium text-gray-500">Run Date:</dt><dd className="text-gray-800">{new Date(payrollRunSummary.run_date).toLocaleDateString()}</dd></div>
+      {loadingDetails && ( <div className="flex flex-1 justify-center items-center p-10"><Loader2 className="animate-spin h-8 w-8 text-[#7F5EFD]" /><span className="ml-3">Loading details...</span></div> )}
+      {!loadingDetails && error && ( <div className="flex-1 text-center text-red-600 p-10 bg-red-50"><p className="font-semibold">Error!</p><p>{error}</p><Button variant="outline" className="mt-4" onClick={() => fetchPayrollRunFullDetails(currentSelectedRunId)}>Retry</Button></div> )}
+      
+      {!currentSelectedRunId && !loadingRuns && !loadingDetails && (
+         <div className="flex-1 flex flex-col justify-center items-center text-center text-gray-500 p-10">
+            <ListFilter className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No Payroll Run Selected</h3>
+            <p>Please select a payroll run from the dropdown above to view its details.</p>
+        </div>
+      )}
+
+      {!loadingDetails && !error && payrollRunSummary && (
+        <CardContent className="p-0 flex-1 flex flex-col">
+          {/* Summary Section */}
+          <div className="p-4 md:p-5 border-b">
+            <h4 className="text-base font-medium mb-2.5 text-gray-600">
+              Summary for: {payrollRunSummary.payroll_month} <span className="text-xs text-gray-500">({payrollRunSummary.payroll_number})</span>
+            </h4>
+            <dl className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-1.5 text-xs">
+                {/* ... (summary dl list as before but with smaller text) ... */}
+                <div className="flex flex-col"><dt className="font-medium text-gray-500">Run Date:</dt><dd className="text-gray-700">{new Date(payrollRunSummary.run_date).toLocaleDateString()}</dd></div>
                 <div className="flex flex-col"><dt className="font-medium text-gray-500">Status:</dt>
-                    <dd><span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getStatusBadgeClass(payrollRunSummary.status)}`}>
+                    <dd><span className={`px-1.5 py-0.5 text-[11px] font-medium rounded-md border ${getStatusBadgeClass(payrollRunSummary.status)}`}>
                         {payrollRunSummary.status.replace(/_/g, ' ')}</span>
                     </dd>
                 </div>
-                {payrollRunSummary.run_progress_details?.stage && ( <div className="flex flex-col"><dt className="font-medium text-gray-500">Stage:</dt><dd className="text-gray-800">{payrollRunSummary.run_progress_details.stage.replace(/_/g, ' ')}</dd></div> )}
-                <div className="flex flex-col"><dt className="font-medium text-gray-500">Total Gross:</dt><dd className="text-gray-800 font-semibold">{formatToKsh(payrollRunSummary.total_gross_pay)}</dd></div>
-                <div className="flex flex-col"><dt className="font-medium text-gray-500">Total Net Pay:</dt><dd className="text-gray-800 font-bold text-[#7F5EFD]">{formatToKsh(payrollRunSummary.total_net_pay)}</dd></div>
-              </dl>
-            </div>
+                <div className="flex flex-col"><dt className="font-medium text-gray-500">Total Gross:</dt><dd className="text-gray-700 font-semibold">{formatToKsh(payrollRunSummary.total_gross_pay)}</dd></div>
+                <div className="flex flex-col"><dt className="font-medium text-gray-500">Total Net Pay:</dt><dd className="text-gray-700 font-bold text-[#7F5EFD]">{formatToKsh(payrollRunSummary.total_net_pay)}</dd></div>
+            </dl>
+          </div>
 
-            {/* Table Controls: Search */}
-            <div className="px-4 md:px-5 py-3 flex items-center bg-slate-50 border-b border-gray-200">
-              <div className="relative w-full sm:max-w-xs">
-                <Input
-                  placeholder="Search employees (name, emp no)..."
-                  value={globalFilter ?? ''}
-                  onChange={(event) => setGlobalFilter(event.target.value)}
-                  className="pl-10 h-9 text-sm border-gray-300 focus:border-[#7F5EFD] focus:ring-[#7F5EFD]"
-                />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
+          {/* Table Controls: Search */}
+          <div className="px-4 md:px-5 py-2.5 flex items-center border-b">
+            <div className="relative w-full sm:max-w-xs">
+              <Input placeholder="Search employees..." value={globalFilter ?? ''} onChange={(event) => setGlobalFilter(event.target.value)}
+                className="pl-9 h-8 text-xs border-gray-300 focus:border-[#7F5EFD] focus:ring-[#7F5EFD]" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
             </div>
+          </div>
 
-            <ScrollArea className="flex-1 data-[orientation=horizontal]:pb-2.5">
-                {payrollDetails.length === 0 && !loading && ( <div className="text-center text-gray-500 py-10 px-4">No employee details found.</div> )}
-                {payrollDetails.length > 0 && (
-                    <div className="px-4 md:px-5 pt-1"> {/* Padding for table content */}
-                        <Table className="min-w-[1000px]"> {/* Adjust min-width as needed */}
-                            <TableHeader className="bg-gray-100 sticky top-0 z-[5]">
-                                {table.getHeaderGroups().map((headerGroup) => (
-                                <TableRow key={headerGroup.id}>
-                                    {headerGroup.headers.map((header) => (
-                                    <TableHead key={header.id} onClick={header.column.getToggleSortingHandler()} className="px-3 py-2.5 text-xs font-semibold text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-200" style={{ width: header.getSize() }}>
-                                        {flexRender(header.column.columnDef.header, header.getContext())}
-                                        {{ asc: ' ▲', desc: ' ▼' }[header.column.getIsSorted() as string] ?? null}
-                                    </TableHead>
-                                    ))}
-                                </TableRow>
-                                ))}
-                            </TableHeader>
-                            <TableBody className="divide-y divide-gray-200">
-                                {table.getRowModel().rows.map((row) => (
-                                    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} className="hover:bg-gray-50/50 transition-colors text-xs">
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} className="px-3 py-2 whitespace-nowrap">
-                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                        </TableCell>
-                                    ))}
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                )}
-              <ScrollBar orientation="horizontal" className="mx-4 md:mx-5" />
-            </ScrollArea>
-            
+          <ScrollArea className="flex-1 data-[orientation=horizontal]:pb-2.5">
+            {payrollDetails.length === 0 && !loadingDetails && ( <div className="text-center text-gray-500 py-10 px-4">No employee details found.</div> )}
             {payrollDetails.length > 0 && (
-                <div className="px-4 md:px-5 py-2.5 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-600">
-                    {/* ... (Pagination controls as before) ... */}
-                    <div className="flex-1 text-muted-foreground mb-2 sm:mb-0">
-                        Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} ({table.getFilteredRowModel().rows.length} row(s))
-                    </div>
-                    <div className="flex items-center space-x-1 sm:space-x-2">
-                         <Select value={`${table.getState().pagination.pageSize}`} onValueChange={(value) => { table.setPageSize(Number(value)); }}>
-                            <SelectTrigger className="h-7 w-[75px] text-xs px-2"> <SelectValue placeholder={table.getState().pagination.pageSize} /> </SelectTrigger>
-                            <SelectContent side="top"> {[10, 20, 30, 50, 100].map((pageSize) => ( <SelectItem key={pageSize} value={`${pageSize}`} className="text-xs">Show {pageSize}</SelectItem> ))} </SelectContent>
-                        </Select>
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}> <ChevronsLeft className="h-3.5 w-3.5" /> </Button>
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}> <ChevronLeft className="h-3.5 w-3.5" /> </Button>
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}> <ChevronRight className="h-3.5 w-3.5" /> </Button>
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => table.setPageIndex(table.getPageCount() - 1)} disabled={!table.getCanNextPage()}> <ChevronsRight className="h-3.5 w-3.5" /> </Button>
-                    </div>
+                <div className="px-4 md:px-5 pt-1">
+                    <Table className="min-w-[900px]">
+                        <TableHeader className="bg-gray-100 sticky top-0 z-[5]">
+                          {table.getHeaderGroups().map(headerGroup => (
+                            <TableRow key={headerGroup.id}>
+                              {headerGroup.headers.map(header => (
+                                <TableHead key={header.id} onClick={header.column.getToggleSortingHandler()}
+                                  className="px-2.5 py-2 text-[11px] font-bold text-gray-500 whitespace-nowrap cursor-pointer hover:bg-gray-200 tracking-wider"
+                                  style={{ width: header.getSize() }}>
+                                  {flexRender(header.column.columnDef.header, header.getContext())}
+                                  {{ asc: ' ▲', desc: ' ▼' }[header.column.getIsSorted() as string] ?? null}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableHeader>
+                        <TableBody className="divide-y divide-gray-200">
+                          {table.getRowModel().rows.map(row => (
+                            <TableRow key={row.id} className="hover:bg-slate-50/70 transition-colors text-[11px]">
+                              {row.getVisibleCells().map(cell => (
+                                <TableCell key={cell.id} className="px-2.5 py-1.5 whitespace-nowrap">
+                                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                    </Table>
                 </div>
             )}
-          </>
-        )}
-    </div>
+            <ScrollBar orientation="horizontal" className="mx-4 md:mx-5" />
+          </ScrollArea>
+          
+          {payrollDetails.length > 0 && (
+            <div className="px-4 md:px-5 py-2 border-t flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-gray-500">
+                {/* ... (Pagination controls with adjusted sizes if needed) ... */}
+                <div className="flex-1 text-muted-foreground mb-1 sm:mb-0"> Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} ({table.getFilteredRowModel().rows.length} row(s)) </div>
+                <div className="flex items-center space-x-1">
+                    <Select value={`${table.getState().pagination.pageSize}`} onValueChange={(value) => { table.setPageSize(Number(value)); }}>
+                        <SelectTrigger className="h-6 w-[70px] text-[11px] px-1.5"> <SelectValue placeholder={table.getState().pagination.pageSize} /> </SelectTrigger>
+                        <SelectContent side="top"> {[10, 20, 30, 50, 100].map((pageSize) => ( <SelectItem key={pageSize} value={`${pageSize}`} className="text-[11px]">Show {pageSize}</SelectItem> ))} </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}> <ChevronsLeft className="h-3 w-3" /> </Button>
+                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}> <ChevronLeft className="h-3 w-3" /> </Button>
+                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}> <ChevronRight className="h-3 w-3" /> </Button>
+                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => table.setPageIndex(table.getPageCount() - 1)} disabled={!table.getCanNextPage()}> <ChevronsRight className="h-3 w-3" /> </Button>
+                </div>
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
   );
 };
 
