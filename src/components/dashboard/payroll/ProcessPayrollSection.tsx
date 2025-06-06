@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, TrendingUp, UserCheck } from 'lucide-react'; // Added TrendingUp and UserCheck for overview and quick links cards
 import RunPayrollDialog from './RunPayrollDialog';
+import { useNavigate } from 'react-router-dom';
 
 interface ProcessPayrollSectionProps {
   // Renamed prop for clarity, matches what PayrollPage provides
@@ -12,6 +13,11 @@ interface ProcessPayrollSectionProps {
 
 const ProcessPayrollSection: React.FC<ProcessPayrollSectionProps> = ({ onPayrollRunSuccess }) => {
   const [isRunPayrollDialogOpen, setIsRunPayrollDialogOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleViewEmploees = () => {
+    navigate('/employee'); // Navigate to the employees page
+  }
 
   return (
     <div className="p-2 md:p-4">
@@ -50,8 +56,8 @@ const ProcessPayrollSection: React.FC<ProcessPayrollSectionProps> = ({ onPayroll
                 Access employee records or manage benefits.
             </p>
             <div className="flex space-x-3">
-                <Button variant="outline" size="sm">View Employees</Button>
-                <Button variant="outline" size="sm">Manage Benefits</Button>
+                <Button variant="outline" size="sm" onClick={handleViewEmploees} >View Employees</Button>
+               { /*<Button variant="outline" size="sm">Manage Benefits</Button> */ }
             </div>
         </div>
       </div>

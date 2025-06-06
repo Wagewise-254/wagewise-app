@@ -57,6 +57,7 @@ interface PayrollRunDetail {
   basic_salary: number;
   // ... (all other fields from your PayrollRunDetail interface)
   gross_pay: number;
+  cash_gross_pay: number; // Assuming this is the same as gross_pay
   taxable_income: number;
   paye_calculated: number;
   paye_after_relief: number;
@@ -65,6 +66,8 @@ interface PayrollRunDetail {
   shif_contribution: number;
   nssf_employee_contribution: number;
   nssf_employer_contribution: number;
+  nssf_employee_total: number;
+  nssf_employer_total: number;
   helb_deduction: number;
   housing_levy_employee: number;
   housing_levy_employer: number;
@@ -186,15 +189,15 @@ const PayrollRunDetailsView: React.FC<PayrollRunDetailsViewProps> = ({ payrollRu
         const formattedDetails: PayrollRunDetail[] = details.map((d) => ({
             ...d,
             basic_salary: parseFloat(d.basic_salary as unknown as string),
-            gross_pay: parseFloat(d.gross_pay as unknown as string),
+            gross_pay: parseFloat(d.cash_gross_pay as unknown as string),
             taxable_income: parseFloat(d.taxable_income as unknown as string),
             paye_calculated: parseFloat(d.paye_calculated as unknown as string),
             paye_after_relief: parseFloat(d.paye_after_relief as unknown as string),
             personal_relief_amount: parseFloat(d.personal_relief_amount as unknown as string || '0'),
             insurance_relief_amount: parseFloat(d.insurance_relief_amount as unknown as string || '0'),
             shif_contribution: parseFloat(d.shif_contribution as unknown as string),
-            nssf_employee_contribution: parseFloat(d.nssf_employee_contribution as unknown as string),
-            nssf_employer_contribution: parseFloat(d.nssf_employer_contribution as unknown as string),
+            nssf_employee_contribution: parseFloat(d.nssf_employee_total as unknown as string),
+            nssf_employer_contribution: parseFloat(d.nssf_employer_total as unknown as string),
             helb_deduction: parseFloat(d.helb_deduction as unknown as string),
             housing_levy_employee: parseFloat(d.housing_levy_employee as unknown as string),
             housing_levy_employer: parseFloat(d.housing_levy_employer as unknown as string),
