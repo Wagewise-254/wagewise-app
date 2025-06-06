@@ -40,7 +40,7 @@ const createMainWindow = () => {
 
   mainWindow.maximize();
   // Hide menu bar completely
- // mainWindow.setMenu(null); // Removes the full menu
+ mainWindow.setMenu(null); // Removes the full menu
 
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow?.webContents.send('main-process-message', (new Date).toLocaleString());

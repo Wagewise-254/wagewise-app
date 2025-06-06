@@ -24,7 +24,7 @@ interface PayrollRun {
 const reportOptions = [
   { value: 'KRA_SEC_B1_PAYE', label: 'KRA PAYE Return (SEC B1)', icon: FileText },
   { value: 'NSSF_Return', label: 'NSSF Return', icon: FileText },
-  { value: 'NHIF_Return', label: 'SHIF (NHIF) Return', icon: FileText }, // SHIF is the new NHIF
+  { value: 'SHIF_Return', label: 'SHIF Return', icon: FileText }, // SHIF is the new NHIF
   { value: 'Housing_Levy_Return', label: 'Housing Levy Return', icon: FileText },
   { value: 'HELB_Deduction_Report', label: 'HELB Deduction Report', icon: FileText },
   { value: 'FBT_Report', label: 'Fringe Benefit Tax (FBT) Report', icon: FileText },
