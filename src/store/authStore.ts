@@ -18,12 +18,14 @@ interface AuthState {
   isAuthenticated: boolean; // Convenience boolean: true if user is not null
   isLoading: boolean; // To track if the auth state is currently loading (e.g., from storage)
   error: string | null; // To store any auth-related errors
+  hasRecoveryEmail: boolean | null;  // null = unchecked, false = not set, true = set
 
   // Actions
   login: (user: User, accessToken: string, refreshToken: string) => void; // Action to set the state on login
   logout: () => void; // Action to clear the state on logout
   setLoading: (isLoading: boolean) => void; // Action to set loading state
   setError: (error: string | null) => void; // Action to set error state
+  setRecoveryStatus: (status: boolean) => void; // Action to set recovery email status
   // Optional: Action to initialize state from storage (e.g., localStorage)
   // initializeAuth: () => void;
 }
@@ -37,6 +39,7 @@ const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   isLoading: true, // Start as loading, assuming we might check storage on app load
   error: null,
+  hasRecoveryEmail: null, // Initialize as null
 
   // Action to handle successful login
   login: (user, accessToken, refreshToken) => {
@@ -54,6 +57,7 @@ const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: true,
       isLoading: false, // Loading finished after login
       error: null, // Clear any previous errors
+      hasRecoveryEmail: null, // Reset on new login, to force a re-check
     });
   },
 
@@ -62,6 +66,7 @@ const useAuthStore = create<AuthState>((set) => ({
     // Clear tokens from storage
     localStorage.removeItem('supabase_access_token');
     localStorage.removeItem('supabase_refresh_token');
+    localStorage.clear();
     // localStorage.removeItem('user'); // Clear user data if stored
 
     // Clear state
@@ -72,6 +77,7 @@ const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: false,
       isLoading: false, // Loading finished after logout
       error: null, // Clear any previous errors
+      hasRecoveryEmail: null,
     });
     // In a real app, you'd also likely navigate the user away from protected routes
   },
@@ -81,6 +87,9 @@ const useAuthStore = create<AuthState>((set) => ({
 
   // Action to set error state
   setError: (error) => set({ error }),
+
+  // New action to update the recovery email status
+  setRecoveryStatus: (status: boolean) => set({ hasRecoveryEmail: status }),
 
   // Optional: Action to initialize state from storage on app startup
   // initializeAuth: () => {

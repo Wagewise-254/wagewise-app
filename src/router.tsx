@@ -1,6 +1,9 @@
 import { HashRouter, Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/auth/loginPage";
 import SignUpPage from "./pages/auth/signupPage";
+import  ResetPasswordPage  from "./pages/auth/ResetPasswordPage";
+import  ForgotPasswordPage  from "./pages/auth/ForgotPasswordPage";
+import  VerifyCodePage  from "./pages/auth/VerifyCodePage";
 import SplashScreen from "./pages/SplashScreen";
 import MainDashboard from "./pages/dashboard/main/mainDashboard";
 import EmployeePage from "./pages/dashboard/employee/employeePage";
@@ -37,6 +40,19 @@ const AppRouter = () => {
         <Route path="/payroll" element={<PayrollPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/account" element={<AccountPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/verify-code" element={<VerifyCodePage />} />
+        
+        {/* Uncomment and add your other routes as needed */}
+        {/* <Route path="/dashboard" element={<DashboardPage />} /> */}
+        {/* Add other routes here */}
+        {/* Example: */}
+        {/* <Route path="/profile" element={<ProfilePage />} /> */}
+        {/* <Route path="/settings" element={<SettingsPage />} /> */}
+
+        {/* Uncomment and add your other routes as needed */}
+        {/* <Route path="/dashboard" element={<DashboardPage />} />
         {/* Add other routes here */}
         {/* Example: */}
         {/* <Route path="/profile" element={<ProfilePage />} /> */}

@@ -5,9 +5,9 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import axios from "axios"; // Import AxiosError for better type safety
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2 , Eye, EyeOff} from "lucide-react"; // Import spinner and eye icons
+import { Loader2, Eye, EyeOff } from "lucide-react"; // Import spinner and eye icons
 
-import { API_BASE_URL } from "@/config"; // Assuming "@/config" resolves to your config file
+import { API_BASE_URL } from "@/config"; 
 
 // Import the auth store - We'll still use this for updating global auth state
 import useAuthStore from "@/store/authStore"; // Adjust the import path as necessary
@@ -58,54 +58,70 @@ const LoginPage: React.FC = () => {
 
     try {
       // Make the API call
-      const response = await axios.post<LoginSuccessResponse>(`${API_BASE_URL}/users/login`, {
-        email: data.Email, // Sending lowercase 'email'
-        password: data.Password, // Sending lowercase 'password'
-      });
+      const response = await axios.post<LoginSuccessResponse>(
+        `${API_BASE_URL}/users/login`,
+        {
+          email: data.Email, // Sending lowercase 'email'
+          password: data.Password, // Sending lowercase 'password'
+        }
+      );
 
       // --- Improved Success Handling ---
       // Check for HTTP status 200 and presence of access_token
-      if (response.status === 200 && response.data.access_token && response.data.user) {
+      if (
+        response.status === 200 &&
+        response.data.access_token &&
+        response.data.user
+      ) {
         console.log("Login successful:", response.data.user);
         console.log("Access Token:", response.data.access_token);
         console.log("Refresh Token:", response.data.refresh_token);
 
         // Call the Zustand login action to update the store state
-        login(response.data.user, response.data.access_token, response.data.refresh_token || ""); // Pass refresh token, default to empty string
+        login(
+          response.data.user,
+          response.data.access_token,
+          response.data.refresh_token || ""
+        ); // Pass refresh token, default to empty string
 
         toast.success("Login successful", { duration: 3000 });
         setLocalError(null); // Clear any local errors
         navigate("/dashboard"); // Redirect to dashboard AFTER state is updated
-
       } else {
         // Handle cases where the request was successful (e.g., 200 OK)
         // but the backend response structure was unexpected or incomplete
-        const errorMessage = response.data?.message || "Login failed: Unexpected response from server.";
+        const errorMessage =
+          response.data?.message ||
+          "Login failed: Unexpected response from server.";
         setLocalError(errorMessage);
         setAuthError(errorMessage); // Also set global error
         toast.error(errorMessage, { duration: 3000 });
       }
-
-    } catch (err: unknown) { // Use unknown for better type safety
+    } catch (err: unknown) {
+      // Use unknown for better type safety
       console.error("Login error:", err);
 
       // --- Improved Error Handling ---
       // Check if it's an Axios error with a response from the backend
-      if (axios.isAxiosError(err) && err.response) { // Narrow down the type using a type guard
+      if (axios.isAxiosError(err) && err.response) {
+        // Narrow down the type using a type guard
         // Use the error message provided by the backend if available
-        const backendErrorMessage = err.response.data?.error || err.response.data?.message || "Login failed. Please check your credentials.";
+        const backendErrorMessage =
+          err.response.data?.error ||
+          err.response.data?.message ||
+          "Login failed. Please check your credentials.";
         setLocalError(backendErrorMessage);
         setAuthError(backendErrorMessage); // Also set global error
         toast.error(backendErrorMessage, { duration: 3000 });
       } else {
         // Handle non-Axios errors or errors without a response
-        const genericErrorMessage = "An unexpected error occurred. Please try again.";
+        const genericErrorMessage =
+          "An unexpected error occurred. Please try again.";
         setLocalError(genericErrorMessage);
         setAuthError(genericErrorMessage); // Also set global error
         toast.error(genericErrorMessage, { duration: 3000 });
       }
       // --- End Improved Error Handling ---
-
     } finally {
       setIsSubmitting(false); // Stop local form submission loading in finally block
     }
@@ -124,7 +140,9 @@ const LoginPage: React.FC = () => {
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
         <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
         {/* Display local error message */}
-        {localError && <p className="text-red-500 text-sm mb-4">{localError}</p>}
+        {localError && (
+          <p className="text-red-500 text-sm mb-4">{localError}</p>
+        )}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">
@@ -143,7 +161,9 @@ const LoginPage: React.FC = () => {
           </div>
           {/* Password Input with Toggle */}
           <div>
-            <label className="block text-sm font-medium text-gray-700">Password</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Password
+            </label>
             <div className="relative mt-1">
               <input
                 // Dynamically set input type based on state
@@ -160,14 +180,32 @@ const LoginPage: React.FC = () => {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            {errors.Password && <p className="text-red-500 text-sm mt-1">{errors.Password.message}</p>}
+            {errors.Password && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.Password.message}
+              </p>
+            )}
+          </div>
+          <div className="text-right text-sm mt-2">
+            <Link
+              to="/forgot-password"
+              className="text-blue-500 hover:text-blue-600 focus:outline-none"
+            >
+              Forgot Password?
+            </Link>
           </div>
           <button
             type="submit"
             disabled={isSubmitting} // Use local isSubmitting state
-            className={`w-full flex items-center justify-center bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`w-full flex items-center justify-center bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : "Login"}
+            {isSubmitting ? (
+              <Loader2 className="animate-spin h-5 w-5" />
+            ) : (
+              "Login"
+            )}
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-600">

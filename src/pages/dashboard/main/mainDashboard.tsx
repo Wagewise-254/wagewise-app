@@ -10,6 +10,7 @@ import { API_BASE_URL } from '@/config';
 import useAuthStore from '@/store/authStore';
 
 import OnboardingDialog from '@/components/onboarding/OnboardingDialog';
+import  SetRecoveryEmailDialog  from '@/components/auth/SetRecoveryEmailDialog';
 import SideNav from '@/components/dashboard/layout/sideNav';
 import DashboardContent from '@/components/dashboard/main/DashboardContent';
 
@@ -20,13 +21,18 @@ interface CompanyDetailsResponse {
   onboardingComplete: boolean;
 }
 
+interface RecoveryStatusResponse {
+    hasRecoveryEmail: boolean;
+}
+
 const MainDashboard: React.FC = () => {
-  const { accessToken } = useAuthStore();
+  const { accessToken,  setRecoveryStatus, hasRecoveryEmail  } = useAuthStore();
   const navigate = useNavigate();
 
   const [isLoadingCompany, setIsLoadingCompany] = useState(true);
   const [companyDetails, setCompanyDetails] = useState<CompanyDetailsResponse['companyDetails'] | null>(null);
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
+  const [isRecoveryDialogVisible, setIsRecoveryDialogVisible] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [isDialogVisible, setIsDialogVisible] = useState(false);
@@ -45,16 +51,21 @@ const MainDashboard: React.FC = () => {
       setFetchError(null);
 
       try {
-        const response = await axios.get<CompanyDetailsResponse>(`${API_BASE_URL}/company`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
+        // Fetch company details and recovery status in parallel for efficiency
+        const [companyRes, recoveryRes] = await Promise.all([
+          axios.get<CompanyDetailsResponse>(`${API_BASE_URL}/company`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }),
+          axios.get<RecoveryStatusResponse>(`${API_BASE_URL}/users/recovery-status`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          })
+        ]);
 
-        console.log("Fetch Company Details Response:", response.data);
+        console.log("Fetch Company Details Response:", companyRes.data);
 
-        setCompanyDetails(response.data.companyDetails);
-        setOnboardingComplete(response.data.onboardingComplete);
+        setCompanyDetails(companyRes.data.companyDetails);
+        setOnboardingComplete(companyRes.data.onboardingComplete);
+         setRecoveryStatus(recoveryRes.data.hasRecoveryEmail); // Update the global authStore
         setIsLoadingCompany(false);
 
       } catch (err: unknown) {
@@ -74,18 +85,21 @@ const MainDashboard: React.FC = () => {
     };
 
     fetchCompanyDetails();
-  }, [accessToken, navigate]);
+  }, [accessToken, navigate, setRecoveryStatus]);
 
   console.log(companyDetails);
 
-  // Effect to control dialog visibility based on onboardingComplete status
+  // This effect reacts to changes in recovery status or onboarding status
+  // to determine if the recovery dialog should be shown.
   useEffect(() => {
-    if (onboardingComplete === false) {
-      setIsDialogVisible(true);
+    // Show the dialog only after initial data is loaded, onboarding is done,
+    // and we know for sure the user has not set a recovery email.
+    if (onboardingComplete === true && hasRecoveryEmail === false) {
+      setIsRecoveryDialogVisible(true);
     } else {
-      setIsDialogVisible(false);
+      setIsRecoveryDialogVisible(false);
     }
-  }, [onboardingComplete]);
+  }, [onboardingComplete, hasRecoveryEmail]);
 
 
   // Function to handle onboarding completion from the dialog
@@ -112,9 +126,12 @@ const MainDashboard: React.FC = () => {
 
   if (fetchError) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-red-500">
-        <p className="text-lg mb-4">Error loading dashboard:</p>
+      <div className="flex flex-col h-screen items-center justify-center text-center text-red-600 bg-gray-50">
+        <p className="text-lg font-semibold mb-2">Could not load dashboard</p>
         <p>{fetchError}</p>
+        <button onClick={() => navigate('/login')} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+            Go to Login
+        </button>
       </div>
     );
   }
@@ -122,6 +139,13 @@ const MainDashboard: React.FC = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       <SideNav />
+
+      {/* RecoveryEmailDialog will only show after onboarding is complete and if needed. */}
+      <SetRecoveryEmailDialog
+          isOpen={isRecoveryDialogVisible}
+          onClose={() => setIsRecoveryDialogVisible(false)}
+      />
+
       {/* Conditional rendering for OnboardingDialog or DashboardContent */}
       {onboardingComplete === false ? (
         <OnboardingDialog
