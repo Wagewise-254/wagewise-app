@@ -1,6 +1,7 @@
 // src/components/dashboard/employee/EmployeeTable.tsx - Updated with Comprehensive Employee Interface
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ColumnDef,
   flexRender,
@@ -11,7 +12,6 @@ import {
 } from "@tanstack/react-table";
 import axios from "axios";
 
-// Import Shadcn UI table components
 import {
   Table,
   TableBody,
@@ -116,16 +116,11 @@ export interface Employee {
 interface EmployeeTableProps {
   searchTerm: string;
   onDataChange: () => void;
-  onEditEmployee: (employee: Employee) => void;
 }
 
-const EmployeeTable: React.FC<EmployeeTableProps> = ({
-  searchTerm,
-  onDataChange,
-  onEditEmployee,
-}) => {
+const EmployeeTable: React.FC<EmployeeTableProps> = ({ searchTerm, onDataChange,}) => {
+  const navigate = useNavigate();
   const { accessToken } = useAuthStore();
-
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -234,7 +229,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
 
           const handleEditClick = () => {
             console.log("Editing employee:", employee.id);
-            onEditEmployee(employee);
+             navigate(`/employee/edit/${employee.id}`);
           };
 
           const handleDeleteClick = () => {
@@ -247,7 +242,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 cursor-pointer"
                   disabled={loading}
                 >
                   <span className="sr-only">Open menu</span>
@@ -256,16 +251,16 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <div className="cursor-not-allowed">
-                  <DropdownMenuItem onClick={handleEditClick} disabled>
+                  <DropdownMenuItem 
+                  onClick={handleEditClick}
+                  className="cursor-pointer">
                     Edit
                   </DropdownMenuItem>
-                </div>
 
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleDeleteClick}
-                  className="text-red-600 focus:text-red-600"
+                  className="text-red-600 focus:text-red-600  cursor-pointer"
                 >
                   Delete
                 </DropdownMenuItem>
@@ -275,7 +270,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = ({
         },
       },
     ],
-    [loading, onEditEmployee]
+    [loading, navigate]
   );
 
   // --- TanStack Table Instance ---

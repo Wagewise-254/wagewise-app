@@ -43,7 +43,6 @@ const SideNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [appVersion, setAppVersion] = useState(''); // State to hold the app version
 
   const logout = useAuthStore((state) => state.logout);
 
@@ -61,14 +60,6 @@ const SideNav = () => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-
-  // Effect to get and set the app version
-  useEffect(() => {
-    // CORRECTED: Access the version using import.meta.env
-    if (import.meta.env.VITE_APP_VERSION) {
-      setAppVersion(import.meta.env.VITE_APP_VERSION);
-    }
-  }, []); // Run once on component mount
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -186,12 +177,6 @@ const SideNav = () => {
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
-          {/* App Version Display */}
-          {appVersion && (
-            <div className=" bg-amber-300 text-center text-white/70 text-sm mt-4">
-              Version {appVersion} 
-            </div>
-          )}
         </div>
       </SheetContent>
     </Sheet>
