@@ -1,517 +1,277 @@
-// src/components/dashboard/payroll/PayrollProgressDialog.tsx
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import axios from "axios";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Loader2,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  Send,
-  FileText,
-  Users,
-} from "lucide-react"; // Added Users
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// src/components/dashboard/payroll/PayrollProgressDialog.tsx - CORRECTED & IMPROVED
 
-import { API_BASE_URL } from "@/config";
-import useAuthStore from "@/store/authStore";
-import { toast } from "sonner";
-import GenerateBulkFilesDialog from "./GenerateBulkFilesDialog"; // Import the new dialog
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import axios from 'axios';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Loader2, CheckCircle, XCircle, Send, Download, MailWarning, SkipForward } from 'lucide-react';
+import { toast } from 'sonner';
 
-interface PayrollProgressDialogProps {
-  isOpen: boolean;
-  onClose: (triggerHistoryRefetchAfterBulkDialog?: boolean) => void;
-  payrollRunId: string | null;
-  payrollMonthYear: string;
-  onProcessingComplete: (success: boolean, message?: string) => void;
-}
+import { API_BASE_URL } from '@/config';
+import useAuthStore from '@/store/authStore';
+
+type StepStatus = 'pending' | 'in-progress' | 'success' | 'error' | 'skipped';
 
 interface ProgressDetails {
-  stage: string;
-  message: string;
-  progress?: number;
-  error?: string;
-  failed_emails_count?: number;
-  failed_emails_list?: { employee_id: string; email: string; reason: string }[];
-  // Example: If backend sends total employees during calculation
-  total_employees_to_process?: number;
+    stage: string;
+    message: string;
+    progress?: number;
+    error?: string;
+    total_employees_processed?: number;
 }
 
 interface PayrollStatusResponse {
-  id: string;
-  status: string;
-  payrollMonth: string;
-  progressDetails?: ProgressDetails;
-  summary?: { totalNetPay: number | string };
+    status: string;
+    progressDetails?: ProgressDetails;
 }
 
-const STAGE_ICONS: { [key: string]: React.ElementType } = {
-  Initiated: Loader2,
-  Calculating: Loader2,
-  Calculation_Complete: CheckCircle,
-  Sending_Payslips: Send,
-  Payslips_Sent: CheckCircle,
-  Processing_Failed: XCircle,
-  Calculation_Failed: XCircle,
-  Payslip_Sending_Failed: AlertTriangle,
-  Failed: XCircle,
-  default: Loader2,
-};
-const STAGE_COLORS: { [key: string]: string } = {
-  Initiated: "text-blue-500",
-  Calculating: "text-blue-500",
-  Calculation_Complete: "text-green-500",
-  Sending_Payslips: "text-blue-500",
-  Payslips_Sent: "text-green-500",
-  Processing_Failed: "text-red-500",
-  Calculation_Failed: "text-red-500",
-  Payslip_Sending_Failed: "text-orange-500",
-  Failed: "text-red-500",
-  default: "text-gray-500",
-};
-const FINAL_STAGES = [
-  "Payslips_Sent",
-  "Processing_Failed",
-  "Calculation_Failed",
-  "Payslip_Sending_Failed",
-  "Calculation_Complete",
-  "Failed",
-];
-
-interface GenerateBulkFilesDialogState {
-  isOpen: boolean;
-  payrollRunId: string | null;
-  payrollMonthYear: string;
+interface PayrollProgressDialogProps {
+    isOpen: boolean;
+    onClose: (refetchHistory: boolean) => void;
+    payrollRunId: string;
+    payrollMonthYear: string;
+    onProcessingComplete: (success: boolean) => void;
 }
 
 const PayrollProgressDialog: React.FC<PayrollProgressDialogProps> = ({
-  isOpen,
-  onClose,
-  payrollRunId,
-  payrollMonthYear,
-  onProcessingComplete,
-}) => {
-  const { accessToken } = useAuthStore();
-  const [currentStatus, setCurrentStatus] = useState<string | null>(null);
-  const [progressDetails, setProgressDetails] =
-    useState<ProgressDetails | null>(null);
-  const [logMessages, setLogMessages] = useState<string[]>([]);
-  const pollingIntervalIdRef = useRef<NodeJS.Timeout | null>(null);
-  const [isProcessComplete, setIsProcessComplete] = useState(false);
-  const lastLoggedEmployeeCountRef = useRef<number>(0); // To track logging for employee processing
-
-  const [generateBulkFilesDialogInfo, setGenerateBulkFilesDialogInfo] =
-    useState<GenerateBulkFilesDialogState>({
-      isOpen: false,
-      payrollRunId: null,
-      payrollMonthYear: "",
-    });
-
-  const fetchStatus = useCallback(async () => {
-    if (!payrollRunId || !accessToken) return;
-
-    try {
-      const response = await axios.get<PayrollStatusResponse>(
-        `${API_BASE_URL}/payroll/run-status/${payrollRunId}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      const data = response.data;
-      setCurrentStatus(data.status);
-
-      if (data.progressDetails) {
-        const oldProgressDetails = progressDetails; // Keep a reference to old details for comparison
-        setProgressDetails(data.progressDetails);
-        const currentMessageTimestamped = `${new Date().toLocaleTimeString()}: ${
-          data.progressDetails.message
-        }`;
-
-        const employeeProcessingPattern = /Processing employee (\d+) of (\d+):/;
-        const match = data.progressDetails.message.match(
-          employeeProcessingPattern
-        );
-
-        let shouldLogThisMessage = true;
-
-        if (match) {
-          const currentEmployeeCount = parseInt(match[1], 10);
-          const totalEmployees =
-            parseInt(match[2], 10) ||
-            data.progressDetails.total_employees_to_process ||
-            0;
-
-          if (totalEmployees > 10) {
-            // Only condense log if more than 30 employees
-            // Log start, every 20%, and end for condensed view
-            const progressPercentage =
-              (currentEmployeeCount / totalEmployees) * 100;
-            if (
-              currentEmployeeCount === 1 ||
-              currentEmployeeCount === totalEmployees ||
-              Math.floor(progressPercentage / 20) >
-                Math.floor(lastLoggedEmployeeCountRef.current / 20)
-            ) {
-              // Log this specific message
-              lastLoggedEmployeeCountRef.current = progressPercentage;
-            } else {
-              shouldLogThisMessage = false; // Skip logging this specific "Processing employee X of Y"
-            }
-          }
-          // If not skipping, update the general message to show overall progress
-          if (
-            data.progressDetails.message &&
-            data.progressDetails.stage === "Calculating" &&
-            totalEmployees > 0
-          ) {
-            // We can update a general "Calculating X/Y employees" message for the stage display instead of individual logs
-            // For now, the main progress bar and stage message should cover this.
-            // The log filtering above handles reducing spam.
-          }
-        }
-
-        // Add to log only if it's a new message (or a significant employee processing step)
-        if (
-          shouldLogThisMessage &&
-          (logMessages.length === 0 ||
-            logMessages[logMessages.length - 1] !== currentMessageTimestamped)
-        ) {
-          // Prevent duplicate consecutive messages
-          if (
-            data.progressDetails &&
-            !logMessages.find((log) =>
-              log.endsWith(data.progressDetails!.message)
-            )
-          ) {
-            setLogMessages((prev) => [...prev, currentMessageTimestamped]);
-          }
-        }
-        // Update progressDetails even if not logging every message for UI elements that use it
-        if (
-          oldProgressDetails?.message !== data.progressDetails.message ||
-          oldProgressDetails?.progress !== data.progressDetails.progress
-        ) {
-          setProgressDetails(data.progressDetails);
-        }
-      }
-
-      if (FINAL_STAGES.includes(data.status) && !isProcessComplete) {
-        // Ensure this block runs only once
-        if (pollingIntervalIdRef.current)
-          clearInterval(pollingIntervalIdRef.current);
-        pollingIntervalIdRef.current = null;
-        setIsProcessComplete(true); // Mark as complete to stop further processing here
-
-        const success =
-          data.status === "Payslips_Sent" ||
-          data.status === "Calculation_Complete";
-        onProcessingComplete(
-          success,
-          data.progressDetails?.message || data.status
-        ); // Notify parent
-
-        if (success) {
-          toast.success(
-            `Payroll for ${payrollMonthYear} processed: ${
-              data.progressDetails?.message || data.status
-            }`
-          );
-          setGenerateBulkFilesDialogInfo({
-            isOpen: true,
-            payrollRunId: payrollRunId,
-            payrollMonthYear: payrollMonthYear,
-          });
-        } else if (data.status === "Payslip_Sending_Failed") {
-          toast.warning(
-            `Payroll for ${payrollMonthYear} processed with issues: ${
-              data.progressDetails?.message || data.status
-            }`
-          );
-        } else {
-          toast.error(
-            `Payroll for ${payrollMonthYear} failed: ${
-              data.progressDetails?.error ||
-              data.progressDetails?.message ||
-              data.status
-            }`
-          );
-        }
-        // If processing failed, we can close this dialog and signal history refetch
-        onClose(true); // true to refetch history to see the failed run
-      }
-    } catch (error) {
-      console.error("Error fetching payroll status:", error);
-      // Stop polling on critical error to prevent loop
-      if (pollingIntervalIdRef.current)
-        clearInterval(pollingIntervalIdRef.current);
-      pollingIntervalIdRef.current = null;
-      setProgressDetails((prev) => ({
-        ...prev,
-        stage: "Error",
-        message: "Could not fetch payroll status.",
-        error: (error as Error).message,
-      }));
-      toast.error("Failed to get payroll status update.");
-    }
-  }, [
+    isOpen,
+    onClose,
     payrollRunId,
-    accessToken,
-    onProcessingComplete,
     payrollMonthYear,
-    isProcessComplete /* ,logMessages, progressDetails (removed to avoid loop with setProgressDetails) */,
-  ]);
+    onProcessingComplete,
+}) => {
+    const { accessToken } = useAuthStore();
+    const [openAccordion, setOpenAccordion] = useState<string>("step1");
 
-  useEffect(() => {
-    if (isOpen && payrollRunId) {
-      setLogMessages([
-        `${new Date().toLocaleTimeString()}: Initiating payroll process for ${payrollMonthYear}...`,
-      ]);
-      setIsProcessComplete(false); // Reset completion status when dialog is (re)opened
-      lastLoggedEmployeeCountRef.current = 0;
-      setCurrentStatus(null); // Reset status
-      setProgressDetails(null); // Reset details
+    const [calcStatus, setCalcStatus] = useState<StepStatus>('in-progress');
+    const [emailStatus, setEmailStatus] = useState<StepStatus>('pending');
+    const [fileStatus, setFileStatus] = useState<StepStatus>('pending');
 
-      if (pollingIntervalIdRef.current) {
-        // Clear any existing interval
-        clearInterval(pollingIntervalIdRef.current);
-        pollingIntervalIdRef.current = null;
-      }
+    const [progressDetails, setProgressDetails] = useState<ProgressDetails | null>(null);
+    const pollingIntervalIdRef = useRef<NodeJS.Timeout | null>(null);
 
-      fetchStatus(); // Initial fetch
-      pollingIntervalIdRef.current = setInterval(fetchStatus, 3000); // Start new interval
-
-      return () => {
+    // CHANGE: Stop the polling function more explicitly
+    const stopPolling = useCallback(() => {
         if (pollingIntervalIdRef.current) {
-          clearInterval(pollingIntervalIdRef.current);
-          pollingIntervalIdRef.current = null;
+            clearInterval(pollingIntervalIdRef.current);
+            pollingIntervalIdRef.current = null;
+            console.log("Polling stopped.");
         }
-      };
-    } else if (!isOpen) {
-      // Dialog closed externally
-      if (pollingIntervalIdRef.current) {
-        clearInterval(pollingIntervalIdRef.current);
-        pollingIntervalIdRef.current = null;
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, payrollRunId, accessToken, fetchStatus]); // fetchStatus is memoized
+    }, []);
 
-  const StageIcon = progressDetails?.stage
-    ? STAGE_ICONS[progressDetails.stage] || STAGE_ICONS.default
-    : STAGE_ICONS.default;
-  const iconColor = progressDetails?.stage
-    ? STAGE_COLORS[progressDetails.stage] || STAGE_COLORS.default
-    : STAGE_COLORS.default;
+    const fetchStatus = useCallback(async () => {
+        if (!payrollRunId || !pollingIntervalIdRef.current) return; // Only run if polling is active
 
-  // This is called when THIS dialog needs to be closed.
-  // It might be called by its own "Close" button, or after GenerateBulkFilesDialog is done.
-  const handleThisDialogClose = (refetchHistory: boolean) => {
-    if (pollingIntervalIdRef.current) {
-      clearInterval(pollingIntervalIdRef.current);
-      pollingIntervalIdRef.current = null;
-    }
-    onClose(refetchHistory); // Call the onClose passed from RunPayrollDialog
-  };
-
-  return (
-    <>
-      <Dialog
-        open={isOpen && !generateBulkFilesDialogInfo.isOpen}
-        onOpenChange={(open) => { 
-            if(!open && !generateBulkFilesDialogInfo.isOpen) { // Only close if bulk dialog isn't the one active
-                handleThisDialogClose(isProcessComplete && (currentStatus === 'Payslips_Sent' || currentStatus === 'Calculation_Complete'));
-            }
-        }}
-      >
-        <DialogContent className="sm:max-w-lg md:max-w-2xl lg:max-w-3xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="text-2xl flex items-center">
-              <FileText className="mr-3 h-7 w-7 text-[#7F5EFD]" />
-              Processing Payroll for {payrollMonthYear}
-            </DialogTitle>
-            <DialogDescription>
-              Track the progress of your payroll run. This may take a few
-              moments.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4 px-2 space-y-6 flex-1 overflow-y-auto">
-            <div className="p-4 border rounded-lg shadow bg-slate-50">
-              <div className="flex items-center mb-2">
-                <StageIcon
-                  className={`mr-3 h-8 w-8 ${iconColor} ${
-                    progressDetails?.stage &&
-                    STAGE_ICONS[progressDetails.stage] === Loader2
-                      ? "animate-spin"
-                      : ""
-                  }`}
-                />
-                <div>
-                  <p className={`text-xl font-semibold ${iconColor}`}>
-                    {progressDetails?.stage
-                      ? progressDetails.stage.replace(/_/g, " ")
-                      : "Initializing..."}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {currentStatus
-                      ? `Overall Status: ${currentStatus.replace(/_/g, " ")}`
-                      : "Waiting for status..."}
-                  </p>
-                </div>
-              </div>
-
-              {progressDetails?.stage === "Calculating" &&
-                progressDetails?.message.includes(" of ") && (
-                  <div className="mt-3 mb-1">
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>
-                        <Users className="inline h-4 w-4 mr-1" />
-                        {progressDetails?.message}
-                      </span>
-                      {progressDetails.progress !== undefined && (
-                        <span>{progressDetails.progress.toFixed(0)}%</span>
-                      )}
-                    </div>
-                    {progressDetails.progress !== undefined && (
-                      <Progress
-                        value={progressDetails.progress}
-                        className="w-full [&>div]:bg-[#7F5EFD]"
-                      />
-                    )}
-                  </div>
-                )}
-              {progressDetails?.stage !== "Calculating" &&
-                progressDetails?.progress !== undefined &&
-                progressDetails.progress >= 0 && (
-                  <div className="mt-3 mb-1">
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>{progressDetails?.message || "Processing..."}</span>
-                      <span>{progressDetails.progress.toFixed(0)}%</span>
-                    </div>
-                    <Progress
-                      value={progressDetails.progress}
-                      className="w-full [&>div]:bg-[#7F5EFD]"
-                    />
-                  </div>
-                )}
-              {(progressDetails?.progress === undefined ||
-                progressDetails.progress < 0) &&
-                progressDetails?.message &&
-                progressDetails?.stage !== "Calculating" && (
-                  <p className="text-sm text-gray-700 mt-1">
-                    {progressDetails?.message}
-                  </p>
-                )}
-            </div>
-
-            {logMessages.length > 0 && (
-              <div className="mt-4">
-                <h3 className="text-md font-semibold mb-2 text-gray-700">
-                  Activity Log:
-                </h3>
-                <ScrollArea className="h-[150px] md:h-[200px] w-full rounded-md border p-3 bg-gray-900 text-gray-200 font-mono text-xs">
-                  {logMessages.map((msg, index) => (
-                    <p
-                      key={index}
-                      className="whitespace-pre-wrap leading-relaxed"
-                    >
-                      {msg.includes("Failed") ||
-                      msg.includes("Error") ||
-                      msg.includes("failed") ? (
-                        <span className="text-yellow-400">{msg}</span>
-                      ) : msg.includes("Warning") || msg.includes("issues") ? (
-                        <span className="text-yellow-400">{msg}</span>
-                      ) : (
-                        msg
-                      )}
-                    </p>
-                  ))}
-                </ScrollArea>
-              </div>
-            )}
-
-            {progressDetails?.failed_emails_count &&
-              progressDetails.failed_emails_count > 0 && (
-                <div className="mt-4 p-3 border rounded-md bg-orange-50 border-orange-200">
-                  <h3 className="text-md font-semibold text-orange-700 flex items-center">
-                    <AlertTriangle className="mr-2 h-5 w-5" /> Payslip Emailing
-                    Issues
-                  </h3>
-                  <p className="text-sm text-orange-600 mt-1">
-                    {progressDetails.failed_emails_count} employee(s) did not
-                    receive their payslip.
-                  </p>
-                  {progressDetails.failed_emails_list &&
-                    progressDetails.failed_emails_list.length > 0 && (
-                      <ScrollArea className="h-[100px] mt-2 text-xs text-orange-700">
-                        <ul className="list-disc pl-5">
-                          {progressDetails.failed_emails_list.map(
-                            (item, idx) => (
-                              <li key={idx}>
-                                {" "}
-                                Emp ID: {item.employee_id || "N/A"} - Email:{" "}
-                                {item.email || "N/A"} - Reason: {item.reason}{" "}
-                              </li>
-                            )
-                          )}
-                        </ul>
-                      </ScrollArea>
-                    )}
-                </div>
-              )}
-            {progressDetails?.error && (
-              <div className="mt-4 p-3 border rounded-md bg-red-50 border-red-200">
-                <h3 className="text-md font-semibold text-red-700 flex items-center">
-                  <XCircle className="mr-2 h-5 w-5" /> An Error Occurred
-                </h3>
-                <p className="text-sm text-red-600 mt-1">
-                  {progressDetails.error}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="pt-4 border-t">
-            <Button 
-                variant="outline" 
-                onClick={() => handleThisDialogClose(isProcessComplete && (currentStatus === 'Payslips_Sent' || currentStatus === 'Calculation_Complete'))} 
-                className="w-full sm:w-auto"
-            >
-              {isProcessComplete && !generateBulkFilesDialogInfo.isOpen
-                ? "Finish"
-                : "Close (Processing in Background)"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {generateBulkFilesDialogInfo.payrollRunId && (
-        <GenerateBulkFilesDialog
-         isOpen={generateBulkFilesDialogInfo.isOpen}
-          onClose={(refetchHistoryAfterBulk) => {
-            // Changed param name for clarity
-            setGenerateBulkFilesDialogInfo({
-              isOpen: false,
-              payrollRunId: null,
-              payrollMonthYear: "",
+        try {
+            const response = await axios.get<PayrollStatusResponse>(`${API_BASE_URL}/payroll/run-status/${payrollRunId}`, {
+                headers: { Authorization: `Bearer ${accessToken}` },
             });
-            // When GenerateBulkFilesDialog closes, it signals whether to refetch history.
-            // This also implies the main ProgressDialog should close.
-           handleThisDialogClose(refetchHistoryAfterBulk);
-          }}
-          payrollRunId={generateBulkFilesDialogInfo.payrollRunId}
-          payrollMonthYear={generateBulkFilesDialogInfo.payrollMonthYear}
-        />
-      )}
-    </>
-  );
+            const data = response.data;
+            setProgressDetails(data.progressDetails || null);
+            
+            // CHANGE: More robust check for terminal states
+            const terminalCalculationStates = ['Calculation_Complete', 'Calculation_Failed', 'Completed_No_Employees'];
+            if (terminalCalculationStates.includes(data.status)) {
+                console.log(`Terminal state reached: ${data.status}. Stopping poller.`);
+                stopPolling(); 
+
+                if (data.status === 'Calculation_Complete' || data.status === 'Completed_No_Employees') {
+                    setCalcStatus('success');
+                    // CHANGE: Add a clearer success message before moving on
+                    setProgressDetails(prev => ({
+                        ...(prev ?? { stage: "Calculation", message: "" }),
+                        stage: (prev && prev.stage) ? prev.stage : "Calculation",
+                        message: "Calculation successful! Please proceed to the next step."
+                    }));
+                    setOpenAccordion("step2");
+                } else {
+                    setCalcStatus('error');
+                    setProgressDetails(prev => ({
+                        ...(prev ?? { stage: "Calculation", message: "" }),
+                        stage: (prev && prev.stage) ? prev.stage : "Calculation",
+                        message: data.progressDetails?.error || "An unknown error occurred during calculation."
+                    }))
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching payroll status:", error);
+            setCalcStatus('error');
+            setProgressDetails({ stage: 'Error', message: 'Could not fetch status updates.' });
+            stopPolling();
+        }
+    }, [payrollRunId, accessToken, stopPolling]);
+
+    useEffect(() => {
+        if (isOpen) {
+            // Reset state on open
+            setCalcStatus('in-progress');
+            setEmailStatus('pending');
+            setFileStatus('pending');
+            setOpenAccordion("step1");
+            setProgressDetails(null);
+            
+            // Clear any old interval before starting a new one
+            if (pollingIntervalIdRef.current) {
+                clearInterval(pollingIntervalIdRef.current);
+            }
+            // Start a new polling interval
+            pollingIntervalIdRef.current = setInterval(fetchStatus, 2500);
+            fetchStatus(); // Initial fetch
+        } else {
+            // Cleanup on close
+            stopPolling();
+        }
+        // Cleanup function for when component unmounts
+        return () => stopPolling();
+    }, [isOpen, fetchStatus, stopPolling]);
+
+
+    const handleSendEmails = async () => {
+        setEmailStatus('in-progress');
+        try {
+            await axios.post(`${API_BASE_URL}/payroll/send-payslips/${payrollRunId}`, {}, {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+            toast.info("Payslip emailing has started in the background.");
+            setEmailStatus('success');
+            setOpenAccordion('step3');
+        } catch (error) {
+            toast.error("Failed to start the email sending process.");
+            setEmailStatus('error');
+        }
+    };
+
+    const handleSkipEmails = () => {
+        setEmailStatus('skipped');
+        setOpenAccordion('step3');
+    };
+    
+    const handleGenerateFiles = async () => {
+        setFileStatus('in-progress');
+        try {
+            const response = await axios.post(`${API_BASE_URL}/payroll/generate-bulk-files/${payrollRunId}`, {}, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+                responseType: 'blob'
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            const contentDisposition = response.headers['content-disposition'];
+            let filename = `payroll_files_${payrollMonthYear}.zip`;
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                if (filenameMatch && filenameMatch[1]) filename = filenameMatch[1];
+            }
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+            toast.success("Statutory files downloaded successfully!");
+            setFileStatus('success');
+        } catch (error) {
+            toast.error("Failed to generate or download the files bundle.");
+            setFileStatus('error');
+        }
+    };
+
+    const handleFinish = () => {
+        stopPolling();
+        onProcessingComplete(calcStatus === 'success');
+        onClose(true);
+    };
+    
+    // (getStatusIcon function remains the same)
+    const getStatusIcon = (status: StepStatus) => {
+        switch (status) {
+            case 'in-progress': return <Loader2 className="h-5 w-5 animate-spin text-blue-500" />;
+            case 'success': return <CheckCircle className="h-5 w-5 text-green-500" />;
+            case 'error': return <XCircle className="h-5 w-5 text-red-500" />;
+            case 'skipped': return <SkipForward className="h-5 w-5 text-gray-500" />;
+            case 'pending': return <MailWarning className="h-5 w-5 text-yellow-500" />;
+            default: return null;
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleFinish(); }}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle className="text-xl">Payroll Progress for {payrollMonthYear}</DialogTitle>
+                    <DialogDescription>
+                        Follow the steps below to complete the payroll process.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <Accordion type="single" collapsible value={openAccordion} onValueChange={setOpenAccordion} className="w-full">
+                    <AccordionItem value="step1">
+                        <AccordionTrigger className="text-base">
+                            <div className="flex items-center gap-3">
+                                {getStatusIcon(calcStatus)}
+                                <span>1. Payroll Run</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-4 space-y-3">
+                            {calcStatus === 'in-progress' && (
+                                <>
+                                    <p className="text-sm text-gray-600">{progressDetails?.message || 'Calculation is in progress...'}</p>
+                                    {progressDetails?.progress !== undefined && <Progress value={progressDetails.progress} className="w-full [&>div]:bg-blue-500" />}
+                                </>
+                            )}
+                            {calcStatus === 'success' && <p className="text-sm text-green-600 font-medium">{progressDetails?.message || 'Payroll calculation completed successfully.'}</p>}
+                            {calcStatus === 'error' && <p className="text-sm text-red-600 font-medium">{progressDetails?.message || 'An error occurred during calculation.'}</p>}
+                        </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="step2" disabled={calcStatus !== 'success'}>
+                        <AccordionTrigger className="text-base">
+                            <div className="flex items-center gap-3">
+                                {getStatusIcon(emailStatus)}
+                                <span>2. Email Payslips</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-4 space-y-4">
+                            <p className="text-sm text-gray-600">Send payslips to all active employees with a valid email address.</p>
+                            <div className="flex justify-end gap-3">
+                                <Button variant="outline" onClick={handleSkipEmails} disabled={emailStatus === 'in-progress' || emailStatus === 'success'}>Skip</Button>
+                                <Button className="bg-[#7F5EFD] hover:bg-[#6a4fcf]" onClick={handleSendEmails} disabled={emailStatus === 'in-progress' || emailStatus === 'success'}>
+                                    {emailStatus === 'in-progress' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                    Send Emails
+                                </Button>
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="step3" disabled={emailStatus === 'pending' || emailStatus === 'in-progress'}>
+                        <AccordionTrigger className="text-base">
+                             <div className="flex items-center gap-3">
+                                {getStatusIcon(fileStatus)}
+                                <span>3. Generate Statutory Files</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-4 space-y-4">
+                             <p className="text-sm text-gray-600">Download a zip file containing the required statutory returns.</p>
+                             <div className="flex justify-end gap-3">
+                                 <Button variant="outline" onClick={() => setFileStatus('skipped')}>Skip</Button>
+                                 <Button className="bg-[#7F5EFD] hover:bg-[#6a4fcf]" onClick={handleGenerateFiles} disabled={fileStatus === 'in-progress' || fileStatus === 'success'}>
+                                    {fileStatus === 'in-progress' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                     Download .zip
+                                 </Button>
+                             </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+
+                <DialogFooter className="mt-4">
+                    <Button variant="secondary" onClick={handleFinish}>Finish & Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 };
 
 export default PayrollProgressDialog;

@@ -53,16 +53,9 @@ const RunPayrollDialog: React.FC<RunPayrollDialogProps> = ({
   onPayrollRunSuccess,
 }) => {
   const { accessToken } = useAuthStore();
-  const {
-    handleSubmit,
-    reset,
-    setValue,
-    watch,
-    formState: { errors, isDirty },
-  } = useForm<RunPayrollFormInputs>();
+ const { handleSubmit, reset, setValue } = useForm<RunPayrollFormInputs>();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
 
   // State for the new Progress Dialog
   const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
@@ -99,8 +92,7 @@ const RunPayrollDialog: React.FC<RunPayrollDialogProps> = ({
         payrollMonth: currentMonth,
         payrollYear: currentYear,
       });
-      setFormError(null);
-      setIsSubmitting(false);
+      //setFormError(null);
     }
   }, [isOpen, reset, currentMonth, currentYear]);
 
@@ -111,17 +103,15 @@ const RunPayrollDialog: React.FC<RunPayrollDialogProps> = ({
     }
 
     setIsSubmitting(true);
-    setFormError(null);
+    //setFormError(null);
     setCurrentPayrollMonthYear(`${data.payrollMonth} ${data.payrollYear}`); // For display in progress dialog
 
     try {
       // Use the new endpoint
-      const response = await axios.post<InitiateRunResponse>(
-        `${API_BASE_URL}/payroll/initiate-run`,
+       const response = await axios.post<InitiateRunResponse>(
+        `${API_BASE_URL}/payroll/calculate-run`,
         data,
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
       toast.info(
@@ -146,175 +136,75 @@ const RunPayrollDialog: React.FC<RunPayrollDialogProps> = ({
           errorMessage = backendError.error; // Use the specific conflict message
         }
       }
-      setFormError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
+      //setFormError(errorMessage);
+      toast.error(errorMessage, { id: 'initiate-payroll-error' });
       setIsSubmitting(false);
     }
   };
 
-  const handleProcessingComplete = (
-    success: boolean,
-    finalMessage?: string
-  ) => {
-    setIsProgressDialogOpen(false); // Close progress dialog
+  // This function is called when the progress dialog is finally closed.
+  const handleProcessingComplete = (success: boolean) => {
+    setIsProgressDialogOpen(false);
     setCurrentPayrollRunId(null);
-    onPayrollRunSuccess(success, finalMessage);
-    // Toasts for final status are handled within PayrollProgressDialog
+    onPayrollRunSuccess(success); // Notify the parent page (PayrollPage)
   };
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[450px] bg-white">
+     <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
-            <DialogTitle className="text-xl text-gray-800">
-              Run New Payroll
-            </DialogTitle>
-            <DialogDescription className="text-gray-600">
-              Select the month and year to start processing payroll.
-            </DialogDescription>
+            <DialogTitle className="text-xl">Run New Payroll</DialogTitle>
+            <DialogDescription>Select the month and year to start the payroll calculation process.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 py-4">
             <div className="grid grid-cols-1 gap-3">
-              <Label
-                htmlFor="payrollMonth"
-                className="text-sm font-medium text-gray-700"
-              >
-                Payroll Month
-              </Label>
-              <Select
-                onValueChange={(value) =>
-                  setValue("payrollMonth", value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
-                }
-                value={watch("payrollMonth") || currentMonth} // Ensure a value is always present
-                name="payrollMonth"
-              >
-                <SelectTrigger
-                  id="payrollMonth"
-                  className="w-full border-gray-300 focus:border-[#7F5EFD] focus:ring-[#7F5EFD]"
-                >
+              <Label htmlFor="payrollMonth">Payroll Month</Label>
+              <Select onValueChange={(value) => setValue("payrollMonth", value)} defaultValue={currentMonth}>
+                <SelectTrigger id="payrollMonth" className="w-full">
                   <SelectValue placeholder="Select Month" />
                 </SelectTrigger>
                 <SelectContent>
-                  {months.map((month) => (
-                    <SelectItem
-                      key={month}
-                      value={month}
-                      className="hover:bg-gray-100"
-                    >
-                      {month}
-                    </SelectItem>
-                  ))}
+                  {months.map((month) => (<SelectItem key={month} value={month}>{month}</SelectItem>))}
                 </SelectContent>
               </Select>
-              {errors.payrollMonth && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.payrollMonth.message}
-                </p>
-              )}
             </div>
 
             <div className="grid grid-cols-1 gap-3">
-              <Label
-                htmlFor="payrollYear"
-                className="text-sm font-medium text-gray-700"
-              >
-                Payroll Year
-              </Label>
-              <Select
-                onValueChange={(value) =>
-                  setValue("payrollYear", value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
-                }
-                value={watch("payrollYear") || currentYear} // Ensure a value is always present
-                name="payrollYear"
-              >
-                <SelectTrigger
-                  id="payrollYear"
-                  className="w-full border-gray-300 focus:border-[#7F5EFD] focus:ring-[#7F5EFD]"
-                >
+              <Label htmlFor="payrollYear">Payroll Year</Label>
+              <Select onValueChange={(value) => setValue("payrollYear", value)} defaultValue={currentYear}>
+                <SelectTrigger id="payrollYear" className="w-full">
                   <SelectValue placeholder="Select Year" />
                 </SelectTrigger>
                 <SelectContent>
-                  {years.map((year) => (
-                    <SelectItem
-                      key={year}
-                      value={year}
-                      className="hover:bg-gray-100"
-                    >
-                      {year}
-                    </SelectItem>
-                  ))}
+                  {years.map((year) => (<SelectItem key={year} value={year}>{year}</SelectItem>))}
                 </SelectContent>
               </Select>
-              {errors.payrollYear && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.payrollYear.message}
-                </p>
-              )}
             </div>
 
-            {formError && (
-              <p className="text-red-600 text-sm text-center bg-red-100 p-2 rounded-md">
-                {formError}
-              </p>
-            )}
-
             <DialogFooter className="mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={isSubmitting}
-                className="hover:bg-gray-50"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting || !isDirty}
-                className="bg-[#7F5EFD] hover:bg-[#6a4fcf] text-white"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                {isSubmitting ? "Initiating..." : "Start Payroll Process"}
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-[#7F5EFD] hover:bg-[#6a4fcf]">
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isSubmitting ? "Initiating..." : "Start Process"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Payroll Progress Dialog */}
+      {/* Payroll Progress Dialog is now controlled from here */}
       {isProgressDialogOpen && currentPayrollRunId && (
         <PayrollProgressDialog
           isOpen={isProgressDialogOpen}
-          // This onClose for PayrollProgressDialog will be called by its internal logic 
-          // (e.g., when GenerateBulkFilesDialog itself is closed or if user closes progress dialog early)
-          onClose={(triggerHistoryRefetch) => {
-            setIsProgressDialogOpen(false); // Close the progress dialog itself
-            // If history refetch is signaled (typically after GenerateBulkFiles is done),
-            // call the main success handler.
-            // This assumes the 'success' status is implicitly true if refetch is triggered from a successful flow.
-            // The onProcessingComplete from PayrollProgressDialog is the primary signal.
-            if (triggerHistoryRefetch) {
-              handleProcessingComplete(true, "Process viewed, history updated.");
-            } else {
-              // If closed early or without specific success signal for history,
-              // might not call the full success handler or call it with a different status.
-              // For simplicity, we rely on onProcessingComplete.
-            }
+          onClose={(refetch) => {
+             setIsProgressDialogOpen(false);
+             if(refetch) {
+                onPayrollRunSuccess(true);
+             }
           }}
           payrollRunId={currentPayrollRunId}
           payrollMonthYear={currentPayrollMonthYear}
-          // This onProcessingComplete is called by PayrollProgressDialog *before* it shows GenerateBulkFilesDialog (if successful)
-          // OR if it fails. We need to pass the main callback here.
           onProcessingComplete={handleProcessingComplete}
         />
       )}
