@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, TrendingUp, UserCheck } from 'lucide-react'; // Added TrendingUp and UserCheck for overview and quick links cards
+import { PlusCircle, UserCheck, FileText} from 'lucide-react'; // Added TrendingUp and UserCheck for overview and quick links cards
 import RunPayrollDialog from './RunPayrollDialog';
+import GenerateP9Dialog from './GenerateP9Dialog';
 import { useNavigate } from 'react-router-dom';
 
 interface ProcessPayrollSectionProps {
@@ -13,6 +14,7 @@ interface ProcessPayrollSectionProps {
 
 const ProcessPayrollSection: React.FC<ProcessPayrollSectionProps> = ({ onPayrollRunSuccess }) => {
   const [isRunPayrollDialogOpen, setIsRunPayrollDialogOpen] = useState(false);
+  const [isGenerateP9DialogOpen, setIsGenerateP9DialogOpen] = useState(false); 
   const navigate = useNavigate();
 
   const handleViewEmploees = () => {
@@ -39,13 +41,18 @@ const ProcessPayrollSection: React.FC<ProcessPayrollSectionProps> = ({ onPayroll
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
             <div className="flex items-center text-gray-700 mb-2">
-                <TrendingUp className="h-6 w-6 mr-3 text-[#7F5EFD]" />
-                <h3 className="text-lg font-semibold">Payroll Overview</h3>
+                <FileText className="h-6 w-6 mr-3 text-[#7F5EFD]" /> {/* Icon changed to FileText */}
+                <h3 className="text-lg font-semibold">P9 Forms Management</h3> {/* Title changed */}
             </div>
-            <p className="text-sm text-gray-600">
-                Summary of your company's payroll activity will appear here. (e.g., total paid last month, upcoming run alerts).
+            <p className="text-sm text-gray-600 mb-3">
+                Generate and manage P9 tax forms for employees.
             </p>
-            {/* Add charts or key figures later */}
+            <Button
+              onClick={() => setIsGenerateP9DialogOpen(true)} // Open P9 dialog
+              className="bg-[#7F5EFD] hover:bg-[#6a4fcf] text-white px-4 py-2" // Style maintained
+            >
+                Generate P9 Forms
+            </Button>
         </div>
          <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
             <div className="flex items-center text-gray-700 mb-2">
@@ -67,6 +74,10 @@ const ProcessPayrollSection: React.FC<ProcessPayrollSectionProps> = ({ onPayroll
         isOpen={isRunPayrollDialogOpen}
         onClose={() => setIsRunPayrollDialogOpen(false)}
         onPayrollRunSuccess={onPayrollRunSuccess} // Pass the callback
+      />
+      <GenerateP9Dialog
+        isOpen={isGenerateP9DialogOpen}
+        onClose={() => setIsGenerateP9DialogOpen(false)}
       />
     </div>
   );

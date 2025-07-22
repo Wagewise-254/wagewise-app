@@ -1,12 +1,13 @@
-// src/components/dashboard/main/DashboardContent.tsx - Scrollability Fix
-
+// src/components/dashboard/main/DashboardContent.tsx
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Users, DollarSign, Wallet, MinusCircle } from 'lucide-react';
-import { toast } from 'sonner'; // Re-added toast import as it's good practice for error messages
+import { Loader2, Users , PlayCircle } from 'lucide-react'; // Added PlayCircle for payroll run
+import { toast } from 'sonner';
 import axios from 'axios';
+//import { Button } from '@/components/ui/button'; // Still need Button for payroll run
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // For year dropdown
+import DashboardCalendar from './DashboardCalendar'; // Import the new Calendar component
 
-// Recharts imports
 import {
   BarChart,
   Bar,
@@ -21,7 +22,6 @@ import {
 import { API_BASE_URL } from '@/config';
 import useAuthStore from '@/store/authStore';
 
-// Define data types for dashboard summary
 interface MonthlyPayrollOverview {
   month: string;
   grossPay: number;
@@ -43,10 +43,14 @@ interface DashboardData {
 }
 
 const DashboardContent: React.FC = () => {
-  const { accessToken } = useAuthStore();
+  const { accessToken } = useAuthStore(); // Removed 'user' as avatar is gone
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 5 }, (_, i) => (currentYear - i).toString()); // Last 5 years
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -60,7 +64,7 @@ const DashboardContent: React.FC = () => {
       setError(null);
 
       try {
-        const response = await axios.get(`${API_BASE_URL}/reports/dashboard-summary`, {
+        const response = await axios.get(`${API_BASE_URL}/reports/dashboard-summary?year=${selectedYear}`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -77,10 +81,10 @@ const DashboardContent: React.FC = () => {
         if (axios.isAxiosError(err) && err.response && typeof err.response.data === 'object') {
           const backendError = err.response.data as { error?: string; message?: string };
           setError(backendError.error || backendError.message || 'Failed to fetch dashboard data.');
-          toast.error(backendError.error || backendError.message || 'Failed to fetch dashboard data.'); // Added toast
+          toast.error(backendError.error || backendError.message || 'Failed to fetch dashboard data.');
         } else {
           setError('An unexpected error occurred while fetching dashboard data.');
-          toast.error('An unexpected error occurred while fetching dashboard data.'); // Added toast
+          toast.error('An unexpected error occurred while fetching dashboard data.');
         }
         setDashboardData(null);
       } finally {
@@ -89,13 +93,13 @@ const DashboardContent: React.FC = () => {
     };
 
     fetchDashboardData();
-  }, [accessToken]);
+  }, [accessToken, selectedYear]);
 
   const renderLoadingOrError = (height: string = 'h-32') => {
     if (loading) {
       return (
         <div className={`flex justify-center items-center ${height}`}>
-          <Loader2 className="animate-spin h-6 w-6 text-blue-500" />
+          <Loader2 className="animate-spin h-6 w-6 text-[#7F5EFD]" />
         </div>
       );
     }
@@ -105,122 +109,128 @@ const DashboardContent: React.FC = () => {
     return null;
   };
 
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  const fullYearPayrollData = months.map(monthName => {
+    const monthData = dashboardData?.monthlyPayrollOverview?.find(item => item.month === monthName);
+    return {
+      month: monthName,
+      // Ensure values are numbers, default to 0 if undefined
+      grossPay: monthData?.grossPay || 0,
+      netPay: monthData?.netPay || 0,
+      totalDeductions: monthData?.totalDeductions || 0,
+    };
+  });
+
+  // Placeholder for "Run Payroll" action
+  const handleRunPayroll = () => {
+    toast.info("Run Payroll functionality coming soon!");
+    // In a real application, you'd trigger a payroll process here
+  };
+
   return (
-    // REMOVED: overflow-hidden from this div. The parent MainDashboard.tsx will handle scrolling.
-    <div className="flex-1 flex flex-col p-6">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">Dashboard Overview</h1>
+    <div className="flex-1 flex flex-col px-6 py-4 bg-gray-100"> {/* Added bg-gray-100 for consistency */}
+      {/* Top Header/Greeting */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">Good Evening</h1> {/* Dynamic greeting could be added */}
+        <p className="text-sm text-gray-500">Sunday, {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</p>
+      </div>
 
-      {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card>
+      {/* Top Row: Total Employees Card & Run Payroll Card */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Total Active Employees Card */}
+        <Card className="shadow-sm bg-white border border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Active Employees</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-lg font-medium text-gray-700">Total Active Employees</CardTitle>
+            <Users className="h-6 w-6 text-gray-500" /> {/* Larger icon */}
           </CardHeader>
           <CardContent>
             {renderLoadingOrError('h-16')}
             {!loading && !error && (
-              <div className="text-2xl font-bold">
-                {dashboardData?.totalActiveEmployees ?? 'N/A'}
-              </div>
+              <>
+                <div className="text-4xl font-bold text-gray-900"> {/* Larger font for primary metric */}
+                  {dashboardData?.totalActiveEmployees ?? 'N/A'}
+                </div>
+                <p className="text-sm text-green-600 mt-2">+2.1% from last month</p> {/* Example trend */}
+              </>
             )}
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Run Payroll Card */}
+        <Card className="shadow-sm bg-[#7F5EFD] text-white border border-gray-200 cursor-pointer hover:bg-[#6a4fdd] transition-colors" onClick={handleRunPayroll}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Latest Gross Pay</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-lg font-medium">Run Payroll</CardTitle>
+            <PlayCircle className="h-6 w-6" /> {/* Icon for running payroll */}
           </CardHeader>
-          <CardContent>
-            {renderLoadingOrError('h-16')}
-            {!loading && !error && (
-              <div className="text-2xl font-bold">
-                {dashboardData?.latestPayrollSummary?.total_gross_pay ? `KSh ${dashboardData.latestPayrollSummary.total_gross_pay.toFixed(2)}` : 'N/A'}
-              </div>
-            )}
-            {dashboardData?.latestPayrollSummary && (
-              <p className="text-xs text-muted-foreground">
-                For {dashboardData.latestPayrollSummary.payroll_month}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Latest Net Pay</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {renderLoadingOrError('h-16')}
-            {!loading && !error && (
-              <div className="text-2xl font-bold">
-                {dashboardData?.latestPayrollSummary?.total_net_pay ? `KSh ${dashboardData.latestPayrollSummary.total_net_pay.toFixed(2)}` : 'N/A'}
-              </div>
-            )}
-            {dashboardData?.latestPayrollSummary && (
-              <p className="text-xs text-muted-foreground">
-                For {dashboardData.latestPayrollSummary.payroll_month}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Latest Total Deductions</CardTitle>
-            <MinusCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {renderLoadingOrError('h-16')}
-            {!loading && !error && (
-              <div className="text-2xl font-bold">
-                {dashboardData?.latestPayrollSummary?.total_deductions ? `KSh ${dashboardData.latestPayrollSummary.total_deductions.toFixed(2)}` : 'N/A'}
-              </div>
-            )}
-            {dashboardData?.latestPayrollSummary && (
-              <p className="text-xs text-muted-foreground">
-                For {dashboardData.latestPayrollSummary.payroll_month}
-              </p>
-            )}
+          <CardContent className="flex flex-col justify-between h-[calc(100%-80px)]"> {/* Adjust height */}
+             {/* Dynamic content for next payroll or status here */}
+            <div className="text-3xl font-bold">
+                Ready for Payroll run
+            </div>
+            <p className="text-sm opacity-80 mt-2">Click to initiate the next payroll cycle.</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Monthly Payroll Overview Chart */}
-      <Card className="flex-1">
-        <CardHeader>
-          <CardTitle>Monthly Payroll Overview (Gross vs. Net vs. Deductions)</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[400px]"> {/* Fixed height for chart */}
-          {renderLoadingOrError('h-full')}
-          {!loading && !error && dashboardData?.monthlyPayrollOverview && dashboardData.monthlyPayrollOverview.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={dashboardData.monthlyPayrollOverview}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip formatter={(value) => {
-                  const num = typeof value === 'number' ? value : parseFloat(value as string);
-                  return isNaN(num) ? 'KSh N/A' : `KSh ${num.toFixed(2)}`;
-                }} />
-                <Legend />
-                {/* Stacked bars: Net Pay and Total Deductions stack on top of each other */}
-                <Bar dataKey="totalDeductions" stackId="a" fill="#EF4444" name="Total Deductions" />
-                <Bar dataKey="netPay" stackId="a" fill="#10B981" name="Net Pay" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            !loading && !error && <p className="text-center text-gray-500 py-8">No payroll data available for trends.</p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Bottom Row: Payroll Chart and Calendar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
+        {/* Payroll Overview Chart */}
+        <Card className="lg:col-span-2 shadow-sm bg-white border border-gray-200">
+          <CardHeader className="flex flex-row justify-between items-center pb-2">
+            <CardTitle className="text-lg font-semibold text-gray-700">Monthly Payroll Overview</CardTitle>
+            <Select onValueChange={setSelectedYear} defaultValue={selectedYear}>
+              <SelectTrigger className="w-[120px] rounded-md border border-gray-300">
+                <SelectValue placeholder="Select Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map(year => (
+                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardHeader>
+          <CardContent className="h-[400px] p-4">
+            {renderLoadingOrError('h-full')}
+            {!loading && !error && fullYearPayrollData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={fullYearPayrollData}
+                  margin={{ top: 20, right: 10, left: 0, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-gray-200" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} />
+                  <YAxis axisLine={false} tickLine={false} domain={[0, 'auto']} />
+                  <Tooltip
+                      formatter={(value) => {
+                          const num = typeof value === 'number' ? value : parseFloat(value as string);
+                          return isNaN(num) ? 'N/A' : `KSh ${num.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                      }}
+                      labelFormatter={(label) => `Month: ${label} ${selectedYear}`}
+                      contentStyle={{ backgroundColor: '#fff', border: 'none', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                      labelStyle={{ fontWeight: 'bold', color: '#333' }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
+                  {/* Bars for Gross Pay, Net Pay, and Deductions */}
+                  <Bar dataKey="grossPay" fill="#A8DADC" name="Gross Pay" barSize={15} radius={[4, 4, 0, 0]} /> {/* Light blue */}
+                  <Bar dataKey="netPay" fill="#457B9D" name="Net Pay" barSize={15} radius={[4, 4, 0, 0]} /> {/* Medium blue */}
+                  <Bar dataKey="totalDeductions" fill="#E63946" name="Total Deductions" barSize={15} radius={[4, 4, 0, 0]} /> {/* Red for deductions */}
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              !loading && !error && <p className="text-center text-gray-500 py-8">No payroll data available for trends.</p>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* You can add more dashboard elements here */}
+        {/* Calendar Card */}
+        <div className="lg:col-span-1 flex flex-col gap-6">
+          <DashboardCalendar />
+        </div>
+      </div>
     </div>
   );
 };
