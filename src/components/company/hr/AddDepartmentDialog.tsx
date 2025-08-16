@@ -45,7 +45,7 @@ const AddDepartmentDialog: React.FC = () => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button onClick={() => setIsOpen(true)}>
+        <Button className='bg-[#7F5EFD]' onClick={() => setIsOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add Department
         </Button>
       </DialogTrigger>

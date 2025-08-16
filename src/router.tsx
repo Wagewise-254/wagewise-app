@@ -13,6 +13,8 @@ import CompanySettings from './pages/company/CompanySettings';
 // Import the new HR pages
 import EmployeesPage from './pages/company/hr/EmployeesPage';
 import DepartmentsPage from './pages/company/hr/DepartmentsPage';
+//Import payroll pages
+import BankDetailsPage from './pages/company/payroll/BankDetailsPage';
 
 // A component to protect routes
 const ProtectedRoute = () => {
@@ -43,7 +45,9 @@ const AppRouterWrapper = () => {
             {/* HR Routes */}
             <Route path="hr/employees" element={<EmployeesPage />} />
             <Route path="hr/departments" element={<DepartmentsPage />} />
-            {/* We will add more routes for Payroll etc. later */}
+            {/* Payroll Routes */}
+            <Route path="payroll/bank-details" element={<BankDetailsPage />} />
+
           </Route>
         </Route>
         

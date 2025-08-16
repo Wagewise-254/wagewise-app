@@ -1,12 +1,21 @@
 // src/pages/company/hr/EmployeesPage.tsx
-import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { useHrStore } from '@/stores/hrStore';
-import  AddEmployeeDialog  from '@/components/company/hr/AddEmployeeDialog';
-import  EmployeesTable  from '@/components/company/hr/EmployeesTable';
+import { useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { useHrStore } from "@/stores/hrStore";
+import AddEmployeeDialog from "@/components/company/hr/AddEmployeeDialog";
+import EmployeesTable from "@/components/company/hr/EmployeesTable";
+
+// ✅ ShadCN Card components
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 
 const EmployeesPage = () => {
-   const { companyId } = useParams<{ companyId: string }>();
+  const { companyId } = useParams<{ companyId: string }>();
   const { fetchEmployees } = useHrStore();
 
   useEffect(() => {
@@ -15,16 +24,23 @@ const EmployeesPage = () => {
     }
   }, [companyId, fetchEmployees]);
 
-
- return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Employees</h2>
-        <div className="flex items-center space-x-2">
+  return (
+    <div className="container mx-auto p-6">
+      <Card className="shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-2xl font-bold">Employees</CardTitle>
+            <CardDescription>
+              View and manage your company’s employees.
+            </CardDescription>
+          </div>
           <AddEmployeeDialog />
-        </div>
-      </div>
-      <EmployeesTable />
+        </CardHeader>
+
+        <CardContent>
+          <EmployeesTable />
+        </CardContent>
+      </Card>
     </div>
   );
 };

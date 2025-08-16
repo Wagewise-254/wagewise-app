@@ -1,8 +1,17 @@
-import React, { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { useHrStore } from '@/stores/hrStore';
-import  AddDepartmentDialog  from '@/components/company/hr/AddDepartmentDialog'; // Assuming you have this
-import  DepartmentsTable  from '@/components/company/hr/DepartmentsTable';
+import React, { useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { useHrStore } from "@/stores/hrStore";
+import AddDepartmentDialog from "@/components/company/hr/AddDepartmentDialog";
+import DepartmentsTable from "@/components/company/hr/DepartmentsTable";
+
+// ✅ Import ShadCN Card components
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 
 const DepartmentsPage: React.FC = () => {
   const { companyId } = useParams<{ companyId: string }>();
@@ -15,14 +24,23 @@ const DepartmentsPage: React.FC = () => {
   }, [companyId, fetchDepartments]);
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Departments</h2>
-        <div className="flex items-center space-x-2">
+    <div className="container mx-auto p-6">
+      {/* ✅ Card wrapper */}
+      <Card className="shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-2xl font-bold">Departments</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground mt-1">
+              Manage and organize company departments.
+            </CardDescription>
+          </div>
           <AddDepartmentDialog />
-        </div>
-      </div>
-      <DepartmentsTable />
+        </CardHeader>
+
+        <CardContent>
+          <DepartmentsTable />
+        </CardContent>
+      </Card>
     </div>
   );
 };
