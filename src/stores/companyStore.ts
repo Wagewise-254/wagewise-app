@@ -16,7 +16,8 @@ export interface Company {
   company_phone?: string;
   company_email?: string;
   logo_url?: string;
-  // Add other fields from your table
+  status?: string;
+  // Add other fields from your table if needed
 }
 
 interface CompanyState {
@@ -27,6 +28,7 @@ interface CompanyState {
   addCompany: (formData: FormData) => Promise<void>;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const useCompanyStore = create<CompanyState>((set, get) => ({
   companies: [],
   loading: false,
@@ -97,5 +99,5 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
       }
       throw error;
     }
-  },
+  }
 }));

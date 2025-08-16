@@ -4,11 +4,15 @@ import LoginPage from './pages/onboarding/auth/LoginPage.tsx';
 import SignUpPage from './pages/onboarding/auth/SignUpPage';
 import RootDashboard from './pages/dashboard/RootDashboard';
 import DashboardLayout from './pages/dashboard/DashboardLayout';
+import AccountSettings from './pages/dashboard/AccountSettings.tsx';
 import { useAuthStore } from './stores/authStore';
 // Import the new company-specific dashboard layout
 import CompanyDashboardLayout from './pages/company/CompanyDashboardLayout';
 import CompanyOverview from './pages/company/CompanyOverview';
 import CompanySettings from './pages/company/CompanySettings';
+// Import the new HR pages
+import EmployeesPage from './pages/company/hr/EmployeesPage';
+import DepartmentsPage from './pages/company/hr/DepartmentsPage';
 
 // A component to protect routes
 const ProtectedRoute = () => {
@@ -28,6 +32,7 @@ const AppRouterWrapper = () => {
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<RootDashboard />} />
+            <Route path="/dashboard/account-settings" element={<AccountSettings />} />
             {/* Add future dashboard pages here, e.g., /dashboard/settings */}
           </Route>
           {/* Company-specific Dashboard with a Company ID parameter */}
@@ -35,7 +40,10 @@ const AppRouterWrapper = () => {
             <Route index element={<Navigate to="overview" replace />} />
             <Route path="overview" element={<CompanyOverview />} />
             <Route path="settings" element={<CompanySettings />} />
-            {/* We will add more routes for HR, Payroll, etc. later */}
+            {/* HR Routes */}
+            <Route path="hr/employees" element={<EmployeesPage />} />
+            <Route path="hr/departments" element={<DepartmentsPage />} />
+            {/* We will add more routes for Payroll etc. later */}
           </Route>
         </Route>
         

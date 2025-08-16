@@ -87,7 +87,7 @@ const CompanyTopBar: React.FC = () => {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem className='cursor-pointer' asChild>
-                <Link to="/account-settings">Account Settings</Link>
+                <Link to="/dashboard/account-settings">Account Settings</Link>
               </DropdownMenuItem>
               <DropdownMenuItem className='cursor-pointer' onClick={logout}>
                 Log out

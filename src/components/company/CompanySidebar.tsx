@@ -1,14 +1,12 @@
 // src/components/company/CompanySidebar.tsx
 import React from 'react';
-import { NavLink, useParams } from 'react-router-dom';
-import { LayoutDashboard, Settings, Users, FileText, Briefcase, ChevronDown, ChevronRight } from 'lucide-react';
-//import { useCompanyStore } from '@/stores/companyStore';
+import { NavLink, useParams, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Settings, Users, FileText, Briefcase, ChevronDown, ChevronRight, Building } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { useLocation } from 'react-router-dom';
 
 const navLinks = [
   { name: 'Overview', path: 'overview', icon: <LayoutDashboard size={20} /> },
@@ -17,15 +15,14 @@ const navLinks = [
 
 const hrLinks = [
   { name: 'Employees', path: 'hr/employees', icon: <Users size={20} /> },
-  { name: 'Leave', path: 'hr/leave', icon: <FileText size={20} /> },
-  // Add other HR sub-menus here
+  { name: 'Departments', path: 'hr/departments', icon: <Building size={20} /> },
+  //{ name: 'Leave', path: 'hr/leave', icon: <FileText size={20} /> },
 ];
 
 const payrollLinks = [
   { name: 'Payroll Run', path: 'payroll/run', icon: <Briefcase size={20} /> },
   { name: 'Allowances', path: 'payroll/allowances', icon: <FileText size={20} /> },
   { name: 'Deductions', path: 'payroll/deductions', icon: <FileText size={20} /> },
-  // Add other Payroll sub-menus here
 ];
 
 const CompanySidebar: React.FC = () => {

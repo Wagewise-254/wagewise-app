@@ -38,19 +38,39 @@ const TopBar: React.FC = () => {
 
         {/* Right Side: Actions and Profile */}
         <div className="flex items-center space-x-2">
-          <a href="mailto:wagewise.dev@gmail.com" target="_blank" rel="noopener noreferrer">
-            <Button variant="ghost" className="text-white hover:bg-white/20 hover:text-white font-semibold text-sm">
-              Feedback
-            </Button>
-          </a>
-          <a href="mailto:wagewise.dev@gmail.com" target="_blank" rel="noopener noreferrer">
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
-              <HelpCircle size={22} />
-            </Button>
-          </a>
+           {/* Feedback dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="text-white hover:bg-white/20 hover:text-white font-semibold text-sm">
+                Feedback
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Contact Us</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className='cursor-pointer' asChild>
+                <a href="mailto:wagewise.dev@gmail.com">📧 wagewise.dev@gmail.com</a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Help dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
+                <HelpCircle size={22} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Need Help?</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className='cursor-pointer' asChild>
+                <a href="mailto:wagewise.dev@gmail.com">📧 wagewise.dev@gmail.com</a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           <DropdownMenu>
-            {/* --- FIX 2: Simplify the trigger --- */}
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative cursor-pointer h-9 w-9 rounded-full">
                 <Avatar className="cursor-pointer h-9 w-9 bg-amber-400">
@@ -71,7 +91,7 @@ const TopBar: React.FC = () => {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem className='cursor-pointer' asChild>
-                <Link to="/account-settings">Account Settings</Link>
+                <Link to="/dashboard/account-settings">Account Settings</Link>
               </DropdownMenuItem>
               <DropdownMenuItem className='cursor-pointer' onClick={logout}>
                 Log out
