@@ -1,5 +1,3 @@
-// src/pages/company/payroll/AddHelbDialog.tsx
-
 import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
@@ -28,7 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Employee } from "@/types/statutory"; // Reusing the Employee type
+import { EmployeeWithHelb } from "./HelbStatutorySection"; // Reusing the Employee type
 
 interface AddHelbDialogProps {
   companyId: string;
@@ -44,40 +42,42 @@ export default function AddHelbDialog({
   onUpdated,
 }: AddHelbDialogProps) {
   const { session } = useAuthStore();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [employees, setEmployees] = useState<EmployeeWithHelb[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeWithHelb | null>(null);
   const [helbAccountNumber, setHelbAccountNumber] = useState("");
   const [initialBalance, setInitialBalance] = useState("");
   const [monthlyDeduction, setMonthlyDeduction] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isEmployeeLoading, setIsEmployeeLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [openCombobox, setOpenCombobox] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  // Fetch employees who are not paying HELB (pays_helb = false)
   const fetchEmployees = useCallback(async () => {
-    if (!session || !companyId) return;
-    setIsEmployeeLoading(true);
-    setError(null);
+    if (!companyId || !session) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/company/${companyId}/employees?pays_helb=false`, {
+      const response = await fetch(`${API_BASE_URL}/company/${companyId}/employees`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (!response.ok) {
-        throw new Error("Failed to fetch employees.");
-      }
+      if (!response.ok) throw new Error("Failed to fetch employees.");
       const employeesData = await response.json();
-      setEmployees(employeesData);
-    } catch (err: unknown) {
-      setError((err as Error).message);
-    } finally {
-      setIsEmployeeLoading(false);
+      
+      const filteredEmployees = employeesData.filter(
+        (emp: EmployeeWithHelb) => !emp.helb_deductions
+      );
+      setEmployees(filteredEmployees);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load employees.");
     }
   }, [companyId, session]);
 
   useEffect(() => {
     if (isOpen) {
       fetchEmployees();
+      setSelectedEmployee(null);
+      setHelbAccountNumber("");
+      setInitialBalance("");
+      setMonthlyDeduction("");
+      setError(null);
     }
   }, [isOpen, fetchEmployees]);
 
@@ -86,6 +86,7 @@ export default function AddHelbDialog({
       setError("Please select an employee.");
       return;
     }
+
     if (!helbAccountNumber || !initialBalance || !monthlyDeduction) {
       setError("All fields are required.");
       return;
@@ -93,13 +94,6 @@ export default function AddHelbDialog({
 
     setIsLoading(true);
     setError(null);
-
-    const payload = {
-      helb_account_number: helbAccountNumber,
-      initial_balance: parseFloat(initialBalance),
-      monthly_deduction: parseFloat(monthlyDeduction),
-    };
-
     try {
       const response = await fetch(
         `${API_BASE_URL}/companies/${companyId}/employees/${selectedEmployee.id}/helb`,
@@ -109,35 +103,29 @@ export default function AddHelbDialog({
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.access_token}`,
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            helb_account_number: helbAccountNumber,
+            initial_balance: parseFloat(initialBalance),
+            monthly_deduction: parseFloat(monthlyDeduction),
+          }),
         }
       );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save HELB record.");
+        throw new Error(errorData.error || "Failed to add HELB record.");
       }
-      
-      onUpdated();
-      handleClose();
 
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unknown error occurred.");
-      }
+      onUpdated();
+      onClose();
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleClose = () => {
-    setSelectedEmployee(null);
-    setHelbAccountNumber("");
-    setInitialBalance("");
-    setMonthlyDeduction("");
-    setError(null);
     onClose();
   };
 
@@ -147,7 +135,7 @@ export default function AddHelbDialog({
         <DialogHeader>
           <DialogTitle>Add HELB Record</DialogTitle>
           <DialogDescription>
-            Add a new HELB deduction record for an employee.
+            Create a new HELB deduction record for an employee.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -155,20 +143,17 @@ export default function AddHelbDialog({
             <Label htmlFor="employee-select" className="text-right">
               Employee
             </Label>
-            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+            <Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
-                  aria-expanded={openCombobox}
-                  className="w-full justify-between col-span-3"
-                  disabled={isEmployeeLoading}
+                  aria-expanded={open}
+                  className="col-span-3 justify-between"
                 >
-                  {selectedEmployee ? (
-                    `${selectedEmployee.first_name} ${selectedEmployee.last_name}`
-                  ) : (
-                    "Select employee..."
-                  )}
+                  {selectedEmployee
+                    ? `${selectedEmployee.first_name} ${selectedEmployee.last_name}`
+                    : "Select employee..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -180,10 +165,9 @@ export default function AddHelbDialog({
                     {employees.map((employee) => (
                       <CommandItem
                         key={employee.id}
-                        value={`${employee.first_name} ${employee.last_name}`}
                         onSelect={() => {
                           setSelectedEmployee(employee);
-                          setOpenCombobox(false);
+                          setOpen(false);
                         }}
                       >
                         <Check
@@ -200,18 +184,18 @@ export default function AddHelbDialog({
               </PopoverContent>
             </Popover>
           </div>
-
           {selectedEmployee && (
             <>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="helb-account" className="text-right">
+                <Label htmlFor="helb-account-number" className="text-right">
                   HELB Account No.
                 </Label>
                 <Input
-                  id="helb-account"
+                  id="helb-account-number"
                   value={helbAccountNumber}
                   onChange={(e) => setHelbAccountNumber(e.target.value)}
                   className="col-span-3"
+                  placeholder="e.g. 123456789"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -225,6 +209,7 @@ export default function AddHelbDialog({
                   type="number"
                   step="0.01"
                   className="col-span-3"
+                  placeholder="e.g. 15000"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -238,6 +223,7 @@ export default function AddHelbDialog({
                   type="number"
                   step="0.01"
                   className="col-span-3"
+                  placeholder="e.g. 5000"
                 />
               </div>
             </>

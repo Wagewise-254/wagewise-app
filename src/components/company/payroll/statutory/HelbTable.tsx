@@ -1,14 +1,12 @@
-// src/pages/company/payroll/HelbTable.tsx
-
 import * as React from "react";
 import {
-  ColumnDef,
-  flexRender,
+  useReactTable,
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  useReactTable,
+  ColumnDef,
   SortingState,
+  flexRender,
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,142 +23,101 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, ArrowUpDown } from "lucide-react";
-import { format } from "date-fns";
+import { MoreHorizontal } from "lucide-react";
+import { EmployeeWithHelb } from "@/components/company/payroll/statutory/HelbStatutorySection";
 
-// Types for the HELB data
+
 export type HelbRecord = {
   id: string;
-  first_name: string;
-  last_name: string;
-  employee_number: string;
   helb_account_number: string;
-  initial_balance: number;
-  current_balance: number;
   monthly_deduction: number;
   status: string;
-  created_at: string;
 };
 
-interface HelbTableProps {
-  data: HelbRecord[];
-  onEdit: (record: HelbRecord) => void;
-  onDelete: (record: HelbRecord) => void;
+interface HelbDataTableProps {
+  data: EmployeeWithHelb[];
+  onEdit: (employee: EmployeeWithHelb) => void;
+  onDelete: (employee: EmployeeWithHelb) => void;
 }
 
-export const HelbTable: React.FC<HelbTableProps> = ({ data, onEdit, onDelete }) => {
+const HelbDataTable: React.FC<HelbDataTableProps> = ({ data, onEdit, onDelete }) => {
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
-  const columns: ColumnDef<HelbRecord>[] = [
-    {
-      accessorKey: "employee_number",
-      header: "Emp No.",
-      cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("employee_number")}</div>
-      ),
-    },
-    {
-      accessorKey: "first_name",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            First Name
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        );
+  // Memoize the columns to prevent unnecessary re-renders
+  const columns: ColumnDef<EmployeeWithHelb>[] = React.useMemo(
+    () => [
+      {
+        accessorKey: "first_name",
+        header: "First Name",
+        cell: info => info.getValue(),
       },
-      cell: ({ row }) => <div>{row.getValue("first_name")}</div>,
-    },
-    {
-      accessorKey: "last_name",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Last Name
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        );
+      {
+        accessorKey: "last_name",
+        header: "Last Name",
+        cell: info => info.getValue(),
       },
-      cell: ({ row }) => <div>{row.getValue("last_name")}</div>,
-    },
-    {
-      accessorKey: "helb_account_number",
-      header: "HELB Account No.",
-    },
-    {
-      accessorKey: "initial_balance",
-      header: "Initial Balance",
-      cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("initial_balance"));
-        return <div className="text-left font-medium">KSh. {amount.toFixed(2)}</div>;
+      {
+        accessorKey: "helb_deductions.helb_account_number",
+        header: "HELB Account Number",
+        cell: info => info.getValue() || "N/A",
       },
+      {
+        accessorKey: "helb_deductions.monthly_deduction",
+        header: "Monthly Deduction",
+       cell: info => {
+      const value = info.getValue<number>();
+      return value ? `KES ${value.toFixed(2)}` : "N/A";
     },
-    {
-      accessorKey: "monthly_deduction",
-      header: "Monthly Deduction",
-      cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("monthly_deduction"));
-        return <div className="text-left font-medium">KSh. {amount.toFixed(2)}</div>;
       },
-    },
-    {
-      accessorKey: "current_balance",
-      header: "Current Balance",
-      cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("current_balance"));
-        return <div className="text-left font-medium">KSh. {amount.toFixed(2)}</div>;
+      {
+        accessorKey: "helb_deductions.status",
+        header: "Status",
+        cell: info => info.getValue() || "Not Added",
       },
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => {
-        const status = row.getValue("status");
-        return (
-          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-            status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          }`}>
-            {status as string}
-          </span>
-        );
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const employee = row.original;
+          const hasHelbRecord = employee.helb_deductions !== null && employee.helb_deductions !== undefined;
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {hasHelbRecord ? (
+                  <>
+                    <DropdownMenuItem onClick={() => onEdit(employee)} className="cursor-pointer">
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onDelete(employee)} className="cursor-pointer">
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem className="opacity-50" disabled>
+                    No HELB Record
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
       },
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => onEdit(row.original)}>
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onDelete(row.original)}>
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
-  ];
+    ],
+    [onEdit, onDelete]
+  );
 
   const table = useReactTable({
     data,
     columns,
-    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     state: {
       sorting,
@@ -168,50 +125,49 @@ export const HelbTable: React.FC<HelbTableProps> = ({ data, onEdit, onDelete }) 
   });
 
   return (
-    <div className="w-full">
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <TableHead key={header.id}>
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows?.length ? (
+            table.getRowModel().rows.map((row) => (
+              <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() && "selected"}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
                 ))}
               </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No HELB records found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={columns.length} className="h-24 text-center">
+                No HELB records found.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+      {/* Pagination controls */}
+      <div className="flex items-center justify-end space-x-2 py-4 px-2">
         <Button
           variant="outline"
           size="sm"
@@ -232,3 +188,5 @@ export const HelbTable: React.FC<HelbTableProps> = ({ data, onEdit, onDelete }) 
     </div>
   );
 };
+
+export default HelbDataTable;

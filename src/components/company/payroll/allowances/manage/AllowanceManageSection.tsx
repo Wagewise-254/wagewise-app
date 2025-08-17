@@ -1,9 +1,7 @@
-// src/components/company/payroll/statutory/HelbStatutorySection.tsx
+// src/components/company/payroll/allowances/AllowanceManageSection.tsx
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-//import { HelbTable, HelbRecord } from "@/components/company/payroll/statutory/HelbTable";
-import AddHelbDialog from "./AddHelbDialog";
 import { API_BASE_URL } from "@/config";
 import { useAuthStore } from "@/stores/authStore";
 import { Loader2 } from "lucide-react";
@@ -11,36 +9,26 @@ import { Loader2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-// Import the new components
-import HelbDataTable from "./HelbTable";
-import EditHelbDialog from "./EditHelbDialog";
-import DeleteHelbDialog from "./DeleteHelbDialog";
+// Import updated components
+import AllowanceManageTable, { AllowanceType } from "./AllowanceManageTable";
+import AddAllowanceDialog from "./AddAllowanceDialog";
+import EditAllowanceDialog from "./EditAllowanceDialog";
+import DeleteAllowanceDialog from "./DeleteAllowanceDialog";
 
-export type EmployeeWithHelb = {
-  id: string;
-  first_name: string;
-  last_name: string;
-  helb_deductions?: {
-    id: string;
-    helb_account_number: string;
-    monthly_deduction: number;
-    status: string;
-  };
-};
-
-const HelbStatutorySection = () => {
+const AllowanceManageSection = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const { session } = useAuthStore();
   
-  const [employees, setEmployees] = useState<EmployeeWithHelb[]>([]);
+  const [allowances, setAllowances] = useState<AllowanceType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeWithHelb | null>(null);
 
-  // A function to fetch all employees with their HELB data
+  // Dialog state
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedAllowance, setSelectedAllowance] = useState<AllowanceType | null>(null);
+
   const fetchData = useCallback(async () => {
     if (!companyId || !session) return;
 
@@ -48,15 +36,14 @@ const HelbStatutorySection = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/companies/${companyId}/helb`, {
+      const response = await fetch(`${API_BASE_URL}/company/${companyId}/allowance-types`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      if (!response.ok) throw new Error("Failed to fetch HELB records.");
+      if (!response.ok) throw new Error("Failed to fetch allowances.");
 
-       const data = await response.json();
-       
-      setEmployees(data);
+      const data = await response.json();
+      setAllowances(data);
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
@@ -68,34 +55,34 @@ const HelbStatutorySection = () => {
     fetchData();
   }, [fetchData]);
 
-  const handleUpdated = () => {
+  const handleAddSuccess = () => {
     setIsAddDialogOpen(false);
     fetchData();
   };
- // Handlers for the dialogs
-  const handleEdit = (employee: EmployeeWithHelb) => {
-    setSelectedEmployee(employee);
+
+  const handleEdit = (allowance: AllowanceType) => {
+    setSelectedAllowance(allowance);
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = (employee: EmployeeWithHelb) => {
-    setSelectedEmployee(employee);
+  const handleDelete = (allowance: AllowanceType) => {
+    setSelectedAllowance(allowance);
     setIsDeleteDialogOpen(true);
   };
 
   const handleUpdateSuccess = () => {
     handleCloseEditDialog();
-    handleUpdated();
+    fetchData();
   };
 
   const handleCloseEditDialog = () => {
     setIsEditDialogOpen(false);
-    setSelectedEmployee(null);
+    setSelectedAllowance(null);
   };
 
   const handleCloseDeleteDialog = () => {
     setIsDeleteDialogOpen(false);
-    setSelectedEmployee(null);
+    setSelectedAllowance(null);
   };
 
   if (loading) {
@@ -115,41 +102,43 @@ const HelbStatutorySection = () => {
       <Card className="shadow-md">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-2xl font-bold">HELB Deductions</CardTitle>
+            <CardTitle className="text-2xl font-bold">Allowance Types</CardTitle>
             <CardDescription>
-              View and manage Higher Education Loans Board (HELB) records for your employees.
+              Define and manage allowance types available in your company.
             </CardDescription>
           </div>
-          <Button onClick={() => setIsAddDialogOpen(true)} className="bg-[#7F5EFD] text-white hover:bg-[#6a4ad3]">
-            Add HELB Record
+          <Button
+            onClick={() => setIsAddDialogOpen(true)}
+            className="bg-[#7F5EFD] text-white hover:bg-[#6a4ad3]"
+          >
+            Add Allowance Type
           </Button>
         </CardHeader>
         <CardContent>
-          <HelbDataTable data={employees} onEdit={handleEdit} onDelete={handleDelete} />
+          <AllowanceManageTable data={allowances} onEdit={handleEdit} onDelete={handleDelete} />
         </CardContent>
-      </Card> 
+      </Card>
 
-      <AddHelbDialog
+      {/* Dialogs */}
+      <AddAllowanceDialog
         companyId={companyId!}
         isOpen={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
-        onUpdated={handleUpdated}
+        onUpdated={handleAddSuccess}
       />
 
-      {/* Edit Dialog */}
-      {isEditDialogOpen && selectedEmployee && (
-        <EditHelbDialog
-          employee={selectedEmployee}
+      {isEditDialogOpen && selectedAllowance && (
+        <EditAllowanceDialog
+          allowance={selectedAllowance}
           companyId={companyId!}
           onClose={handleCloseEditDialog}
           onUpdated={handleUpdateSuccess}
         />
       )}
 
-      {/* Delete Dialog */}
-      {isDeleteDialogOpen && selectedEmployee && (
-        <DeleteHelbDialog
-          employee={selectedEmployee}
+      {isDeleteDialogOpen && selectedAllowance && (
+        <DeleteAllowanceDialog
+          allowance={selectedAllowance}
           companyId={companyId!}
           onClose={handleCloseDeleteDialog}
           onDeleted={handleUpdateSuccess}
@@ -159,4 +148,4 @@ const HelbStatutorySection = () => {
   );
 };
 
-export default HelbStatutorySection;
+export default AllowanceManageSection;
