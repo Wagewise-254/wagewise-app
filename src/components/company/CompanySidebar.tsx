@@ -22,6 +22,7 @@ const hrLinks = [
 const payrollLinks = [
   { name: 'Payroll Run', path: 'payroll/run', icon: <Briefcase size={20} /> },
     { name: 'Bank Details', path: 'payroll/bank-details', icon: <FileText size={20} /> },
+    { name: 'Statutory Deductions', path: 'payroll/statutory-deductions', icon: <FileText size={20} /> },
   { name: 'Allowances', path: 'payroll/allowances', icon: <FileText size={20} /> },
   { name: 'Deductions', path: 'payroll/deductions', icon: <FileText size={20} /> },
 ];
