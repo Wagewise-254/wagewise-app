@@ -1,92 +1,68 @@
-// src/pages/company/payroll/StatutoryPage.tsx
-import { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
-import { StatutoryTable } from "@/components/company/payroll/StatutoryTable";
-import EditStatutoryDialog from "./EditStatutoryDialog";
-import { API_BASE_URL } from "@/config"; // Updated import
-import { useAuthStore } from "@/stores/authStore";
-import { Loader2 } from "lucide-react";
+//import React from "react";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Employee } from "@/types/statutory"; 
+//import settings section components
+import OverviewStatutorySection from '@/components/company/payroll/statutory/OverviewStatutorySection';
+import HelbStatutorySection from '@/components/company/payroll/statutory/HelbStatutorySection';
 
-const StatutoryPage = () => {
-  const { companyId } = useParams<{ companyId: string }>();
-  const { session } = useAuthStore();
+type SettingTab = 'overview' | 'helb';
+
+export default function CompanySettings() {
+  const [currentSettingTab, setCurrentSettingTab] = useState<SettingTab>('overview');
   
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchData = useCallback(async () => {
-    if (!companyId || !session) return;
-    
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/companies/${companyId}/statutories`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch statutory data.");
-
-      const employeesData = await response.json();
-      setEmployees(employeesData);
-
-    } catch (err: unknown) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
+  const renderTabContent = () => {
+    switch (currentSettingTab) {
+      case 'overview':
+        return <OverviewStatutorySection/>;
+      case 'helb':
+        return <HelbStatutorySection/>;
+      default:
+        return null;
     }
-  }, [companyId, session]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleEdit = (employee: Employee) => setSelectedEmployee(employee);
-  const handleCloseDialog = () => setSelectedEmployee(null);
-  const handleUpdateSuccess = () => {
-    handleCloseDialog();
-    fetchData();
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div className="p-6 text-red-500">Error: {error}</div>;
-  }
+    // Define Tailwind classes for active and inactive tabs
+  const activeTabClasses = "border-b-2 border-[#7F5EFD] text-[#7F5EFD] font-semibold";
+  const inactiveTabClasses = "text-gray-600 hover:text-gray-800 ";
 
   return (
-    <div className="container mx-auto p-4">
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Employee Statutory Deductions</CardTitle>
-          <CardDescription>
-            View and manage statutory deduction statuses for your employees.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <StatutoryTable data={employees} onEdit={handleEdit} />
-        </CardContent>
-      </Card> 
+    <div className="flex h-auto bg-gray-100">
+      <div className="flex-1 flex flex-col p-6 bg-white rounded-md overflow-hidden">
+        <h1 className="text-3xl font-bold mb-6 text-gray-800">Statutory Management</h1>
 
-      <EditStatutoryDialog
-        employee={selectedEmployee}
-        companyId={companyId!}
-        onClose={handleCloseDialog}
-        onUpdated={handleUpdateSuccess}
-      />
+        {/* Mini-Navigation (Tabs) */}
+        {/* Adjusted border-b and removed pb-2 */}
+        <div className="flex space-x-4 border-b border-gray-200 mb-6">
+          <Button
+            variant="ghost" // Use ghost variant for full custom styling control
+            className={cn(
+              "relative px-4 py-3 rounded-none transition-colors duration-200 cursor-pointer", // Base styles
+              currentSettingTab === 'overview' ? activeTabClasses : inactiveTabClasses
+            )}
+            onClick={() => setCurrentSettingTab('overview')}
+          >
+            Overview
+          </Button>
+          <Button
+            variant="ghost"
+            className={cn(
+              "relative px-4 py-3 rounded-none transition-colors duration-200 cursor-pointer",
+              currentSettingTab === 'helb' ? activeTabClasses : inactiveTabClasses
+            )}
+            onClick={() => setCurrentSettingTab('helb')}
+          >
+            HELB
+          </Button>
+        </div>
+
+        {/* Content Area based on selected tab */}
+        <div className="flex-1 overflow-auto">
+          {renderTabContent()}
+        </div>
+
+      </div>
     </div>
   );
-};
-
-export default StatutoryPage;
+}

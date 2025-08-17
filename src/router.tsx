@@ -16,6 +16,7 @@ import DepartmentsPage from './pages/company/hr/DepartmentsPage';
 //Import payroll pages
 import BankDetailsPage from './pages/company/payroll/BankDetailsPage';
 import StatutoryPage from './pages/company/payroll/StatutoryPage';
+//import HelbPage from './pages/company/payroll/HelbPage';
 
 // A component to protect routes
 const ProtectedRoute = () => {
