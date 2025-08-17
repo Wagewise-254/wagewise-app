@@ -1,8 +1,8 @@
 // src/pages/company/CompanyDashboardLayout.tsx
 //import React from 'react';
 import { Outlet } from 'react-router-dom';
-import CompanyTopBar from '@/components/company/CompanyTopBar';
-import CompanySidebar from '@/components/company/CompanySidebar';
+import CompanyTopBar from '@/components/company/layout/CompanyTopBar';
+import CompanySidebar from '@/components/company/layout/CompanySidebar';
 
 const CompanyDashboardLayout = () => {
   return (

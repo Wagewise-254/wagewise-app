@@ -3,7 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-export default function CompanySettings() {
+export default function StatutorySettingSection
+() {
   // Maintenance flag
   const underMaintenance = true;
 

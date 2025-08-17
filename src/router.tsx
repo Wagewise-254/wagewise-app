@@ -8,8 +8,8 @@ import AccountSettings from './pages/dashboard/AccountSettings.tsx';
 import { useAuthStore } from './stores/authStore';
 // Import the new company-specific dashboard layout
 import CompanyDashboardLayout from './pages/company/CompanyDashboardLayout';
-import CompanyOverview from './pages/company/CompanyOverview';
-import CompanySettings from './pages/company/CompanySettings';
+import CompanyOverview from './pages/company/dashboard/CompanyOverview.tsx';
+import CompanySettings from './pages/company/settings/CompanySettings.tsx';
 // Import the new HR pages
 import EmployeesPage from './pages/company/hr/EmployeesPage';
 import DepartmentsPage from './pages/company/hr/DepartmentsPage';
