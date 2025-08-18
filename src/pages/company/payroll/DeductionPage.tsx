@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // Section Components
-import DeductionManageSection from "@/components/company/payroll/deductions/DeductionManageSection";
-import DeductionAssignSection from "@/components/company/payroll/deductions/DeductionAssignSection";
+import DeductionManageSection from "@/components/company/payroll/deductions/manage/DeductionManageSection";
+import DeductionAssignSection from "@/components/company/payroll/deductions/assign/DeductionAssignSection";
 
 type DeductionTab = "manage" | "assign";
 
