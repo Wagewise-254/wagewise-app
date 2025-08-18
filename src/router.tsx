@@ -18,6 +18,8 @@ import BankDetailsPage from './pages/company/payroll/BankDetailsPage';
 import StatutoryPage from './pages/company/payroll/StatutoryPage';
 import DeductionPage from './pages/company/payroll/DeductionPage.tsx';
 import AllowancePage from './pages/company/payroll/AllowancePage.tsx';
+import PayRunPage from './pages/company/payroll/PayrunPage.tsx';
+import PayrollDetailsPage from './pages/company/payroll/PayrollDetailPage.tsx';
 //import HelbPage from './pages/company/payroll/HelbPage';
 
 // A component to protect routes
@@ -55,6 +57,8 @@ const AppRouterWrapper = () => {
             <Route path="payroll/statutory-deductions" element={<StatutoryPage />} />
             <Route path="payroll/deductions" element={<DeductionPage />} />
             <Route path="payroll/allowances" element={<AllowancePage />} />
+            <Route path="payroll/pay-runs" element={<PayRunPage />} />
+            <Route path="payroll/pay-runs/:runId" element={<PayrollDetailsPage />} />
 
           </Route>
         </Route>

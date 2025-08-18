@@ -66,7 +66,7 @@ interface HrState {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const useHrStore = create<HrState>((set, get) => ({
+export const useHrStore = create<HrState>((set) => ({
   employees: [],
   departments: [],
   loading: false,

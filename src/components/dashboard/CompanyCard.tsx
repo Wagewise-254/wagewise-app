@@ -50,7 +50,7 @@ export const CompanyCard = ({ company }: CompanyCardProps) => {
               <Link to={`/company/${company.id}/hr/employees`}>
                 <DropdownMenuItem>Manage Employees</DropdownMenuItem>
               </Link>
-              <Link to={`/company/${company.id}/payroll`}>
+              <Link to={`/company/${company.id}/payroll/pay-runs`}>
                 <DropdownMenuItem>Run Payroll</DropdownMenuItem>
               </Link>
             </DropdownMenuContent>

@@ -29,7 +29,7 @@ interface CompanyState {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const useCompanyStore = create<CompanyState>((set, get) => ({
+export const useCompanyStore = create<CompanyState>((set) => ({
   companies: [],
   loading: false,
   error: null,
