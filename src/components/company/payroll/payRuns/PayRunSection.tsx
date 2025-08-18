@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Loader2 } from "lucide-react";
 import {
   format,
   parseISO
@@ -125,7 +125,12 @@ const PayRunSection = () => {
   };
 
   if (loading) {
-    return <div>Loading payroll runs...</div>;
+    return (
+      <div className="flex items-center justify-center">
+        <Loader2 className="mr-2 animate-spin " />
+        <span>Loading payroll runs...</span>
+      </div>
+    );
   }
 
   if (payrollRuns.length === 0) {

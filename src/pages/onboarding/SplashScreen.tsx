@@ -47,7 +47,7 @@ const SplashScreen = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            Version 2.0.0
+            Version 2.0.1
           </motion.div>
         </motion.div>
       )}

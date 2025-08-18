@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react";
 // ✅ Import shadcn Card
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
-const BankDetailsPage = () => {
+const PaymentSection = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const { session } = useAuthStore();
   
@@ -98,4 +98,4 @@ const BankDetailsPage = () => {
   );
 };
 
-export default BankDetailsPage;
+export default PaymentSection;

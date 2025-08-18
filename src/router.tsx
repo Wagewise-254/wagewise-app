@@ -14,7 +14,7 @@ import CompanySettings from './pages/company/settings/CompanySettings.tsx';
 import EmployeesPage from './pages/company/hr/EmployeesPage';
 import DepartmentsPage from './pages/company/hr/DepartmentsPage';
 //Import payroll pages
-import BankDetailsPage from './pages/company/payroll/BankDetailsPage';
+//import BankDetailsPage from './pages/company/payroll/BankDetailsPage';
 import StatutoryPage from './pages/company/payroll/StatutoryPage';
 import DeductionPage from './pages/company/payroll/DeductionPage.tsx';
 import AllowancePage from './pages/company/payroll/AllowancePage.tsx';
@@ -52,7 +52,6 @@ const AppRouterWrapper = () => {
             <Route path="hr/employees" element={<EmployeesPage />} />
             <Route path="hr/departments" element={<DepartmentsPage />} />
             {/* Payroll Routes */}
-            <Route path="payroll/bank-details" element={<BankDetailsPage />} />
              {/* Add the new statutory deductions route */}
             <Route path="payroll/statutory-deductions" element={<StatutoryPage />} />
             <Route path="payroll/deductions" element={<DeductionPage />} />

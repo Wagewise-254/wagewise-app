@@ -37,7 +37,7 @@ import { useParams } from 'react-router-dom';
 import { useHrStore, Employee } from '@/stores/hrStore';
 import { toast } from 'sonner';
 
-import ConfirmationDialog from '@/components/company/hr/ConfirmationDialog';
+import ConfirmationDialog from '@/components/company/hr/employee/ConfirmationDialog';
 import EditEmployeeDialog from './EditEmployeeDialog';
 import ChangeEmployeeStatusDialog from './ChangeEmployeeStatusDialog';
 

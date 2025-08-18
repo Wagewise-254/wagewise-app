@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Loader2 } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -86,7 +86,12 @@ const PayrollDetailsPage = () => {
   }, [fetchPayrollDetails]);
 
   if (loading) {
-    return <div>Loading payroll details...</div>;
+    return (
+      <div className="flex items-center justify-center h-full bg-white rounded-md shadow-md">
+        <Loader2 className="mr-2 animate-spin " />
+        <span>Loading payroll details...</span>
+      </div>
+    );
   }
 
   if (details.length === 0) {
@@ -102,7 +107,7 @@ const PayrollDetailsPage = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button onClick={() => navigate(-1)} className="mb-4">
+        <Button onClick={() => navigate(-1)} className="mb-4 bg-[#7F5EFD] cursor-pointer">
           &larr; Back to Payroll Runs
         </Button>
         <Separator className="mb-4" />

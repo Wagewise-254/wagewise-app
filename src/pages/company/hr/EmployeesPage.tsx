@@ -1,48 +1,65 @@
-// src/pages/company/hr/EmployeesPage.tsx
-import { useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { useHrStore } from "@/stores/hrStore";
-import AddEmployeeDialog from "@/components/company/hr/AddEmployeeDialog";
-import EmployeesTable from "@/components/company/hr/EmployeesTable";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-// ✅ ShadCN Card components
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
+// Section Components
+import EmployeeSection from "@/components/company/hr/employee/EmployeeSection";
+import PaymentSection from "@/components/company/hr/employee/PaymentSection";
 
-const EmployeesPage = () => {
-  const { companyId } = useParams<{ companyId: string }>();
-  const { fetchEmployees } = useHrStore();
+type DeductionTab = "employee" | "payment";
 
-  useEffect(() => {
-    if (companyId) {
-      fetchEmployees(companyId);
+export default function DeductionPage() {
+  const [currentTab, setCurrentTab] = useState<DeductionTab>("employee");
+
+  const renderTabContent = () => {
+    switch (currentTab) {
+      case "employee":
+        return <EmployeeSection />;
+      case "payment":
+        return <PaymentSection />;
+      default:
+        return null;
     }
-  }, [companyId, fetchEmployees]);
+  };
+
+  const activeTabClasses =
+    "border-b-2 border-[#7F5EFD] text-[#7F5EFD] font-semibold";
+  const inactiveTabClasses = "text-gray-600 hover:text-gray-800";
 
   return (
-    <div className="container mx-auto p-6">
-      <Card className="shadow-md">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-2xl font-bold">Employees</CardTitle>
-            <CardDescription>
-              View and manage your company’s employees.
-            </CardDescription>
-          </div>
-          <AddEmployeeDialog />
-        </CardHeader>
+    <div className="flex h-auto bg-gray-100">
+      <div className="flex-1 flex flex-col p-6 bg-white rounded-md overflow-hidden">
+        <h1 className="text-3xl font-bold mb-6 text-gray-800">
+          Employee Management
+        </h1>
 
-        <CardContent>
-          <EmployeesTable />
-        </CardContent>
-      </Card>
+        {/* Tabs */}
+        <div className="flex space-x-4 border-b border-gray-200 mb-6">
+          <Button
+            variant="ghost"
+            className={cn(
+              "relative px-4 py-3 rounded-none transition-colors duration-200 cursor-pointer",
+              currentTab === "employee" ? activeTabClasses : inactiveTabClasses
+            )}
+            onClick={() => setCurrentTab("employee")}
+          >
+            Employee
+          </Button>
+          <Button
+            variant="ghost"
+            className={cn(
+              "relative px-4 py-3 rounded-none transition-colors duration-200 cursor-pointer",
+              currentTab === "payment" ? activeTabClasses : inactiveTabClasses
+            )}
+            onClick={() => setCurrentTab("payment")}
+          >
+            Payment
+          </Button>
+        </div>
+
+        {/* Dynamic Content */}
+        <div className="flex-1 overflow-auto">{renderTabContent()}</div>
+      </div>
     </div>
   );
-};
-
-export default EmployeesPage;
+}

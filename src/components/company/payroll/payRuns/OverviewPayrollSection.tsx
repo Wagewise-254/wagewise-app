@@ -100,7 +100,7 @@ const OverviewPayrollSection = () => {
       </p>
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
-          <Button>Run Payroll</Button>
+          <Button className="bg-[#7F5EFD] cursor-pointer">Run Payroll</Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

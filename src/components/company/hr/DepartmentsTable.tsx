@@ -42,7 +42,7 @@ import { useHrStore, Department } from "@/stores/hrStore";
 import { useParams } from "react-router-dom";
 // Import the new dialog component
 import EditDepartmentDialog from "./EditDepartmentDialog";
-import ConfirmationDialog from "@/components/company/hr/ConfirmationDialog";
+import ConfirmationDialog from "@/components/company/hr/employee/ConfirmationDialog";
 import { toast } from "sonner";
 
 const columns: ColumnDef<Department>[] = [
