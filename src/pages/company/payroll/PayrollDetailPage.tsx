@@ -128,6 +128,7 @@ const PayrollDetailsPage = () => {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
+    toast.success(`Payslip for downloaded successfully.`);
   } catch (error: unknown) {
     console.error("Error downloading payslip:", error);
     toast.error((error as Error).message || "Error downloading payslip");
