@@ -5,8 +5,9 @@ import { cn } from "@/lib/utils";
 // Section Components
 import OverviewPayrollSection from "@/components/company/payroll/payRuns/OverviewPayrollSection";
 import PayRunSection from "@/components/company/payroll/payRuns/PayRunSection";
+import PayrollFilesSection from "@/components/company/payroll/payRuns/PayrollFilesSection";
 
-type PayRunTab = "overview" | "payRun";
+type PayRunTab = "overview" | "payRun" | "files";
 
 export default function PayRunPage() {
   const [currentTab, setCurrentTab] = useState<PayRunTab>("overview");
@@ -17,6 +18,8 @@ export default function PayRunPage() {
         return <OverviewPayrollSection />;
       case "payRun":
         return <PayRunSection />;
+      case "files":
+        return <PayrollFilesSection />;
       default:
         return null;
     }
@@ -54,6 +57,16 @@ export default function PayRunPage() {
             onClick={() => setCurrentTab("payRun")}
           >
             pay runs
+          </Button>
+          <Button
+            variant="ghost"
+            className={cn(
+              "relative px-4 py-3 rounded-none transition-colors duration-200 cursor-pointer",
+              currentTab === "files" ? activeTabClasses : inactiveTabClasses
+            )}
+            onClick={() => setCurrentTab("files")}
+          >
+            Payroll Files
           </Button>
         </div>
 

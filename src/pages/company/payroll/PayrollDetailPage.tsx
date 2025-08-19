@@ -85,6 +85,61 @@ const PayrollDetailsPage = () => {
     fetchPayrollDetails();
   }, [fetchPayrollDetails]);
 
+  // New function to handle payslip download
+  const handleDownloadPayslip = async (payrollDetailId: string) => {
+  if (!companyId || !session) {
+    toast.error("Authentication failed. Please log in again.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/company/${companyId}/payroll/payslip/${payrollDetailId}/download`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to download payslip.");
+    }
+
+    // Grab filename from Content-Disposition header if backend sends it
+    const contentDisposition = response.headers.get("Content-Disposition");
+    let filename = "payslip.pdf";
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="(.+)"/);
+      if (match && match[1]) {
+        filename = match[1];
+      }
+    }
+
+    // Turn response into blob and download
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error: unknown) {
+    console.error("Error downloading payslip:", error);
+    toast.error((error as Error).message || "Error downloading payslip");
+  }
+};
+
+  
+  // New function to handle email payslip, showing a toast message
+  const handleEmailPayslip = () => {
+      toast.info("Email functionality is coming soon.");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full bg-white rounded-md shadow-md">
@@ -142,8 +197,10 @@ const PayrollDetailsPage = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Download Payslip</DropdownMenuItem>
-                      <DropdownMenuItem>Email Payslip</DropdownMenuItem>
+                      {/* Attach the new click handler to the download button */}
+                      <DropdownMenuItem onClick={() => handleDownloadPayslip(detail.id)}>Download Payslip</DropdownMenuItem>
+                      {/* Attach the new click handler to the email button */}
+                      <DropdownMenuItem onClick={handleEmailPayslip}>Email Payslip</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
