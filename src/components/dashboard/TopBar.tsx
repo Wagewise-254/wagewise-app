@@ -32,7 +32,7 @@ const TopBar: React.FC = () => {
         {/* Left Side: Logo */}
         <div className="flex items-center space-x-2">
           <Link to="/dashboard"> {/* Ensure this link points to your main dashboard */}
-            <img src="/icons/android-chrome-512x512.png" alt="Wagewise Logo" className="h-8 w-auto" />
+            <img src="/icons/android-chrome-512x512.png" alt="Wagewise" className="h-8 w-auto" />
           </Link>
         </div>
 
