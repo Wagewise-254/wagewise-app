@@ -5,9 +5,9 @@ import { cn } from '@/lib/utils';
 
 //import settings section components
 import OverviewSettingsSection from '@/components/company/settings/OverviewSettingsSection';
-import StatutorySettingSection from '@/components/company/settings/StatutorySettingSection';
+import TeamSettingsSection from '@/components/company/settings/TeamSettingsSection';
 
-type SettingTab = 'overview' | 'statutory';
+type SettingTab = 'overview' | 'team';
 
 export default function CompanySettings() {
   const [currentSettingTab, setCurrentSettingTab] = useState<SettingTab>('overview');
@@ -16,8 +16,8 @@ export default function CompanySettings() {
     switch (currentSettingTab) {
       case 'overview':
         return <OverviewSettingsSection/>;
-      case 'statutory':
-        return <StatutorySettingSection/>;
+      case 'team':
+        return <TeamSettingsSection/>;
       default:
         return null;
     }
@@ -49,11 +49,11 @@ export default function CompanySettings() {
             variant="ghost"
             className={cn(
               "relative px-4 py-3 rounded-none transition-colors duration-200 cursor-pointer",
-              currentSettingTab === 'statutory' ? activeTabClasses : inactiveTabClasses
+              currentSettingTab === 'team' ? activeTabClasses : inactiveTabClasses
             )}
-            onClick={() => setCurrentSettingTab('statutory')}
+            onClick={() => setCurrentSettingTab('team')}
           >
-            Statutory
+            Team
           </Button>
         </div>
 

@@ -24,10 +24,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Check, X} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { Switch } from "@/components/ui/switch";
 //import { Employee, DeductionType } from "./DeductionAssignSection";
 
 // Define the type for an assigned Deduction
@@ -86,20 +85,14 @@ const DeductionAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
       accessorKey: "is_active",
       header: "Active?",
       cell: ({ row }) => (
-        <Switch
-          checked={row.original.is_active}
-          disabled
-        />
+        row.original.is_active ? <Check className="h-4 w-4 text-green-500" /> :  <X className="h-4 w-4 text-red-500" />
       ),
     },
     {
       accessorKey: "is_one_time",
       header: "One Time?",
       cell: ({ row }) => (
-        <Switch
-          checked={row.original.is_one_time}
-          disabled
-        />
+        row.original.is_one_time ? <Check className="h-4 w-4 text-green-500" /> :  <X className="h-4 w-4 text-red-500" />
       ),
     },
     {

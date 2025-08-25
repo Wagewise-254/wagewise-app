@@ -18,7 +18,7 @@ interface CompanyCardProps {
 
 export const CompanyCard = ({ company }: CompanyCardProps) => {
   const fallbackLetter = company.business_name ? company.business_name.charAt(0).toUpperCase() : 'C';
-  const status = 'active'; // default for now
+  const status = company.status; // default for now
   const statusColor = status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700';
 
   return (

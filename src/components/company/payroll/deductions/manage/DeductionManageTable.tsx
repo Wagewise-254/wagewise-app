@@ -24,10 +24,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { Switch } from "@/components/ui/switch";
 
 // Define the type for a DeductionType based on your schema
 export type DeductionType = {
@@ -62,10 +61,7 @@ const DeductionManageTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
       accessorKey: "is_tax_deductible",
       header: "Tax Deductible?",
       cell: ({ row }) => (
-        <Switch
-          checked={row.original.is_tax_deductible}
-          disabled // Make it read-only since it's only for display
-        />
+        row.original.is_tax_deductible ? <Check className="h-4 w-4 text-green-500" /> :  <X className="h-4 w-4 text-red-500" />
       ),
     },
     {

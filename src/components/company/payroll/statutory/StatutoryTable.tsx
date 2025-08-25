@@ -50,7 +50,7 @@ export function StatutoryTable({ data, onEdit }: StatutoryTableProps) {
     },
     {
       accessorKey: "pays_paye",
-      header: "PAYE",
+      header: "PAY",
       cell: ({ row }) => (
         row.original.pays_paye ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />
       ),

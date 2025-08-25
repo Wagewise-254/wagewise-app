@@ -26,6 +26,7 @@ interface CompanyState {
   error: string | null;
   fetchCompanies: () => Promise<void>;
   addCompany: (formData: FormData) => Promise<void>;
+  updateCompany: (companyId: string, formData: FormData) => Promise<void>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -99,5 +100,40 @@ export const useCompanyStore = create<CompanyState>((set) => ({
       }
       throw error;
     }
-  }
+  },
+  updateCompany: async (companyId, formData) => {
+    set({ loading: true, error: null });
+    const session = useAuthStore.getState().session;
+    if (!session) throw new Error("User not authenticated.");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/companies/${companyId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update company.');
+      }
+
+      const updatedCompany = await response.json();
+      set((state) => ({
+        companies: state.companies.map((c) =>
+          c.id === updatedCompany.id ? updatedCompany : c
+        ),
+        loading: false,
+      }));
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        set({ error: error.message, loading: false });
+      } else {
+        set({ error: 'An unknown error occurred', loading: false });
+      }
+      throw error;
+    }
+  },
 }));

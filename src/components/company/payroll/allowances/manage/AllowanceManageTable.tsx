@@ -8,7 +8,6 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch"; // Import Switch
 import {
   Table,
   TableBody,
@@ -17,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Check, X } from "lucide-react";
 
 // Updated type definition to match backend schema
 export type AllowanceType = {
@@ -49,30 +49,16 @@ const AllowanceManageTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
     {
       accessorKey: "is_cash",
       header: "Is Cash",
-      cell: ({ row }) => {
-        const isCash = row.original.is_cash;
-        return (
-          <Switch
-            checked={isCash}
-            disabled // The table should only display, not allow editing
-            aria-label="Is cash"
-          />
-        );
-      },
+      cell: ({ row }) => (
+        row.original.is_cash ?  <Check className="h-4 w-4 text-green-500" /> :  <X className="h-4 w-4 text-red-500" />
+        ),
     },
     {
       accessorKey: "is_taxable",
       header: "Is Taxable",
-      cell: ({ row }) => {
-        const isTaxable = row.original.is_taxable;
-        return (
-          <Switch
-            checked={isTaxable}
-            disabled // The table should only display, not allow editing
-            aria-label="Is taxable"
-          />
-        );
-      },
+      cell: ({ row }) => (
+        row.original.is_taxable ? <Check className="h-4 w-4 text-green-500" /> :  <X className="h-4 w-4 text-red-500" />
+      ),
     },
     {
       id: "actions",
