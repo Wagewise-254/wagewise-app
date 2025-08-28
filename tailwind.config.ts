@@ -8,7 +8,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        'brand-purple': '',
+        'brand-purple': '#7F5EFD',
       },
     },
   },

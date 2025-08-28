@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/stores/authStore";
-import { Employee } from "@/components/company/payroll/DataTable";
+import { Employee } from "@/components/company/hr/employee/DataTable";
 import { API_BASE_URL } from "@/config"; // Assuming DataTable is in the same folder
 
 
