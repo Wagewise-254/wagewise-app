@@ -156,7 +156,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaE
                   <SelectValue placeholder="Select employee type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Primary">Primary</SelectItem>
+                  <SelectItem value="Primary Employee">Primary Employee</SelectItem>
                   <SelectItem value="Secondary Employee">Secondary Employee</SelectItem>
                 </SelectContent>
               </Select>
