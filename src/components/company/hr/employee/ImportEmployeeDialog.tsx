@@ -16,7 +16,6 @@ import { Loader2, Download, CheckCircle, CloudUpload } from "lucide-react";
 import { useHrStore } from "@/stores/hrStore";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import { utils, writeFile } from "xlsx";
 
 interface ImportEmployeeDialogProps {
   isOpen: boolean;
@@ -63,114 +62,21 @@ const ImportEmployeeDialog: React.FC<ImportEmployeeDialogProps> = ({
       }
 
       const response = await axios.get(
-        `${API_BASE_URL}/company/${companyId}/departments`,
+        `${API_BASE_URL}/company/${companyId}/employees/template`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          responseType: "blob",
         }
       );
-
-      const departments = response.data.map(
-        (dept: { name: string }) => dept.name
-      );
-
-      const templateHeaders = [
-        "Employee Number",
-        "First Name",
-        "Last Name",
-        "Other Names",
-        "Email",
-        "Phone",
-        "Date of Birth (YYYY-MM-DD)",
-        "Gender",
-        "Date Joined (YYYY-MM-DD)",
-        "Job Title",
-        "Job Type",
-        "Employee Status",
-        "ID Type",
-        "ID Number",
-        "KRA PIN",
-        "NSSF Number",
-        "Citizenship",
-        "Has Disability",
-        "Salary",
-        "Employee Type",
-        "Pays PAYE",
-        "Pays NSSF",
-        "Pays HELB",
-        "Pays Housing Levy",
-        "Department",
-      ];
-
-      const dropdownOptions = {
-        "Gender": ["Male", "Female", "Other"],
-        "Citizenship": ["Kenyan", "Non-Kenyan"],
-        "Job Type": ["Full-time", "Part-time", "Contract", "Internship"],
-        "Employee Type": ["Primary Employee", "Secondary Employee"],
-        "ID Type": ["National ID", "Passport"],
-        "Employee Status": ["Active", "On Leave", "Terminated", "Suspended"],
-        "Has Disability": ["Yes", "No"],
-        "Pays PAYE": ["Yes", "No"],
-        "Pays NSSF": ["Yes", "No"],
-        "Pays HELB": ["Yes", "No"],
-        "Pays Housing Levy": ["Yes", "No"],
-        "Department": departments,
-      };
-
-      const employeeSheet = utils.json_to_sheet([], {
-        header: templateHeaders,
-      });
-      const workbook = utils.book_new();
-      const validationSheet = utils.json_to_sheet([]);
-
-      // Add data validations for dropdowns
-      //populate validation sheet with dropdown options
-      Object.keys(dropdownOptions).forEach((header, index) => {
-        const values = (dropdownOptions as Record<string, string[]>)[header];
-        utils.sheet_add_aoa(validationSheet, [[header]], {
-          origin: `A${index + 1}`,
-        });
-        utils.sheet_add_aoa(validationSheet, [values], {
-          origin: `B${index + 1}`,
-        });
-      });
-
-      // Add sheets to workbook
-            utils.book_append_sheet(workbook, employeeSheet, "Employees");
-            utils.book_append_sheet(workbook, validationSheet, "ValidationLists");
-      // Add data validations for dropdowns
-      Object.keys(dropdownOptions).forEach((header) => {
-        const colIndex = templateHeaders.indexOf(header);
-        if (colIndex !== -1) {
-          const colLetter = String.fromCharCode(65 + colIndex);
-          const listRowIndex = Object.keys(dropdownOptions).indexOf(header) + 1;
-          const listLength = (dropdownOptions as Record<string, string[]>)[header].length;
-          const formula = `ValidationLists!$B$${listRowIndex}:$${utils.encode_col(
-            1 + listLength - 1
-          )}$${listRowIndex}`;
-
-          if (!workbook.Sheets.Employees["!dataValidations"]) {
-            workbook.Sheets.Employees["!dataValidations"] = {};
-          }
-
-          workbook.Sheets.Employees["!dataValidations"][
-            `${colLetter}2:${colLetter}1000`
-          ] = {
-            type: "list",
-            allowBlank: true,
-            showErrorMessage: true,
-            errorTitle: "Invalid Selection",
-            error: "Please select a value from the dropdown list.",
-            formula1: formula,
-          };
-        }
-      });
-
-      // Hide the validation sheet
-      workbook.Sheets.ValidationLists["!visibility"] = "hidden";
-
-      writeFile(workbook, "Employee_Import_Template.xlsx");
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "Employee_Import_Template.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
       toast.success("Template downloaded successfully.");
     } catch (error) {
       console.error("Error downloading template:", error);
