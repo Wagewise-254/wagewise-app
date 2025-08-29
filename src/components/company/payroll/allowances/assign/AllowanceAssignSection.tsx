@@ -6,6 +6,7 @@ import { API_BASE_URL } from "@/config";
 import { useAuthStore } from "@/stores/authStore";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+//import axios from "axios";
 
 import {
   Card,
@@ -20,6 +21,8 @@ import AllowanceAssignTable, { Allowance } from "./AllowanceAssignTable";
 import AddAllowanceDialog from "./AddAllowanceDialog";
 import EditAllowanceDialog from "./EditAllowanceDialog";
 import DeleteAllowanceDialog from "./DeleteAllowanceDialog";
+import ImportAllowanceDialog from "./ImportAllowanceDialog"; 
+import { FileUp } from "lucide-react";
 
 const AllowanceAssignSection = () => {
   const { companyId } = useParams<{ companyId: string }>();
@@ -34,6 +37,7 @@ const AllowanceAssignSection = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedAllowance, setSelectedAllowance] = useState<Allowance | null>(null);
+    const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!companyId || !session) return;
@@ -97,22 +101,37 @@ const AllowanceAssignSection = () => {
     handleCloseDeleteDialog();
   };
 
+  // Add an import success handler
+  const handleImportSuccess = () => {
+      setIsImportDialogOpen(false);
+      fetchData();
+  };
+
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+    <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-2xl font-bold">Assigned Allowances</CardTitle>
-            <CardDescription>
-              Manage allowances assigned to employees.
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="flex flex-col">
+            <CardTitle className="text-2xl font-bold">
+              Assigned Allowances
+            </CardTitle>
+            <CardDescription className="text-sm text-gray-500">
+              Manage allowances assigned to employees and departments.
             </CardDescription>
           </div>
-          <Button
-            onClick={() => setIsAddDialogOpen(true)}
-            className="bg-[#7F5EFD] text-white hover:bg-[#6a4ad3]"
-          >
-            Assign Allowance
-          </Button>
+          <div className="flex gap-2">
+             <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsImportDialogOpen(true)} // <-- Add this button handler
+                className="flex items-center gap-2"
+            >
+                <FileUp className="h-4 w-4" /> Bulk Import
+            </Button>
+            <Button size="sm" className="bg-[#7F5EFD] cursor-pointer text-white hover:bg-[#6a4ad3]" onClick={() => setIsAddDialogOpen(true)}>
+              Assign Allowance
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -158,7 +177,16 @@ const AllowanceAssignSection = () => {
           onDeleted={handleUpdateSuccess}
         />
       )}
-    </div>
+
+      {/* New Bulk Import Dialog */}
+      {isImportDialogOpen && (
+        <ImportAllowanceDialog
+            isOpen={isImportDialogOpen}
+            onClose={() => setIsImportDialogOpen(false)}
+            onUpdated={handleImportSuccess}
+        />
+      )}
+    </>
   );
 };
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import companyLogo from '/icons/android-chrome-512x512.png'; // Make sure this path is correct
+import companyLogo from '/icons/android-chrome-512x512.png'; 
 
 const SplashScreen = () => {
   const navigate = useNavigate();
@@ -34,7 +34,7 @@ const SplashScreen = () => {
             transition={{ duration: 0.6, ease: 'easeOut' }}
           />
           <motion.h1
-            className="text-2xl font-semibold mb-2"
+            className="text-2xl font-semibold tracking-wide mb-2"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
@@ -42,12 +42,12 @@ const SplashScreen = () => {
             WageWise
           </motion.h1>
           <motion.div
-            className="absolute bottom-4 text-xs text-white/60"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
+            className="absolute bottom-6 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-xs font-medium text-white shadow-md"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.5 }}
           >
-            Version 2.0.7
+            v2.0.8
           </motion.div>
         </motion.div>
       )}
