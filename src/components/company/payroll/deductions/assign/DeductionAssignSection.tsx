@@ -20,6 +20,8 @@ import DeductionAssignTable, { AssignedDeduction } from "./DeductionAssignTable"
 import AddDeductionDialog from "./AddDeductionDialog";
 import EditDeductionDialog from "./EditDeductionDialog";
 import DeleteDeductionDialog from "./DeleteDeductionDialog";
+import ImportDeductionDialog from "./ImportDeductionDialog";
+import { FileUp } from "lucide-react";
 
 // Define helper types for data fetching
 export type Employee = {
@@ -70,6 +72,7 @@ const DeductionAssignSection = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedDeduction, setSelectedDeduction] = useState<AssignedDeduction | null>(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!companyId || !session) return;
@@ -164,22 +167,38 @@ const DeductionAssignSection = () => {
     handleCloseDeleteDialog();
   };
 
+  // Add an import success handler
+  const handleImportSuccess = () => {
+      setIsImportDialogOpen(false);
+      fetchData();
+  };
+
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+    <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="flex flex-col">
             <CardTitle className="text-2xl font-bold">Assigned Deductions</CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm text-gray-500">
               View and manage deductions assigned to employees or departments.
             </CardDescription>
           </div>
+          <div className="flex gap-2">
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsImportDialogOpen(true)} // <-- Add this button handler
+                className="flex items-center gap-2"
+            >
+                <FileUp className="h-4 w-4" /> Bulk Import
+            </Button>
           <Button
             onClick={() => setIsAddDialogOpen(true)}
             className="bg-[#7F5EFD] text-white hover:bg-[#6a4ad3]"
           >
             Assign Deduction
           </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -231,7 +250,15 @@ const DeductionAssignSection = () => {
           onDeleted={handleUpdateSuccess}
         />
       )}
-    </div>
+      {/* New Bulk Import Dialog */}
+      {isImportDialogOpen && (
+        <ImportDeductionDialog
+            isOpen={isImportDialogOpen}
+            onClose={() => setIsImportDialogOpen(false)}
+            onUpdated={handleImportSuccess}
+        />
+      )}
+    </>
   );
 };
 
