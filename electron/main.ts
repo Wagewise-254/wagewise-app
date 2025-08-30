@@ -33,7 +33,7 @@ const createMainWindow = () => {
 
     mainWindow.maximize();
   // Hide menu bar completely
-  mainWindow.setMenu(null); 
+  //mainWindow.setMenu(null); 
 
   // Test active push message to Renderer-process.
   mainWindow.webContents.on('did-finish-load', () => {

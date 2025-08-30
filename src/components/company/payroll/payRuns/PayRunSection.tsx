@@ -21,10 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Loader2 } from "lucide-react";
-import {
-  format,
-  parseISO
-} from 'date-fns';
+import { format, parseISO } from "date-fns";
 
 interface PayrollRun {
   id: string;
@@ -72,53 +69,98 @@ const PayRunSection = () => {
     fetchPayrollRuns();
   }, [fetchPayrollRuns]);
 
-  const handleCompleteRun = useCallback(async (runId: string) => {
-    if (!companyId || !session) return;
-    try {
-      const res = await fetch(
-        `${API_BASE_URL}/company/${companyId}/payroll/complete/${runId}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
+  const handleCompleteRun = useCallback(
+    async (runId: string) => {
+      if (!companyId || !session) return;
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/company/${companyId}/payroll/complete/${runId}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          }
+        );
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to complete payroll run.");
         }
-      );
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to complete payroll run.");
+        toast.success("Payroll run completed successfully.");
+        fetchPayrollRuns(); // Refresh the list
+      } catch (error: unknown) {
+        console.error(error);
+        toast.error(
+          (error as Error).message || "An unexpected error occurred."
+        );
       }
-      toast.success("Payroll run completed successfully.");
-      fetchPayrollRuns(); // Refresh the list
-    } catch (error: unknown) {
-      console.error(error);
-      toast.error((error as Error).message || "An unexpected error occurred.");
-    }
-  }, [companyId, session, fetchPayrollRuns]);
+    },
+    [companyId, session, fetchPayrollRuns]
+  );
 
-  const handleCancelRun = useCallback(async (runId: string) => {
-    if (!companyId || !session) return;
-    try {
-      const res = await fetch(
-        `${API_BASE_URL}/company/${companyId}/payroll/cancel/${runId}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
+  const handleCancelRun = useCallback(
+    async (runId: string) => {
+      if (!companyId || !session) return;
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/company/${companyId}/payroll/cancel/${runId}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          }
+        );
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to cancel payroll run.");
         }
-      );
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to cancel payroll run.");
+        toast.success("Payroll run cancelled successfully.");
+        fetchPayrollRuns(); // Refresh the list
+      } catch (error: unknown) {
+        console.error(error);
+        toast.error(
+          (error as Error).message || "An unexpected error occurred."
+        );
       }
-      toast.success("Payroll run cancelled successfully.");
-      fetchPayrollRuns(); // Refresh the list
-    } catch (error: unknown) {
-      console.error(error);
-      toast.error((error as Error).message || "An unexpected error occurred.");
-    }
-  }, [companyId, session, fetchPayrollRuns]);
+    },
+    [companyId, session, fetchPayrollRuns]
+  );
+
+  const handleRecalculateRun = useCallback(
+    async (run: PayrollRun) => {
+      if (!companyId || !session) return;
+      try {
+        toast.info("Recalculating payroll run...");
+        const res = await fetch(
+          `${API_BASE_URL}/company/${companyId}/payroll/run`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              month: run.payroll_month,
+              year: run.payroll_year,
+            }),
+          }
+        );
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to recalculate payroll run.");
+        }
+        toast.success("Payroll run recalculated successfully.");
+        fetchPayrollRuns(); // Refresh the list
+      } catch (error: unknown) {
+        console.error(error);
+        toast.error(
+          (error as Error).message || "An unexpected error occurred."
+        );
+      }
+    },
+    [companyId, session, fetchPayrollRuns]
+  );
 
   const handleViewDetails = (runId: string) => {
     navigate(`/company/${companyId}/payroll/pay-runs/${runId}`);
@@ -160,7 +202,9 @@ const PayRunSection = () => {
               <TableCell>
                 {run.payroll_month}, {run.payroll_year}
               </TableCell>
-              <TableCell>{format(parseISO(run.payroll_date), 'dd/MM/yyyy')}</TableCell>
+              <TableCell>
+                {format(parseISO(run.payroll_date), "dd/MM/yyyy")}
+              </TableCell>
               <TableCell>KSh {run.total_net_pay.toFixed(2)}</TableCell>
               <TableCell>{run.status}</TableCell>
               <TableCell>
@@ -176,6 +220,11 @@ const PayRunSection = () => {
                     </DropdownMenuItem>
                     {run.status === "Draft" && (
                       <>
+                        <DropdownMenuItem
+                          onClick={() => handleRecalculateRun(run)}
+                        >
+                          Recalculate
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleCompleteRun(run.id)}
                         >

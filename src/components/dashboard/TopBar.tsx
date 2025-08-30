@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 // Icons
 import { HelpCircle } from 'lucide-react';
+import companyLogo from "@/assets/android-chrome-512x512.png"
 
 const TopBar: React.FC = () => {
   const { user, logout } = useAuthStore();
@@ -32,7 +33,7 @@ const TopBar: React.FC = () => {
         {/* Left Side: Logo */}
         <div className="flex items-center space-x-2">
           <Link to="/dashboard"> {/* Ensure this link points to your main dashboard */}
-            <img src="/icons/android-chrome-512x512.png" alt="Wagewise" className="h-8 w-auto" />
+            <img src={companyLogo} alt="Wagewise" className="h-8 w-auto" />
           </Link>
         </div>
 

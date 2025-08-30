@@ -35,6 +35,8 @@ export type DeductionType = {
   description: string;
   is_tax_deductible: boolean;
   company_id: string;
+  has_maximum_value: boolean;
+  maximum_value: number | null;
 };
 
 interface Props {
