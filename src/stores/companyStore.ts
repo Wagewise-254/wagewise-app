@@ -27,9 +27,9 @@ interface CompanyState {
   fetchCompanies: () => Promise<void>;
   addCompany: (formData: FormData) => Promise<void>;
   updateCompany: (companyId: string, formData: FormData) => Promise<void>;
+  transferCompany: (companyId: string, recipientEmail: string) => Promise<void>;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const useCompanyStore = create<CompanyState>((set) => ({
   companies: [],
   loading: false,
@@ -101,6 +101,7 @@ export const useCompanyStore = create<CompanyState>((set) => ({
       throw error;
     }
   },
+
   updateCompany: async (companyId, formData) => {
     set({ loading: true, error: null });
     const session = useAuthStore.getState().session;
@@ -136,4 +137,40 @@ export const useCompanyStore = create<CompanyState>((set) => ({
       throw error;
     }
   },
+
+  transferCompany: async (companyId, recipientEmail) => {
+    set({ loading: true, error: null });
+    const session = useAuthStore.getState().session;
+    if (!session) throw new Error("User not authenticated.");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/companies/${companyId}/transfer`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ recipientEmail }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to transfer company ownership.');
+      }
+
+      // Remove the company from the local state after a successful transfer
+      set((state) => ({
+        companies: state.companies.filter((c) => c.id !== companyId),
+        loading: false,
+      }));
+      
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        set({ error: error.message, loading: false });
+      } else {
+        set({ error: 'An unknown error occurred', loading: false });
+      }
+      throw error;
+    }
+  }
 }));

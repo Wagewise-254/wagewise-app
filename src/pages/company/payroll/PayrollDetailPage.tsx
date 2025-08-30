@@ -40,6 +40,7 @@ interface PayrollDetail {
   };
   basic_salary: number;
   total_allowances: number;
+  total_non_cash_benefits: number;
   total_deductions: number;
   gross_pay: number;
   net_pay: number;
@@ -186,7 +187,7 @@ const PayrollDetailsPage = () => {
                   {detail.employee.first_name} {detail.employee.last_name}
                 </TableCell>
                 <TableCell>KSh {detail.basic_salary.toFixed(2)}</TableCell>
-                <TableCell>KSh {detail.total_allowances.toFixed(2)}</TableCell>
+                <TableCell>KSh {(detail.total_allowances + detail.total_non_cash_benefits).toFixed(2)}</TableCell>
                 <TableCell>KSh {detail.total_deductions.toFixed(2)}</TableCell>
                 <TableCell>KSh {detail.gross_pay.toFixed(2)}</TableCell>
                 <TableCell>KSh {detail.net_pay.toFixed(2)}</TableCell>
