@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Users, Briefcase, Loader2 } from "lucide-react";
+import { Users, Loader2 } from "lucide-react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -196,7 +196,7 @@ const CompanyOverview = () => {
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between pb-1">
             <CardTitle className="text-sm font-medium">Active Employees</CardTitle>
-            <Briefcase className="h-5 w-5 text-gray-500" />
+            <Users className="h-5 w-5 text-gray-500" />
           </CardHeader>
           <CardContent className="pb-2">
             <div className="text-2xl font-bold">{data.activeEmployees}</div>

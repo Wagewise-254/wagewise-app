@@ -19,7 +19,7 @@ import {
 export default function OverviewSettingsSection() {
   // Maintenance flag
   const underMaintenance = false; // Set to false to enable functionality
-  const { companies, updateCompany,  loading, error  } = useCompanyStore(); // removed this  transferCompany, fetchCompanies
+  const { companies, updateCompany, transferCompany, fetchCompanies,  loading, error  } = useCompanyStore(); // removed this  
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [companyStatus, setCompanyStatus] = useState<string>('active');
@@ -95,9 +95,7 @@ export default function OverviewSettingsSection() {
       toast.error("Please enter a recipient email.");
       return;
     }
-    toast.info("Transfer functionality is currently disabled for maintenance.");
 
-    /*
 
     try {
       await transferCompany(selectedCompanyId, transferRecipientEmail);
@@ -107,7 +105,7 @@ export default function OverviewSettingsSection() {
       fetchCompanies(); // Refresh company list
     } catch (err) {
       toast.error(`Failed to transfer company ownership.`);
-    } */
+    } 
   };
 
   return (
