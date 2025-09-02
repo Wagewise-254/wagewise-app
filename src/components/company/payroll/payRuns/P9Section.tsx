@@ -36,7 +36,7 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
-import { Loader2, MoreHorizontal } from "lucide-react";
+import { Loader2, MoreHorizontal, Download, Mail } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -50,6 +50,17 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationLink,
+  PaginationNext,
+} from "@/components/ui/pagination";
+
 import { cn } from "@/lib/utils";
 
 // Define types for data
@@ -70,6 +81,11 @@ const P9Section = () => {
   const [openYear, setOpenYear] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [isBulkSending, setIsBulkSending] = useState(false);
 
   // Fetch unique payroll years and employee list
   const fetchP9Data = useCallback(async () => {
@@ -105,18 +121,22 @@ const P9Section = () => {
         }
       );
       const yearsData = await yearsRes.json();
-// ✅ Check if the request was successful and the data is an array
-if (!yearsRes.ok || !yearsData.success || !Array.isArray(yearsData.data)) {
-    throw new Error(yearsData.error || "Failed to fetch payroll years.");
-}
+      // ✅ Check if the request was successful and the data is an array
+      if (
+        !yearsRes.ok ||
+        !yearsData.success ||
+        !Array.isArray(yearsData.data)
+      ) {
+        throw new Error(yearsData.error || "Failed to fetch payroll years.");
+      }
 
-// ✅ Use the data directly as it's already an array of unique years
-const uniqueYears = yearsData.data.sort().reverse() as number[];
-setYears(uniqueYears);
+      // ✅ Use the data directly as it's already an array of unique years
+      const uniqueYears = yearsData.data.sort().reverse() as number[];
+      setYears(uniqueYears);
 
-if (uniqueYears.length > 0) {
-    setSelectedYear(uniqueYears[0]);
-}
+      if (uniqueYears.length > 0) {
+        setSelectedYear(uniqueYears[0]);
+      }
     } catch (error: unknown) {
       console.error("Error fetching P9 data:", error);
       if (error instanceof Error) {
@@ -185,15 +205,154 @@ if (uniqueYears.length > 0) {
     [companyId, selectedYear, session]
   );
 
-  // Handle bulk download (Coming soon)
-  const handleBulkDownload = () => {
-    toast.info("Bulk download is coming soon!");
+  const handleEmailSingleP9A = async (employeeId: string, year: number) => {
+    if (!companyId || !session) {
+      toast.error("Authentication failed. Please log in again.");
+      return;
+    }
+
+    const toastId = toast.loading("Sending P9A via email...");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/companies/${companyId}/employees/${employeeId}/p9a/${year}/email`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to send P9A email.");
+      }
+
+      const data = await response.json();
+      toast.success(data.message || "P9A email sent successfully.", {
+        id: toastId,
+      });
+    } catch (error: unknown) {
+      console.error("Error emailing P9A:", error);
+      if (error instanceof Error) {
+        toast.error(error.message || "Error sending P9A email.", {
+          id: toastId,
+        });
+      } else {
+        toast.error("Error sending P9A email.", { id: toastId });
+      }
+    }
   };
 
-  // Handle email send (Coming soon)
-  const handleEmail = () => {
-    toast.info("Email functionality is coming soon!");
+  const handleEmailBulkP9As = async () => {
+    if (selectedEmployees.length === 0 || !selectedYear) {
+      toast.error("No employees selected or year not specified.");
+      return;
+    }
+    if (!companyId || !session) {
+      toast.error("Authentication failed. Please log in again.");
+      return;
+    }
+
+    setIsBulkSending(true);
+    let successCount = 0;
+    let failCount = 0;
+    const totalSelected = selectedEmployees.length;
+
+    const toastId = toast.loading(
+      `Sending emails to ${totalSelected} employees...`
+    );
+
+    try {
+      for (const employeeId of selectedEmployees) {
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/companies/${companyId}/employees/${employeeId}/p9a/${selectedYear}/email`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+            const errorData = await response.json();
+            console.error(
+              `Failed to send email for employee ${employeeId}:`,
+              errorData.error
+            );
+          }
+        } catch (error) {
+          failCount++;
+          console.error(
+            `Error sending email for employee ${employeeId}:`,
+            error
+          );
+        }
+      }
+
+      // Final toast message
+      if (successCount > 0 && failCount === 0) {
+        toast.success(
+          `Successfully sent P9A emails to all ${successCount} selected employees.`,
+          { id: toastId }
+        );
+      } else if (successCount > 0 && failCount > 0) {
+        toast.warning(
+          `Sent P9A emails to ${successCount} employees. Failed to send to ${failCount} employees.`,
+          { id: toastId }
+        );
+      } else {
+        toast.error("Failed to send any P9A emails.", { id: toastId });
+      }
+    } finally {
+      setIsBulkSending(false);
+      setSelectedEmployees([]); // Clear selection after the operation
+    }
   };
+
+  // Search and Pagination Logic
+  const filteredEmployees = employees.filter(
+    (employee) =>
+      `${employee.first_name} ${employee.last_name}`
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      employee.employee_number.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  const paginatedEmployees = filteredEmployees.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = filteredEmployees.map((e) => e.id);
+      setSelectedEmployees(allIds);
+    } else {
+      setSelectedEmployees([]);
+    }
+  };
+
+  const handleSelectEmployee = (employeeId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedEmployees((prev) => [...prev, employeeId]);
+    } else {
+      setSelectedEmployees((prev) => prev.filter((id) => id !== employeeId));
+    }
+  };
+
+  const isAllSelected =
+    selectedEmployees.length > 0 &&
+    selectedEmployees.length === filteredEmployees.length;
 
   return (
     <Card>
@@ -205,8 +364,9 @@ if (uniqueYears.length > 0) {
       </CardHeader>
       <CardContent>
         {loading && (
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
+          <div className="flex items-center justify-center h-32">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <span>Loading years...</span>
           </div>
         )}
         {!loading && years.length > 0 && (
@@ -261,73 +421,85 @@ if (uniqueYears.length > 0) {
                   <DialogHeader>
                     <DialogTitle>P9A for {selectedYear}</DialogTitle>
                     <DialogDescription>
-                      Download or email the P9A for individual employees.
+                      Select employees to download or send their P9A forms.
                     </DialogDescription>
                   </DialogHeader>
                   <Separator className="my-4" />
-                  <div className="flex flex-col md:flex-row justify-between gap-4">
-                    <Button variant="outline" onClick={handleBulkDownload}>
-                      <Loader2
-                        className={cn(
-                          "mr-2 h-4 w-4 animate-spin",
-                          downloading ? "" : "hidden"
-                        )}
+                  <div className="flex justify-between items-center my-4">
+                    <div className="flex gap-2 w-full">
+                      <Input
+                        placeholder="Search by name or employee number..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="max-w-sm"
                       />
-                      Download All (Zip)
-                    </Button>
-                    <Button variant="outline" onClick={handleEmail}>
-                      <Loader2
-                        className={cn(
-                          "mr-2 h-4 w-4 animate-spin",
-                          downloading ? "" : "hidden"
-                        )}
-                      />
-                      Email All
-                    </Button>
+                      {selectedEmployees.length > 0 && (
+                        <Button
+                          onClick={handleEmailBulkP9As}
+                          className="bg-blue-500 hover:bg-blue-600"
+                          disabled={isBulkSending}
+                        >
+                          {isBulkSending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>Send P9A Email ({selectedEmployees.length})</>
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div className="max-h-[500px] overflow-auto mt-4">
+                  <div className="flex-grow overflow-auto border rounded-md">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Employee Name</TableHead>
-                          <TableHead>Employee No.</TableHead>
+                          <TableHead className="w-[50px]">
+                            <Checkbox
+                              checked={isAllSelected}
+                              onCheckedChange={(checked: boolean) => handleSelectAll(checked)}
+                            />
+                          </TableHead>
+                          <TableHead>Employee</TableHead>
+                          <TableHead>Employee Number</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {employees.length > 0 ? (
-                          employees.map((employee) => (
+                         {paginatedEmployees.length > 0 ? (
+                          paginatedEmployees.map((employee) => (
                             <TableRow key={employee.id}>
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedEmployees.includes(employee.id)}
+                                  onCheckedChange={(checked: boolean) => handleSelectEmployee(employee.id, checked)}
+                                />
+                              </TableCell>
                               <TableCell className="font-medium">
                                 {employee.first_name} {employee.last_name}
                               </TableCell>
-                              <TableCell>{employee.employee_number}</TableCell>
+                              <TableCell>
+                                {employee.employee_number}
+                              </TableCell>
                               <TableCell className="text-right">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      className="h-8 w-8 p-0"
-                                    >
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                      <span className="sr-only">Open menu</span>
                                       <MoreHorizontal className="h-4 w-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        handleDownloadP9A(
-                                          employee.id,
-                                          `${employee.first_name}_${employee.last_name}`
-                                        )
-                                      }
-                                      disabled={downloading === employee.id}
-                                    >
+                                    <DropdownMenuItem onClick={() => handleDownloadP9A(employee.id, `${employee.first_name} ${employee.last_name}`)}>
+                                      <Download className="mr-2 h-4 w-4" />
                                       {downloading === employee.id && (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                       )}
                                       Download P9A
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={handleEmail}>
+                                    <DropdownMenuItem onClick={() => handleEmailSingleP9A(employee.id, selectedYear!)}>
+                                      <Mail className="mr-2 h-4 w-4" />
                                       Email P9A
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
@@ -337,13 +509,35 @@ if (uniqueYears.length > 0) {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={3} className="text-center">
+                            <TableCell colSpan={4} className="text-center">
                               No employees found for this company.
                             </TableCell>
                           </TableRow>
                         )}
                       </TableBody>
                     </Table>
+                  </div>
+                  <div className="flex justify-center mt-4">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} />
+                        </PaginationItem>
+                        {[...Array(totalPages)].map((_, index) => (
+                          <PaginationItem key={index}>
+                            <PaginationLink
+                              isActive={currentPage === index + 1}
+                              onClick={() => setCurrentPage(index + 1)}
+                            >
+                              {index + 1}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
                   </div>
                 </DialogContent>
               </Dialog>
