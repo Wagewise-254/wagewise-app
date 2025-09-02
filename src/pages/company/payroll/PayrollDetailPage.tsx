@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Loader2 } from "lucide-react";
+import { MoreHorizontal, Loader2, Mail, Download } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -29,6 +29,11 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext } from "@/components/ui/pagination";
+
+
 
 interface PayrollDetail {
   id: string;
@@ -52,6 +57,11 @@ const PayrollDetailsPage = () => {
   const navigate = useNavigate();
   const [details, setDetails] = useState<PayrollDetail[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+   const [isBulkSending, setIsBulkSending] = useState(false);
 
   const fetchPayrollDetails = useCallback(async () => {
     if (!companyId || !runId || !session) {
@@ -135,12 +145,130 @@ const PayrollDetailsPage = () => {
     toast.error((error as Error).message || "Error downloading payslip");
   }
 };
-
   
-  // New function to handle email payslip, showing a toast message
-  const handleEmailPayslip = () => {
-      toast.info("Email functionality is coming soon.");
+  // New function to handle single payslip email
+  const handleEmailSinglePayslip = async (payrollDetailId: string) => {
+      if (!companyId || !session) {
+      toast.error("Authentication failed. Please log in again.");
+      return;
+    }
+  
+    const toastId = toast.loading("Sending payslip via email...");
+  
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/company/${companyId}/payroll/payslip/${payrollDetailId}/email`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to send payslip email.");
+      }
+      
+      const data = await response.json();
+      toast.success(data.message || "Payslip email sent successfully.", { id: toastId });
+    } catch (error: unknown) {
+      console.error("Error emailing payslip:", error);
+      toast.error((error as Error).message || "Error sending payslip email.", { id: toastId });
+    }
   };
+
+  // New function to handle bulk payslip email
+  const handleEmailBulkPayslips = async () => {
+      if (selectedEmployees.length === 0) {
+      toast.error("No employees selected for email.");
+      return;
+    }
+    if (!companyId || !session) {
+      toast.error("Authentication failed. Please log in again.");
+      return;
+    }
+    
+    setIsBulkSending(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    const toastId = toast.loading(`Sending emails to ${selectedEmployees.length} employees...`);
+
+    try {
+      for (const id of selectedEmployees) {
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/company/${companyId}/payroll/payslip/${id}/email`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+            const errorData = await response.json();
+            console.error(`Failed to send email for ID ${id}:`, errorData.error);
+          }
+        } catch (error) {
+          failCount++;
+          console.error(`Error sending email for ID ${id}:`, error);
+        }
+      }
+
+      // Final toast message
+      if (successCount > 0 && failCount === 0) {
+        toast.success(`Successfully sent emails to all ${successCount} selected employees.`, { id: toastId });
+      } else if (successCount > 0 && failCount > 0) {
+        toast.warning(`Sent emails to ${successCount} employees. Failed to send to ${failCount} employees.`, { id: toastId });
+      } else {
+        toast.error("Failed to send any emails.", { id: toastId });
+      }
+
+    } finally {
+      setIsBulkSending(false);
+      setSelectedEmployees([]); // Clear selection after the operation
+    }
+  }
+  // Pagination and search logic
+  const filteredDetails = details.filter(detail =>
+    `${detail.employee.first_name} ${detail.employee.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    detail.employee.employee_number.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  const totalPages = Math.ceil(filteredDetails.length / itemsPerPage);
+  const paginatedDetails = filteredDetails.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = filteredDetails.map(d => d.id);
+      setSelectedEmployees(allIds);
+    } else {
+      setSelectedEmployees([]);
+    }
+  };
+
+  const handleSelectEmployee = (payrollDetailId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedEmployees(prev => [...prev, payrollDetailId]);
+    } else {
+      setSelectedEmployees(prev => prev.filter(id => id !== payrollDetailId));
+    }
+  };
+
+  const isAllSelected = selectedEmployees.length > 0 && selectedEmployees.length === filteredDetails.length;
+
 
   if (loading) {
     return (
@@ -164,13 +292,43 @@ const PayrollDetailsPage = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button onClick={() => navigate(-1)} className="mb-4 bg-[#7F5EFD] cursor-pointer">
-          &larr; Back to Payroll Runs
-        </Button>
+        <div className="flex justify-between items-center mb-4">
+          <Button onClick={() => navigate(-1)} className="bg-[#7F5EFD] cursor-pointer">
+            &larr; Back to Payroll Runs
+          </Button>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Search for employees"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-md"
+            />
+            {selectedEmployees.length > 0 && (
+              <Button onClick={handleEmailBulkPayslips} className="bg-blue-500 hover:bg-blue-600">
+                 {isBulkSending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    Send Payslip Email ({selectedEmployees.length})
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
         <Separator className="mb-4" />
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">
+                <Checkbox
+                  checked={isAllSelected}
+                  onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
               <TableHead>Employee</TableHead>
               <TableHead>Basic Salary</TableHead>
               <TableHead>Allowances</TableHead>
@@ -181,8 +339,14 @@ const PayrollDetailsPage = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {details.map((detail) => (
+            {paginatedDetails.map((detail) => (
               <TableRow key={detail.id}>
+                <TableCell>
+                  <Checkbox
+                    checked={selectedEmployees.includes(detail.id)}
+                    onCheckedChange={(checked: boolean) => handleSelectEmployee(detail.id, checked)}
+                  />
+                </TableCell>
                 <TableCell className="font-medium">
                   {detail.employee.first_name} {detail.employee.last_name}
                 </TableCell>
@@ -199,10 +363,12 @@ const PayrollDetailsPage = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {/* Attach the new click handler to the download button */}
-                      <DropdownMenuItem onClick={() => handleDownloadPayslip(detail.id)}>Download Payslip</DropdownMenuItem>
-                      {/* Attach the new click handler to the email button */}
-                      <DropdownMenuItem onClick={handleEmailPayslip}>Email Payslip</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownloadPayslip(detail.id)}>
+                        <Download className="mr-2 h-4 w-4" /> Download Payslip
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEmailSinglePayslip(detail.id)}>
+                        <Mail className="mr-2 h-4 w-4" /> Email Payslip
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -210,6 +376,28 @@ const PayrollDetailsPage = () => {
             ))}
           </TableBody>
         </Table>
+        <div className="flex justify-center mt-4">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} />
+              </PaginationItem>
+              {[...Array(totalPages)].map((_, index) => (
+                <PaginationItem key={index}>
+                  <PaginationLink
+                    isActive={currentPage === index + 1}
+                    onClick={() => setCurrentPage(index + 1)}
+                  >
+                    {index + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       </CardContent>
     </Card>
   );
