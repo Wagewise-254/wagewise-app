@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { API_BASE_URL } from "@/config";
 import { toast } from "sonner";
+import { format } from 'date-fns';
 import {
   Card,
   CardContent,
@@ -100,6 +101,20 @@ const DonutTooltip: React.FC<DonutTooltipProps> = ({ active, payload }) => {
     );
   }
   return null;
+};
+
+// Create a new helper function to extract month and year from payroll_number
+const formatPayrollNumber = (payrollNumber: string) => {
+    // The format is PR-YYYYMM-XXXXXX
+    // We need to extract the YYYY and MM parts
+    const year = payrollNumber.slice(3, 7);
+    const month = payrollNumber.slice(7, 9);
+    
+    // Create a date object to format the month name
+    // We use a dummy day (01) to create a valid date
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    
+    return format(date, 'MMMM yyyy');
 };
 
 const CompanyOverview = () => {
@@ -220,7 +235,7 @@ const CompanyOverview = () => {
             </div>
             <div>
               <div className="text-gray-500">Last Payroll</div>
-              <div className="font-semibold">{data.recentPayrolls?.[0]?.payroll_date ? new Date(data.recentPayrolls[0].payroll_date).toLocaleDateString() : "—"}</div>
+              <div className="font-semibold">{data.recentPayrolls?.[0]?.payroll_number ? formatPayrollNumber(data.recentPayrolls[0].payroll_number) : "—"}</div>
             </div>
             <div>
               <div className="text-gray-500">Last Net Pay</div>
@@ -310,6 +325,7 @@ const CompanyOverview = () => {
                 <thead>
                   <tr className="text-left text-gray-500">
                     <th className="py-2 pr-4">Payroll #</th>
+                    <th className="py-2 pr-4">Period</th>
                     <th className="py-2 pr-4">Date</th>
                     <th className="py-2 pr-4">Net Pay</th>
                   </tr>
@@ -318,6 +334,7 @@ const CompanyOverview = () => {
                   {(data.recentPayrolls || []).map((r, i) => (
                     <tr key={i} className="border-t">
                       <td className="py-2 pr-4 font-medium">{r.payroll_number}</td>
+                      <td className="py-2 pr-4">{formatPayrollNumber(r.payroll_number)}</td>
                       <td className="py-2 pr-4">{new Date(r.payroll_date).toLocaleDateString()}</td>
                       <td className="py-2 pr-4">{currency(r.total_net_pay)}</td>
                     </tr>

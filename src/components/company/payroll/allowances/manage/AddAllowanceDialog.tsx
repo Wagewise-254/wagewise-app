@@ -72,11 +72,11 @@ export default function AddAllowanceDialog({ companyId, isOpen, onClose, onUpdat
         <div className="space-y-4">
           <div>
             <Label className="my-2" htmlFor="name">Name</Label>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="E.g. Housing, Meals, Car"/>
           </div>
           <div>
             <Label className="my-2" htmlFor="description">Description</Label>
-            <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="E.g. Monthly housing allowance"/>
           </div>
           <div className="flex items-center space-x-2">
             <Label htmlFor="isCash">Is Cash?</Label>

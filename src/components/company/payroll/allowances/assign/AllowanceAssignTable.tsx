@@ -130,6 +130,12 @@ const AllowanceAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    globalFilterFn: (row, _columnId, filterValue) => {
+    // Get the employee name from the row
+    const employeeName = `${row.original.employees.first_name} ${row.original.employees.last_name}`;
+    // Check if the employee name (case-insensitive) includes the filter value
+    return employeeName.toLowerCase().includes(filterValue.toLowerCase());
+  },
     onGlobalFilterChange: setGlobalFilter,
     state: {
       globalFilter,
@@ -139,7 +145,7 @@ const AllowanceAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
   return (
     <div className="space-y-4">
       <Input
-        placeholder="Search by allowance type or employee name..."
+        placeholder="Search by employee name..."
         value={globalFilter ?? ""}
         onChange={(event) => setGlobalFilter(event.target.value)}
         className="max-w-sm"

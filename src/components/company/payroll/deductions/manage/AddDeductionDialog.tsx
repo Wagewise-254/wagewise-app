@@ -100,6 +100,7 @@ export default function AddDeductionDialog({
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              placeholder="E.g. Insurance, Mortgage"
             />
           </div>
           <div>
@@ -110,6 +111,7 @@ export default function AddDeductionDialog({
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              placeholder="E.g. Monthly insurance deduction"
             />
           </div>
           <div className="flex items-center space-x-2">
