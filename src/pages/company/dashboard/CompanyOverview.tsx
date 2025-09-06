@@ -258,9 +258,9 @@ const CompanyOverview = () => {
                 <YAxis tickFormatter={(v) => `${Math.round(v/1000)}k`} axisLine={false} tickLine={false} />
                 <Tooltip content={<PayrollTooltip />} />
                 <Legend wrapperStyle={{ paddingTop: 8 }} />
-                <Bar dataKey="gross_pay" name="Gross" radius={[5, 5, 0, 0]} fill="#8884d8" />
-                <Bar dataKey="total_deductions" name="Deductions" radius={[4, 4, 0, 0]} fill="#82ca9d" />
-                <Bar dataKey="net_pay" name="Net" radius={[5, 5, 0, 0]} fill="#ffc658" />
+                <Bar dataKey="gross_pay" name="Gross" radius={[0, 0, 0, 0]} fill="#8884d8" />
+                <Bar dataKey="total_deductions" name="Deductions" radius={[0, 0, 0, 0]} fill="#82ca9d" />
+                <Bar dataKey="net_pay" name="Net" radius={[0, 0, 0, 0]} fill="#ffc658" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

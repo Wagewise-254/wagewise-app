@@ -144,7 +144,7 @@ const AllowanceAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
         onChange={(event) => setGlobalFilter(event.target.value)}
         className="max-w-sm"
       />
-      <div className="rounded-md border">
+      <div className="rounded-md border px-2">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

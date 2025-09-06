@@ -3,7 +3,6 @@ import {
   ColumnDef,
   ColumnFiltersState,
   SortingState,
-  VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -11,7 +10,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronDown, MoreHorizontal, Loader2 } from "lucide-react"
+import { MoreHorizontal, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -22,9 +21,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -33,6 +32,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationLink,
+  PaginationNext,
+} from "@/components/ui/pagination"
 import { useParams } from 'react-router-dom';
 import { useHrStore, Employee } from '@/stores/hrStore';
 import { toast } from 'sonner';
@@ -40,6 +47,23 @@ import { toast } from 'sonner';
 import ConfirmationDialog from '@/components/company/hr/employee/ConfirmationDialog';
 import EditEmployeeDialog from './EditEmployeeDialog';
 import ChangeEmployeeStatusDialog from './ChangeEmployeeStatusDialog';
+import EmployeeDetailsDialog from "./EmployeeDetailsDialog"
+
+const EmployeeStatusBadge = ({ status }: { status: string }) => {
+  const getVariant = (status: string) => {
+    switch (status) {
+      case 'Active':
+        return 'bg-green-100 text-green-800';
+      case 'On Leave':
+        return 'bg-orange-100 text-orange-800';
+      case 'Terminated':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+  return <Badge className={getVariant(status)}>{status}</Badge>;
+};
 
 const columns: ColumnDef<Employee>[] = [
   {
@@ -65,19 +89,17 @@ const columns: ColumnDef<Employee>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "first_name",
-    header: "First Name",
-    cell: ({ row }) => <div>{row.getValue("first_name")}</div>,
-  },
-  {
-    accessorKey: "last_name",
-    header: "Last Name",
-    cell: ({ row }) => <div>{row.getValue("last_name")}</div>,
-  },
-  {
     accessorKey: "employee_number",
-    header: "Employee Number",
+    header: "Employee No.",
     cell: ({ row }) => <div>{row.getValue("employee_number")}</div>,
+  },
+  {
+    accessorKey: "name",
+    header: "Name",
+    cell: ({ row }) => {
+      const employee = row.original;
+      return <div>{`${employee.first_name} ${employee.last_name}`}</div>;
+    },
   },
   {
     accessorKey: "email",
@@ -85,7 +107,7 @@ const columns: ColumnDef<Employee>[] = [
     cell: ({ row }) => <div>{row.getValue("email")}</div>,
   },
   {
-    accessorKey: "department_id",
+    accessorKey: "departments.name",
     header: "Department",
     cell: ({ row }) => {
       const department = row.original.departments;
@@ -100,32 +122,18 @@ const columns: ColumnDef<Employee>[] = [
   {
     accessorKey: "employee_status",
     header: "Status",
-    cell: ({ row }) => <div>{row.getValue("employee_status")}</div>,
-  },
-  {
-    accessorKey: "date_joined",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Date Joined
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div>{new Date(row.getValue("date_joined")).toLocaleDateString()}</div>,
+    cell: ({ row }) => <EmployeeStatusBadge status={row.getValue("employee_status")} />,
   },
   {
     id: "actions",
     enableHiding: false,
     cell: ({ row, table }) => {
       const employee = row.original;
-      const { onEditClick, onChangeStatusClick, onDeleteClick } = table.options.meta as {
+      const { onEditClick, onChangeStatusClick, onBulkDeleteClick, onViewDetailsClick } = table.options.meta as {
         onEditClick: (employee: Employee) => void;
         onChangeStatusClick: (employee: Employee) => void;
-        onDeleteClick: (employee: Employee) => void;
+        onBulkDeleteClick: (employeeIds: string[]) => void;
+        onViewDetailsClick: (employee: Employee) => void;
       };
 
       return (
@@ -138,10 +146,8 @@ const columns: ColumnDef<Employee>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(employee.id)}
-            >
-              Copy Employee ID
+            <DropdownMenuItem onClick={() => onViewDetailsClick(employee)}>
+              View Details
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onEditClick(employee)}>
@@ -151,7 +157,7 @@ const columns: ColumnDef<Employee>[] = [
               Change Status
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onDeleteClick(employee)}>
+            <DropdownMenuItem className="text-red-500" onClick={() => onBulkDeleteClick([employee.id])}>
               Delete Employee
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -163,34 +169,33 @@ const columns: ColumnDef<Employee>[] = [
 
 export default function EmployeesTable() {
   const { companyId } = useParams();
-  const { employees, loading, deleteEmployee } = useHrStore();
+  const { employees, deleteEmployee, deleteEmployees } = useHrStore();
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
-  
-  // State for Edit Dialog
+  const [globalFilter, setGlobalFilter] = React.useState('');
+
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
-  const [selectedEmployee, setSelectedEmployee] = React.useState<Employee | null>(null);
-
-  // State for Change Status Dialog
   const [isStatusDialogOpen, setIsStatusDialogOpen] = React.useState(false);
-  const [employeeToChangeStatus, setEmployeeToChangeStatus] = React.useState<Employee | null>(null);
-
-  // State for Delete Dialog
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
-  const [employeeToDelete, setEmployeeToDelete] = React.useState<Employee | null>(null);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = React.useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = React.useState(false);
+
+  const [selectedEmployee, setSelectedEmployee] = React.useState<Employee | null>(null);
+  const [employeeToChangeStatus, setEmployeeToChangeStatus] = React.useState<Employee | null>(null);
+  const [employeesToDelete, setEmployeesToDelete] = React.useState<string[]>([]);
+  
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const handleEditClick = (employee: Employee) => {
     setSelectedEmployee(employee);
     setIsEditDialogOpen(true);
-  };
-  
-  const handleEditDialogClose = () => {
-    setIsEditDialogOpen(false);
-    setSelectedEmployee(null);
   };
 
   const handleChangeStatusClick = (employee: Employee) => {
@@ -198,29 +203,48 @@ export default function EmployeesTable() {
     setIsStatusDialogOpen(true);
   };
 
-  const handleChangeStatusClose = () => {
-    setIsStatusDialogOpen(false);
-    setEmployeeToChangeStatus(null);
-  };
-
-  const handleDeleteClick = (employee: Employee) => {
-    setEmployeeToDelete(employee);
+  const handleDeleteClick = (employeeId: string) => {
+    setEmployeesToDelete([employeeId]);
     setIsDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!employeeToDelete || !companyId) return;
+  const handleBulkDelete = () => {
+    const selectedIds = table.getSelectedRowModel().rows.map(row => row.original.id);
+    if (selectedIds.length > 0) {
+      setEmployeesToDelete(selectedIds);
+      setIsBulkDeleteDialogOpen(true);
+    }
+  };
 
+  const handleViewDetails = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setIsDetailsDialogOpen(true);
+  };
+
+  const handleSingleDeleteConfirm = async () => {
+    if (!employeesToDelete[0] || !companyId) return;
     setIsDeleting(true);
-    const success = await deleteEmployee(companyId, employeeToDelete.id);
+    const success = await deleteEmployee(companyId, employeesToDelete[0]);
     setIsDeleting(false);
-
     if (success) {
       toast.success('Employee deleted successfully.');
       setIsDeleteDialogOpen(false);
-      setEmployeeToDelete(null);
     } else {
       toast.error('Failed to delete employee.');
+    }
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    if (employeesToDelete.length === 0 || !companyId) return;
+    setIsBulkDeleting(true);
+    const success = await deleteEmployees(companyId, employeesToDelete);
+    setIsBulkDeleting(false);
+    if (success) {
+      toast.success(`${employeesToDelete.length} employee(s) deleted successfully.`);
+      setIsBulkDeleteDialogOpen(false);
+      setRowSelection({});
+    } else {
+      toast.error('Failed to delete employees.');
     }
   };
 
@@ -233,62 +257,63 @@ export default function EmployeesTable() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
     state: {
       sorting,
       columnFilters,
-      columnVisibility,
       rowSelection,
+      globalFilter,
+      pagination,
+    },
+    onGlobalFilterChange: setGlobalFilter,
+     globalFilterFn: (row, _columnId, filterValue) => {
+      const searchTerm = String(filterValue).toLowerCase();
+      
+      const employeeNumber = String(row.original.employee_number || '').toLowerCase();
+      const firstName = String(row.original.first_name || '').toLowerCase();
+      const lastName = String(row.original.last_name || '').toLowerCase();
+      const fullName = `${firstName} ${lastName}`;
+      const reversedFullName = `${lastName} ${firstName}`;
+
+      return (
+        employeeNumber.includes(searchTerm) || 
+        firstName.includes(searchTerm) || 
+        lastName.includes(searchTerm) ||
+        fullName.includes(searchTerm) ||
+        reversedFullName.includes(searchTerm)
+      );
     },
     meta: {
       onEditClick: handleEditClick,
       onChangeStatusClick: handleChangeStatusClick,
-      onDeleteClick: handleDeleteClick,
-    },
+      onBulkDeleteClick: handleDeleteClick,
+      onViewDetailsClick: handleViewDetails,
+    }
   });
 
-  if (!companyId) {
-    return <div>Error: Company ID not found.</div>;
-  }
+  const selectedRowCount = Object.keys(rowSelection).length;
+
 
   return (
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
-          placeholder="Filter employees..."
-          value={(table.getColumn("first_name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("first_name")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
+          placeholder="Search employees..."
+          value={globalFilter ?? ''}
+          onChange={event => setGlobalFilter(event.target.value)}
+          className="max-w-sm mr-2"
         />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              Columns <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                )
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {selectedRowCount > 0 && (
+          <Button
+            variant="destructive"
+            className="flex items-center space-x-2"
+            onClick={handleBulkDelete}
+          >
+            <Trash2 className="h-4 w-4" />
+            <span>Delete ({selectedRowCount})</span>
+          </Button>
+        )}
       </div>
       <div className="rounded-md border px-2">
         <Table>
@@ -305,21 +330,13 @@ export default function EmployeesTable() {
                             header.getContext()
                           )}
                     </TableHead>
-                  )
+                  );
                 })}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  <div className="flex items-center justify-center">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : table.getRowModel().rows?.length ? (
+            {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
@@ -335,56 +352,94 @@ export default function EmployeesTable() {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
+                  No employees found.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
+
+      <div className="flex justify-center mt-4">
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => table.previousPage()}
+                className={!table.getCanPreviousPage() ? "cursor-not-allowed opacity-50" : ""}
+              />
+            </PaginationItem>
+            {Array.from({ length: table.getPageCount() }, (_, index) => (
+              <PaginationItem key={index}>
+                <PaginationLink
+                  isActive={table.getState().pagination.pageIndex === index}
+                  onClick={() => table.setPageIndex(index)}
+                >
+                  {index + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => table.nextPage()}
+                className={!table.getCanNextPage() ? "cursor-not-allowed opacity-50" : ""}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
       
+      {/* Dialogs */}
       <EditEmployeeDialog
         isOpen={isEditDialogOpen}
-        onClose={handleEditDialogClose}
+        onClose={() => setIsEditDialogOpen(false)}
         employee={selectedEmployee}
       />
       <ChangeEmployeeStatusDialog
         isOpen={isStatusDialogOpen}
-        onClose={handleChangeStatusClose}
+        onClose={() => setIsStatusDialogOpen(false)}
         employee={employeeToChangeStatus}
+      />
+      <EmployeeDetailsDialog
+        isOpen={isDetailsDialogOpen}
+        onClose={() => setIsDetailsDialogOpen(false)}
+        employee={selectedEmployee}
       />
       <ConfirmationDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={handleDeleteConfirm}
+        onConfirm={handleSingleDeleteConfirm}
         title="Are you sure you want to delete this employee?"
         description="This action cannot be undone. This will permanently delete the employee record."
         isConfirming={isDeleting}
       />
+      <ConfirmationDialog
+        isOpen={isBulkDeleteDialogOpen}
+        onClose={() => setIsBulkDeleteDialogOpen(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        title={`Are you sure you want to delete ${employeesToDelete.length} employee(s)?`}
+        description="This action cannot be undone. This will permanently delete the employee records."
+        isConfirming={isBulkDeleting}
+      />
     </div>
   );
 }
+
+// Create a simple dialog for now to fulfill the view details request
+/*
+const EmployeeDetailsDialog = ({ isOpen, onClose, employee }: { isOpen: boolean, onClose: () => void, employee: Employee | null }) => {
+  if (!isOpen || !employee) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white p-6 rounded-lg shadow-lg">
+        <h2 className="text-xl font-bold">Employee Details</h2>
+        <p className="mt-4">
+          Details for: <strong>{employee.first_name} {employee.last_name}</strong>
+        </p>
+        <div className="mt-6 flex justify-end">
+          <Button onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </div>
+  );
+}; */

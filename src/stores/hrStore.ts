@@ -57,6 +57,7 @@ interface HrState {
   addEmployee: (companyId: string, employeeData: Omit<Employee, 'id' | 'company_id' | 'departments' | 'created_at' | 'updated_at'>) => Promise<boolean>;
   updateEmployee: (companyId: string, employeeId: string, employeeData: Partial<Employee>) => Promise<boolean>;
   deleteEmployee: (companyId: string, employeeId: string) => Promise<boolean>;
+  deleteEmployees: (companyId: string, employeeIds: string[]) => Promise<boolean>;
   updateEmployeeStatus: (companyId: string, employeeId: string, employeeData: Partial<Employee>) => Promise<boolean>;
 
   fetchDepartments: (companyId: string) => Promise<void>;
@@ -224,7 +225,6 @@ export const useHrStore = create<HrState>((set) => ({
     }
   },
 
-
   deleteEmployee: async (companyId, employeeId) => {
     set({ loading: true, error: null });
     const { session } = useAuthStore.getState();
@@ -260,6 +260,48 @@ export const useHrStore = create<HrState>((set) => ({
     }
   },
 
+    deleteEmployees: async (companyId, employeeIds) => {
+    set({ loading: true, error: null });
+    const { session } = useAuthStore.getState();
+    const token = session?.access_token;
+
+    if (!token) {
+      set({ loading: false, error: 'Authentication token missing.' });
+      return false;
+    }
+
+    try {
+      // This implementation sends a separate delete request for each employee
+      const results = await Promise.all(employeeIds.map(employeeId =>
+        fetch(`${API_BASE_URL}/company/${companyId}/employees/${employeeId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+      ));
+
+      const successfulDeletes = results.filter(res => res.ok);
+      const failedDeletes = results.filter(res => !res.ok);
+
+      if (failedDeletes.length > 0) {
+        throw new Error('Failed to delete some employees.');
+      }
+
+      set(state => ({
+        employees: state.employees.filter(emp => !employeeIds.includes(emp.id)),
+        loading: false,
+      }));
+      toast.success(`${employeeIds.length} employees deleted successfully!`);
+      return true;
+
+    } catch (err: unknown) {
+      set({ loading: false, error: (err as Error).message });
+      toast.error((err as Error).message);
+      return false;
+    }
+  },
+  
   fetchDepartments: async (companyId) => {
     set({ loading: true, error: null });
     const { session } = useAuthStore.getState();

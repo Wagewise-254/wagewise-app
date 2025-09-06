@@ -28,12 +28,16 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext } from "@/components/ui/pagination";
-
-
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationLink,
+  PaginationNext,
+} from "@/components/ui/pagination";
 
 interface PayrollDetail {
   id: string;
@@ -53,7 +57,10 @@ interface PayrollDetail {
 
 const PayrollDetailsPage = () => {
   const { session } = useAuthStore();
-  const { companyId, runId } = useParams<{ companyId: string; runId: string }>();
+  const { companyId, runId } = useParams<{
+    companyId: string;
+    runId: string;
+  }>();
   const navigate = useNavigate();
   const [details, setDetails] = useState<PayrollDetail[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +68,7 @@ const PayrollDetailsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-   const [isBulkSending, setIsBulkSending] = useState(false);
+  const [isBulkSending, setIsBulkSending] = useState(false);
 
   const fetchPayrollDetails = useCallback(async () => {
     if (!companyId || !runId || !session) {
@@ -98,63 +105,63 @@ const PayrollDetailsPage = () => {
 
   // New function to handle payslip download
   const handleDownloadPayslip = async (payrollDetailId: string) => {
-  if (!companyId || !session) {
-    toast.error("Authentication failed. Please log in again.");
-    return;
-  }
-
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/company/${companyId}/payroll/payslip/${payrollDetailId}/download`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to download payslip.");
-    }
-
-    // Grab filename from Content-Disposition header if backend sends it
-    const contentDisposition = response.headers.get("Content-Disposition");
-    let filename = "payslip.pdf";
-    if (contentDisposition) {
-      const match = contentDisposition.match(/filename="(.+)"/);
-      if (match && match[1]) {
-        filename = match[1];
-      }
-    }
-
-    // Turn response into blob and download
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-    toast.success(`Payslip for downloaded successfully.`);
-  } catch (error: unknown) {
-    console.error("Error downloading payslip:", error);
-    toast.error((error as Error).message || "Error downloading payslip");
-  }
-};
-  
-  // New function to handle single payslip email
-  const handleEmailSinglePayslip = async (payrollDetailId: string) => {
-      if (!companyId || !session) {
+    if (!companyId || !session) {
       toast.error("Authentication failed. Please log in again.");
       return;
     }
-  
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/company/${companyId}/payroll/payslip/${payrollDetailId}/download`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to download payslip.");
+      }
+
+      // Grab filename from Content-Disposition header if backend sends it
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = "payslip.pdf";
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+
+      // Turn response into blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`Payslip for downloaded successfully.`);
+    } catch (error: unknown) {
+      console.error("Error downloading payslip:", error);
+      toast.error((error as Error).message || "Error downloading payslip");
+    }
+  };
+
+  // New function to handle single payslip email
+  const handleEmailSinglePayslip = async (payrollDetailId: string) => {
+    if (!companyId || !session) {
+      toast.error("Authentication failed. Please log in again.");
+      return;
+    }
+
     const toastId = toast.loading("Sending payslip via email...");
-  
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/company/${companyId}/payroll/payslip/${payrollDetailId}/email`,
@@ -166,23 +173,27 @@ const PayrollDetailsPage = () => {
           },
         }
       );
-  
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to send payslip email.");
       }
-      
+
       const data = await response.json();
-      toast.success(data.message || "Payslip email sent successfully.", { id: toastId });
+      toast.success(data.message || "Payslip email sent successfully.", {
+        id: toastId,
+      });
     } catch (error: unknown) {
       console.error("Error emailing payslip:", error);
-      toast.error((error as Error).message || "Error sending payslip email.", { id: toastId });
+      toast.error((error as Error).message || "Error sending payslip email.", {
+        id: toastId,
+      });
     }
   };
 
   // New function to handle bulk payslip email
   const handleEmailBulkPayslips = async () => {
-      if (selectedEmployees.length === 0) {
+    if (selectedEmployees.length === 0) {
       toast.error("No employees selected for email.");
       return;
     }
@@ -190,12 +201,14 @@ const PayrollDetailsPage = () => {
       toast.error("Authentication failed. Please log in again.");
       return;
     }
-    
+
     setIsBulkSending(true);
     let successCount = 0;
     let failCount = 0;
 
-    const toastId = toast.loading(`Sending emails to ${selectedEmployees.length} employees...`);
+    const toastId = toast.loading(
+      `Sending emails to ${selectedEmployees.length} employees...`
+    );
 
     try {
       for (const id of selectedEmployees) {
@@ -216,7 +229,10 @@ const PayrollDetailsPage = () => {
           } else {
             failCount++;
             const errorData = await response.json();
-            console.error(`Failed to send email for ID ${id}:`, errorData.error);
+            console.error(
+              `Failed to send email for ID ${id}:`,
+              errorData.error
+            );
           }
         } catch (error) {
           failCount++;
@@ -226,24 +242,34 @@ const PayrollDetailsPage = () => {
 
       // Final toast message
       if (successCount > 0 && failCount === 0) {
-        toast.success(`Successfully sent emails to all ${successCount} selected employees.`, { id: toastId });
+        toast.success(
+          `Successfully sent emails to all ${successCount} selected employees.`,
+          { id: toastId }
+        );
       } else if (successCount > 0 && failCount > 0) {
-        toast.warning(`Sent emails to ${successCount} employees. Failed to send to ${failCount} employees.`, { id: toastId });
+        toast.warning(
+          `Sent emails to ${successCount} employees. Failed to send to ${failCount} employees.`,
+          { id: toastId }
+        );
       } else {
         toast.error("Failed to send any emails.", { id: toastId });
       }
-
     } finally {
       setIsBulkSending(false);
       setSelectedEmployees([]); // Clear selection after the operation
     }
-  }
+  };
   // Pagination and search logic
-  const filteredDetails = details.filter(detail =>
-    `${detail.employee.first_name} ${detail.employee.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    detail.employee.employee_number.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredDetails = details.filter(
+    (detail) =>
+      `${detail.employee.first_name} ${detail.employee.last_name}`
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      detail.employee.employee_number
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
   );
-  
+
   const totalPages = Math.ceil(filteredDetails.length / itemsPerPage);
   const paginatedDetails = filteredDetails.slice(
     (currentPage - 1) * itemsPerPage,
@@ -252,7 +278,7 @@ const PayrollDetailsPage = () => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allIds = filteredDetails.map(d => d.id);
+      const allIds = filteredDetails.map((d) => d.id);
       setSelectedEmployees(allIds);
     } else {
       setSelectedEmployees([]);
@@ -261,14 +287,17 @@ const PayrollDetailsPage = () => {
 
   const handleSelectEmployee = (payrollDetailId: string, checked: boolean) => {
     if (checked) {
-      setSelectedEmployees(prev => [...prev, payrollDetailId]);
+      setSelectedEmployees((prev) => [...prev, payrollDetailId]);
     } else {
-      setSelectedEmployees(prev => prev.filter(id => id !== payrollDetailId));
+      setSelectedEmployees((prev) =>
+        prev.filter((id) => id !== payrollDetailId)
+      );
     }
   };
 
-  const isAllSelected = selectedEmployees.length > 0 && selectedEmployees.length === filteredDetails.length;
-
+  const isAllSelected =
+    selectedEmployees.length > 0 &&
+    selectedEmployees.length === filteredDetails.length;
 
   if (loading) {
     return (
@@ -280,20 +309,25 @@ const PayrollDetailsPage = () => {
   }
 
   if (details.length === 0) {
-    return <div className="text-gray-500">No payroll details found for this run.</div>;
+    return (
+      <div className="text-gray-500">
+        No payroll details found for this run.
+      </div>
+    );
   }
 
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Payroll Details</CardTitle>
-        <CardDescription>
-          Details for payroll run: **{runId}**
-        </CardDescription>
+        <CardDescription>Details for payroll run: **{runId}**</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex justify-between items-center mb-4">
-          <Button onClick={() => navigate(-1)} className="bg-[#7F5EFD] cursor-pointer">
+          <Button
+            onClick={() => navigate(-1)}
+            className="bg-[#7F5EFD] cursor-pointer"
+          >
             &larr; Back to Payroll Runs
           </Button>
           <div className="flex gap-2">
@@ -304,83 +338,103 @@ const PayrollDetailsPage = () => {
               className="max-w-md"
             />
             {selectedEmployees.length > 0 && (
-              <Button onClick={handleEmailBulkPayslips} className="bg-blue-500 hover:bg-blue-600">
-                 {isBulkSending ? (
+              <Button
+                onClick={handleEmailBulkPayslips}
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                {isBulkSending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Sending...
                   </>
                 ) : (
-                  <>
-                    Send Payslip Email ({selectedEmployees.length})
-                  </>
+                  <>Send Payslip Email ({selectedEmployees.length})</>
                 )}
               </Button>
             )}
           </div>
         </div>
-        <Separator className="mb-4" />
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50px]">
-                <Checkbox
-                  checked={isAllSelected}
-                  onCheckedChange={handleSelectAll}
-                />
-              </TableHead>
-              <TableHead>Employee</TableHead>
-              <TableHead>Basic Salary</TableHead>
-              <TableHead>Allowances</TableHead>
-              <TableHead>Deductions</TableHead>
-              <TableHead>Gross Pay</TableHead>
-              <TableHead>Net Pay</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedDetails.map((detail) => (
-              <TableRow key={detail.id}>
-                <TableCell>
+        <div className="border rounded-md px-2">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[50px]">
                   <Checkbox
-                    checked={selectedEmployees.includes(detail.id)}
-                    onCheckedChange={(checked: boolean) => handleSelectEmployee(detail.id, checked)}
+                    checked={isAllSelected}
+                    onCheckedChange={handleSelectAll}
                   />
-                </TableCell>
-                <TableCell className="font-medium">
-                  {detail.employee.first_name} {detail.employee.last_name}
-                </TableCell>
-                <TableCell>KSh {detail.basic_salary.toFixed(2)}</TableCell>
-                <TableCell>KSh {(detail.total_allowances + detail.total_non_cash_benefits).toFixed(2)}</TableCell>
-                <TableCell>KSh {detail.total_deductions.toFixed(2)}</TableCell>
-                <TableCell>KSh {detail.gross_pay.toFixed(2)}</TableCell>
-                <TableCell>KSh {detail.net_pay.toFixed(2)}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleDownloadPayslip(detail.id)}>
-                        <Download className="mr-2 h-4 w-4" /> Download Payslip
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEmailSinglePayslip(detail.id)}>
-                        <Mail className="mr-2 h-4 w-4" /> Email Payslip
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+                </TableHead>
+                <TableHead>Employee</TableHead>
+                <TableHead>Basic Salary</TableHead>
+                <TableHead>Allowances</TableHead>
+                <TableHead>Deductions</TableHead>
+                <TableHead>Gross Pay</TableHead>
+                <TableHead>Net Pay</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {paginatedDetails.map((detail) => (
+                <TableRow key={detail.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedEmployees.includes(detail.id)}
+                      onCheckedChange={(checked: boolean) =>
+                        handleSelectEmployee(detail.id, checked)
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {detail.employee.first_name} {detail.employee.last_name}
+                  </TableCell>
+                  <TableCell>KSh {detail.basic_salary.toFixed(2)}</TableCell>
+                  <TableCell>
+                    KSh{" "}
+                    {(
+                      detail.total_allowances + detail.total_non_cash_benefits
+                    ).toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    KSh {detail.total_deductions.toFixed(2)}
+                  </TableCell>
+                  <TableCell>KSh {detail.gross_pay.toFixed(2)}</TableCell>
+                  <TableCell>KSh {detail.net_pay.toFixed(2)}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleDownloadPayslip(detail.id)}
+                        >
+                          <Download className="mr-2 h-4 w-4" /> Download Payslip
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleEmailSinglePayslip(detail.id)}
+                        >
+                          <Mail className="mr-2 h-4 w-4" /> Email Payslip
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
         <div className="flex justify-center mt-4">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} />
+                <PaginationPrevious
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
+                />
               </PaginationItem>
               {[...Array(totalPages)].map((_, index) => (
                 <PaginationItem key={index}>
@@ -393,7 +447,11 @@ const PayrollDetailsPage = () => {
                 </PaginationItem>
               ))}
               <PaginationItem>
-                <PaginationNext onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} />
+                <PaginationNext
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                />
               </PaginationItem>
             </PaginationContent>
           </Pagination>
