@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
+import { useCompanyStore } from "@/stores/companyStore";
 import { API_BASE_URL } from "@/config";
 import { toast } from "sonner";
 import { format } from 'date-fns';
+import  CompanyInactiveBanner  from "@/components/company/layout/CompanyInactiveBanner";
 import {
   Card,
   CardContent,
@@ -120,11 +122,18 @@ const formatPayrollNumber = (payrollNumber: string) => {
 const CompanyOverview = () => {
   const { session } = useAuthStore();
   const { companyId } = useParams<{ companyId: string }>();
+  const { companies } = useCompanyStore();
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+   // Find the current company from store
+  const company = useMemo(
+    () => companies.find((c) => c.id === companyId),
+    [companies, companyId]
+  );
 
   const fetchDashboardData = useCallback(async () => {
     if (!companyId || !session) {
@@ -171,6 +180,17 @@ const CompanyOverview = () => {
       </div>
     );
   }
+
+  // 🧠 2️⃣ Handle inactive/suspended company
+if (company && company.status !== "active") {
+  return (
+    <CompanyInactiveBanner
+      companyId={companyId!}
+      status={company.status}
+    />
+  );
+}
+
 
   if (error) {
     return (

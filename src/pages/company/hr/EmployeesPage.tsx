@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useCompanyStore } from "@/stores/companyStore";
 import { cn } from "@/lib/utils";
+import  CompanyInactiveBanner  from "@/components/company/layout/CompanyInactiveBanner";
 
 // Section Components
 import EmployeeSection from "@/components/company/hr/employee/EmployeeSection";
@@ -10,6 +13,26 @@ type DeductionTab = "employee" | "payment";
 
 export default function DeductionPage() {
   const [currentTab, setCurrentTab] = useState<DeductionTab>("employee");
+  const { companyId } = useParams<{ companyId: string }>();
+  const { companies } = useCompanyStore();
+
+
+    // Find the current company from store
+    const company = useMemo(
+      () => companies.find((c) => c.id === companyId),
+      [companies, companyId]
+    );
+
+
+    // 🧠 2️⃣ Handle inactive/suspended company
+if (company && company.status !== "active") {
+  return (
+    <CompanyInactiveBanner
+      companyId={companyId!}
+      status={company.status}
+    />
+  );
+}
 
   const renderTabContent = () => {
     switch (currentTab) {

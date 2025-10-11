@@ -281,7 +281,7 @@ export const useHrStore = create<HrState>((set) => ({
         })
       ));
 
-      const successfulDeletes = results.filter(res => res.ok);
+      //const successfulDeletes = results.filter(res => res.ok);
       const failedDeletes = results.filter(res => !res.ok);
 
       if (failedDeletes.length > 0) {

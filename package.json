@@ -4,7 +4,7 @@
   "description": "An application for simplifiying payroll processes.",
   "author": "Ashley Chiteri",
   "license": "MIT",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
