@@ -24,10 +24,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Check, X} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { format } from "date-fns";
 
 // Updated type definition to match allowances backend schema
 export type Allowance = {
@@ -38,9 +37,11 @@ export type Allowance = {
   department_id: string | null;
   value: number;
   calculation_type: "Fixed" | "Percentage";
-  is_active: boolean;
-  start_date: string;
-  end_date: string | null;
+  is_recurring: boolean;
+  start_month: string;
+  start_year: number;
+  end_month: string | null;
+  end_year: number | null;
   created_at: string;
   allowance_types: {
     name: string;
@@ -78,9 +79,12 @@ const AllowanceAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
       },
     },
     {
-      accessorKey: "value",
+       accessorKey: "value",
       header: "Value",
-      cell: (info) => (info.getValue() as number).toFixed(2),
+      cell: (info) => {
+        const row = info.row.original;
+        return `${info.getValue()}${row.calculation_type === "Percentage" ? "%" : ""}`;
+      },
     },
     {
       accessorKey: "calculation_type",
@@ -88,21 +92,23 @@ const AllowanceAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
       cell: (info) => info.getValue() as string,
     },
     {
-      accessorKey: "start_date",
-      header: "Start Date",
-      cell: (info) => {
-        const date = info.getValue() as string;
-        return format(new Date(date), "PPP");
-      },
+      accessorKey: "is_recurring",
+      header: "Recurring",
+      cell: ({ row }) => (
+        row.original.is_recurring ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />
+      ),
     },
     {
-      accessorKey: "end_date",
-      header: "End Date",
-      cell: (info) => {
-        const date = info.getValue() as string | null;
-        if (!date) return "N/A";
-        return format(new Date(date), "PPP");
-      },
+      accessorFn: (row) => `${row.start_month} ${row.start_year}`,
+      id: "start_period",
+      header: "Start Period",
+      cell: (info) => info.getValue() as string,
+    },
+    {
+       accessorFn: (row) => row.end_month ? `${row.end_month} ${row.end_year}` : 'N/A (Ongoing)',
+      id: "end_period",
+      header: "End Period",
+      cell: (info) => info.getValue() as string,
     },
     {
       id: "actions",
@@ -145,7 +151,7 @@ const AllowanceAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
   return (
     <div className="space-y-4">
       <Input
-        placeholder="Search by employee name..."
+        placeholder="Search by employee name.."
         value={globalFilter ?? ""}
         onChange={(event) => setGlobalFilter(event.target.value)}
         className="max-w-sm"

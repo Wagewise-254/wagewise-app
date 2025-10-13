@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCompanyStore } from "@/stores/companyStore";
 import { useParams } from "react-router-dom";
-import CompanyInactiveBanner from "@/components/company/layout/CompanyInactiveBanner";
+import CompanyInactiveBanner from "@/components/common/CompanyInactiveBanner";
 
 // Section Components
 import DeductionManageSection from "@/components/company/payroll/deductions/manage/DeductionManageSection";

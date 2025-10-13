@@ -27,7 +27,6 @@ import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Check, X} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-//import { Employee, DeductionType } from "./DeductionAssignSection";
 
 // Define the type for an assigned Deduction
 export type AssignedDeduction = {
@@ -40,10 +39,11 @@ export type AssignedDeduction = {
   department: { name: string } | null;
   value: number;
   calculation_type: "Fixed" | "Percentage";
-  is_active: boolean;
-  is_one_time: boolean;
-  start_date: string;
-  end_date: string | null;
+  is_recurring: boolean;
+  start_month: string;
+  start_year: number;
+  end_month: string | null;
+  end_year: number | null;
 };
 
 
@@ -82,29 +82,23 @@ const DeductionAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
       header: "Calculation Type",
     },
     {
-      accessorKey: "is_active",
-      header: "Active?",
+      accessorKey: "is_recurring",
+      header: "Recurring",
       cell: ({ row }) => (
-        row.original.is_active ? <Check className="h-4 w-4 text-green-500" /> :  <X className="h-4 w-4 text-red-500" />
+        row.original.is_recurring ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />
       ),
     },
     {
-      accessorKey: "is_one_time",
-      header: "One Time?",
-      cell: ({ row }) => (
-        row.original.is_one_time ? <Check className="h-4 w-4 text-green-500" /> :  <X className="h-4 w-4 text-red-500" />
-      ),
+      accessorFn: (row) => `${row.start_month} ${row.start_year}`,
+      id: "start_period",
+      header: "Start Period",
+      cell: (info) => info.getValue() as string,
     },
     {
-      accessorKey: "start_date",
-      header: "Start Date",
-      cell: (info) => new Date(info.getValue() as string).toLocaleDateString(),
-    },
-    {
-      accessorKey: "end_date",
-      header: "End Date",
-      cell: (info) =>
-        info.getValue() ? new Date(info.getValue() as string).toLocaleDateString() : "Ongoing",
+       accessorFn: (row) => row.end_month ? `${row.end_month} ${row.end_year}` : 'N/A (Ongoing)',
+      id: "end_period",
+      header: "End Period",
+      cell: (info) => info.getValue() as string,
     },
     {
       id: "actions",

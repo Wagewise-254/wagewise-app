@@ -5,7 +5,7 @@ import { useCompanyStore } from "@/stores/companyStore";
 import { API_BASE_URL } from "@/config";
 import { toast } from "sonner";
 import { format } from 'date-fns';
-import  CompanyInactiveBanner  from "@/components/company/layout/CompanyInactiveBanner";
+import  CompanyInactiveBanner  from "@/components/common/CompanyInactiveBanner";
 import {
   Card,
   CardContent,

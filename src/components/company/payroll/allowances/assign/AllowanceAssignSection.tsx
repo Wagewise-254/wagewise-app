@@ -123,7 +123,7 @@ const AllowanceAssignSection = () => {
              <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsImportDialogOpen(true)} // <-- Add this button handler
+                onClick={() => setIsImportDialogOpen(true)} 
                 className="flex items-center gap-2"
             >
                 <FileUp className="h-4 w-4" /> Bulk Import

@@ -47,10 +47,11 @@ export type RawDeduction = {
   department_id: string | null;
   value: number;
   calculation_type: "Fixed" | "Percentage";
-  is_active: boolean;
-  is_one_time: boolean;
-  start_date: string;
-  end_date: string | null;
+   is_recurring: boolean;
+  start_month: string;
+  start_year: number;
+  end_month: string | null;
+  end_year: number | null;
 };
 
 

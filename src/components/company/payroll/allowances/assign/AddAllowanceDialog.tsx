@@ -11,7 +11,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -19,10 +24,17 @@ import {
   CommandInput,
   CommandItem,
 } from "@/components/ui/command";
-import { Check, ChevronsUpDown, Calendar as CalendarIcon } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { API_BASE_URL } from "@/config";
 import { useAuthStore } from "@/stores/authStore";
@@ -44,7 +56,37 @@ type Employee = {
   last_name: string;
 };
 
-export default function AddAllowanceDialog({ companyId, isOpen, onClose, onUpdated }: Props) {
+// Standard month list for uniform spelling/dropdowns
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+// Generate years for dropdown
+const currentYear = new Date().getFullYear();
+const YEARS = Array.from({ length: 5 }, (_, i) => String(currentYear + i)); // Current year + next 4
+
+// Helper to get current month name
+const getCurrentMonthName = () => {
+  return MONTHS[new Date().getMonth()];
+};
+
+export default function AddAllowanceDialog({
+  companyId,
+  isOpen,
+  onClose,
+  onUpdated,
+}: Props) {
   const { session } = useAuthStore();
   const [loading, setLoading] = useState(false);
 
@@ -52,14 +94,18 @@ export default function AddAllowanceDialog({ companyId, isOpen, onClose, onUpdat
   const [allowanceTypeId, setAllowanceTypeId] = useState<string>("");
   const [employeeId, setEmployeeId] = useState<string>("");
   const [value, setValue] = useState<string>("");
-  const [calculationType, setCalculationType] = useState<"Fixed" | "Percentage">("Fixed");
-  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-
+  const [calculationType, setCalculationType] = useState<
+    "Fixed" | "Percentage"
+  >("Fixed");
+  const [isRecurring, setIsRecurring] = useState(true);
+  const [startMonth, setStartMonth] = useState<string>(getCurrentMonthName());
+  const [startYear, setStartYear] = useState<string>(String(currentYear));
+  const [endMonth, setEndMonth] = useState<string | null>(null);
+  const [endYear, setEndYear] = useState<string | null>(null);
   // Data for select components
   const [allowanceTypes, setAllowanceTypes] = useState<AllowanceType[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  
+
   // State for popovers
   const [openAllowanceType, setOpenAllowanceType] = useState(false);
   const [openEmployee, setOpenEmployee] = useState(false);
@@ -68,11 +114,14 @@ export default function AddAllowanceDialog({ companyId, isOpen, onClose, onUpdat
     // Fetch allowance types
     const fetchAllowanceTypes = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/company/${companyId}/allowance-types`, {
-          headers: {
-            Authorization: `Bearer ${session?.access_token}`,
-          },
-        });
+        const response = await fetch(
+          `${API_BASE_URL}/company/${companyId}/allowance-types`,
+          {
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+          }
+        );
         const data = await response.json();
         setAllowanceTypes(data);
       } catch (err) {
@@ -84,11 +133,14 @@ export default function AddAllowanceDialog({ companyId, isOpen, onClose, onUpdat
     const fetchEmployees = async () => {
       // NOTE: Assuming an endpoint exists to get employees for the company
       try {
-        const response = await fetch(`${API_BASE_URL}/company/${companyId}/employees`, {
-          headers: {
-            Authorization: `Bearer ${session?.access_token}`,
-          },
-        });
+        const response = await fetch(
+          `${API_BASE_URL}/company/${companyId}/employees`,
+          {
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+          }
+        );
         const data = await response.json();
         setEmployees(data);
       } catch (err) {
@@ -103,9 +155,30 @@ export default function AddAllowanceDialog({ companyId, isOpen, onClose, onUpdat
   }, [isOpen, companyId, session]);
 
   const handleSave = async () => {
-    if (!allowanceTypeId || !employeeId || !value || !startDate) {
-        toast.error("Please fill in all required fields.");
-        return;
+    if (
+      !allowanceTypeId ||
+      !employeeId ||
+      !value ||
+      !startMonth ||
+      !startYear
+    ) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+
+    // --- UPDATED LOGIC: Map internal state to API payload ---
+    const apiEndMonth = endMonth === "ONGOING_PERIOD" ? null : endMonth;
+    const apiEndYear = endYear === "ONGOING_PERIOD" ? null : endYear;
+
+    // Re-check validation based on actual API payload values
+    if (
+      isRecurring &&
+      ((apiEndMonth && !apiEndYear) || (apiEndYear && !apiEndMonth))
+    ) {
+      toast.error(
+        "Please select both a month and a year for the End Period, or neither."
+      );
+      return;
     }
     setLoading(true);
 
@@ -115,18 +188,24 @@ export default function AddAllowanceDialog({ companyId, isOpen, onClose, onUpdat
         employee_id: employeeId,
         value: parseFloat(value),
         calculation_type: calculationType,
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate ? endDate.toISOString().split('T')[0] : null,
+        is_recurring: isRecurring,
+        start_month: startMonth,
+        start_year: parseInt(startYear),
+        end_month: apiEndMonth,
+        end_year: apiEndYear ? parseInt(apiEndYear) : null,
       };
 
-      const response = await fetch(`${API_BASE_URL}/company/${companyId}/allowances`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/company/${companyId}/allowances`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to assign allowance");
@@ -153,7 +232,10 @@ export default function AddAllowanceDialog({ companyId, isOpen, onClose, onUpdat
         <div className="space-y-4 py-2 pb-4">
           <div className="space-y-2">
             <Label htmlFor="allowance-type">Allowance Type</Label>
-            <Popover open={openAllowanceType} onOpenChange={setOpenAllowanceType}>
+            <Popover
+              open={openAllowanceType}
+              onOpenChange={setOpenAllowanceType}
+            >
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -162,7 +244,8 @@ export default function AddAllowanceDialog({ companyId, isOpen, onClose, onUpdat
                   className="w-full justify-between"
                 >
                   {allowanceTypeId
-                    ? allowanceTypes.find((type) => type.id === allowanceTypeId)?.name
+                    ? allowanceTypes.find((type) => type.id === allowanceTypeId)
+                        ?.name
                     : "Select allowance type..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -183,7 +266,9 @@ export default function AddAllowanceDialog({ companyId, isOpen, onClose, onUpdat
                         <Check
                           className={cn(
                             "mr-2 h-4 w-4",
-                            allowanceTypeId === type.id ? "opacity-100" : "opacity-0"
+                            allowanceTypeId === type.id
+                              ? "opacity-100"
+                              : "opacity-0"
                           )}
                         />
                         {type.name}
@@ -253,7 +338,9 @@ export default function AddAllowanceDialog({ companyId, isOpen, onClose, onUpdat
               <Label>Calculation Type</Label>
               <RadioGroup
                 defaultValue="Fixed"
-                onValueChange={(val: "Fixed" | "Percentage") => setCalculationType(val)}
+                onValueChange={(val: "Fixed" | "Percentage") =>
+                  setCalculationType(val)
+                }
                 className="flex h-10 items-center space-x-4"
               >
                 <div className="flex items-center space-x-2">
@@ -267,60 +354,131 @@ export default function AddAllowanceDialog({ companyId, isOpen, onClose, onUpdat
               </RadioGroup>
             </div>
           </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Start Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="space-y-2">
-              <Label>End Date (Optional)</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
 
+          <div className="space-y-4 rounded-md border p-4">
+            <h3 className="text-md font-semibold mb-2">Allowance Period</h3>
+
+            {/* Is Recurring Switch */}
+            <div className="flex items-center justify-between space-x-2 pt-2">
+              <Label htmlFor="is-recurring">Is Recurring?</Label>
+              <Switch
+                id="is-recurring"
+                checked={isRecurring}
+                onCheckedChange={setIsRecurring}
+              />
+            </div>
+
+            {/* Start Period */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Start Month */}
+              <div>
+                <Label htmlFor="start-month">Start Month</Label>
+                <Select value={startMonth} onValueChange={setStartMonth}>
+                  <SelectTrigger id="start-month" className="w-full">
+                    <SelectValue placeholder="Select Month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Months</SelectLabel>
+                      {MONTHS.map((month) => (
+                        <SelectItem key={month} value={month}>
+                          {month}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Start Year */}
+              <div>
+                <Label htmlFor="start-year">Start Year</Label>
+                <Select value={startYear} onValueChange={setStartYear}>
+                  <SelectTrigger id="start-year" className="w-full">
+                    <SelectValue placeholder="Select Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Years</SelectLabel>
+                      {YEARS.map((year) => (
+                        <SelectItem key={year} value={year}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* End Period (Conditional on Is Recurring) */}
+            {isRecurring && (
+              <div className="grid grid-cols-2 gap-4">
+                {/* End Month */}
+                <div>
+                  <Label htmlFor="end-month">End Month (Optional)</Label>
+                  <Select
+                    // Use 'ONGOING_PERIOD' string for null/no selection
+                    value={endMonth || "ONGOING_PERIOD"}
+                    onValueChange={(val) =>
+                      setEndMonth(val === "ONGOING_PERIOD" ? null : val)
+                    }
+                  >
+                    <SelectTrigger id="end-month" className="w-full">
+                      <SelectValue placeholder="No End Month (Ongoing)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ONGOING_PERIOD">
+                        No End Month (Ongoing)
+                      </SelectItem>
+                      <SelectGroup>
+                        <SelectLabel>Months</SelectLabel>
+                        {MONTHS.map((month) => (
+                          <SelectItem key={month} value={month}>
+                            {month}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* End Year */}
+                <div>
+                  <Label htmlFor="end-year">End Year (Optional)</Label>
+                  <Select
+                    // Use 'ONGOING_PERIOD' string for null/no selection
+                    value={endYear || "ONGOING_PERIOD"}
+                    onValueChange={(val) =>
+                      setEndYear(val === "ONGOING_PERIOD" ? null : val)
+                    }
+                    // Disabled check uses the internal state, which is 'ONGOING_PERIOD' if null
+                    disabled={
+                      endMonth === null || endMonth === "ONGOING_PERIOD"
+                    }
+                  >
+                    <SelectTrigger id="end-year" className="w-full">
+                      <SelectValue placeholder="No End Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* Change value from "" to "ONGOING_PERIOD" */}
+                      <SelectItem value="ONGOING_PERIOD">
+                        No End Year
+                      </SelectItem>
+                      <SelectGroup>
+                        <SelectLabel>Years</SelectLabel>
+                        {YEARS.map((year) => (
+                          <SelectItem key={year} value={year}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

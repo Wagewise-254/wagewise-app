@@ -4,7 +4,7 @@ import { useHrStore } from "@/stores/hrStore";
 import { useCompanyStore } from "@/stores/companyStore";
 import AddDepartmentDialog from "@/components/company/hr/AddDepartmentDialog";
 import DepartmentsTable from "@/components/company/hr/DepartmentsTable";
-import CompanyInactiveBanner from "@/components/company/layout/CompanyInactiveBanner";
+import CompanyInactiveBanner from "@/components/common/CompanyInactiveBanner";
 
 // ✅ Import ShadCN Card components
 import {

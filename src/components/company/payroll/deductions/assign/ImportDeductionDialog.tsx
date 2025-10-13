@@ -137,9 +137,9 @@ const ImportDeductionDialog: React.FC<ImportDeductionDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Bulk Import Deductions</DialogTitle>
+         <DialogTitle>Import Deductions (Month/Year Based)</DialogTitle>
           <DialogDescription>
-            Download the template, fill it with employee deduction data, and then upload it.
+            Download the template, fill it with deduction details including the **Start Month/Year** and **Is Recurring** status, and upload the file.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">

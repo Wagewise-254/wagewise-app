@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useCompanyStore } from "@/stores/companyStore";
 import { useParams } from "react-router-dom";
-import CompanyInactiveBanner from "@/components/company/layout/CompanyInactiveBanner";
+import CompanyInactiveBanner from "@/components/common/CompanyInactiveBanner";
 
 //import settings section components
 import OverviewStatutorySection from '@/components/company/payroll/statutory/OverviewStatutorySection';
