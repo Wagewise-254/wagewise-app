@@ -379,7 +379,7 @@ const P9Section = () => {
                     variant="outline"
                     role="combobox"
                     aria-expanded={openYear}
-                    className="w-[200px] justify-between"
+                    className="w-[200px] justify-between "
                   >
                     {selectedYear ? selectedYear : "Select a year..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -415,7 +415,7 @@ const P9Section = () => {
               </Popover>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button disabled={!selectedYear}>Generate P9A</Button>
+                  <Button className="bg-[#7F5EFD] cursor-pointer " disabled={!selectedYear}>Generate P9A</Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl p-6">
                   <DialogHeader>

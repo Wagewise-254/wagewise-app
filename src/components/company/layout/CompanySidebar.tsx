@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronRight,
   Building,
+  ChartLine
 } from "lucide-react";
 import {
   Collapsible,
@@ -67,6 +68,12 @@ const sidebarSections: SidebarSection[]= [
       { name: "Statutory", path: "payroll/statutory-deductions", icon: <FileText size={20} /> },
       { name: "Allowances", path: "payroll/allowances", icon: <FileText size={20} /> },
       { name: "Deductions", path: "payroll/deductions", icon: <FileText size={20} /> },
+    ],
+  },  
+  {
+    type: "link",
+    links: [
+      { name: "Report", path: "reports", icon: <ChartLine size={20} /> },
     ],
   },
   {

@@ -92,7 +92,7 @@ const PayrollFilesSection = () => {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/company/${companyId}/payroll/runs/${selectedRun.id}/reports/${reportType}`,
+        `${API_BASE_URL}/companies/${companyId}/payroll/runs/${selectedRun.id}/reports/${reportType}`,
         {
           method: "GET",
           headers: {

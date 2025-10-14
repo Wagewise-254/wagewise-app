@@ -10,6 +10,7 @@ import { useAuthStore } from './stores/authStore';
 import CompanyDashboardLayout from './pages/company/CompanyDashboardLayout';
 import CompanyOverview from './pages/company/dashboard/CompanyOverview.tsx';
 import CompanySettings from './pages/company/settings/CompanySettings.tsx';
+import CompanyReports from './pages/company/reports/CompanyReports.tsx';
 // Import the new HR pages
 import EmployeesPage from './pages/company/hr/EmployeesPage';
 import DepartmentsPage from './pages/company/hr/DepartmentsPage';
@@ -48,6 +49,7 @@ const AppRouterWrapper = () => {
             <Route index element={<Navigate to="overview" replace />} />
             <Route path="overview" element={<CompanyOverview />} />
             <Route path="settings" element={<CompanySettings />} />
+            <Route path="reports" element={<CompanyReports />} />
             {/* HR Routes */}
             <Route path="hr/employees" element={<EmployeesPage />} />
             <Route path="hr/departments" element={<DepartmentsPage />} />
