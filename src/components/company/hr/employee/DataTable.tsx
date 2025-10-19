@@ -48,10 +48,19 @@ interface DataTableProps {
 }
 
 export function DataTable({ data, onEdit }: DataTableProps) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([
+  {
+    id: "employee_number",
+    desc: false, // 'false' for ascending
+  },
+]);
 
   // Define table columns, making them reusable and type-safe.
   const columns: ColumnDef<Employee>[] = [
+    {
+      accessorKey: "employee_number",
+      header: "Employee No.",
+    },
     {
       cell: ({ row }) => (
       <span>
@@ -59,11 +68,7 @@ export function DataTable({ data, onEdit }: DataTableProps) {
       </span>
     ),
       header: "Employee Name",
-    },
-    {
-      accessorKey: "employee_number",
-      header: "Employee No.",
-    },
+    },   
     {
       accessorKey: "employee_bank_details.payment_method",
       header: "Payment Method",

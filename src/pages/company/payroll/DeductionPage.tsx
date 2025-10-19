@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useCompanyStore } from "@/stores/companyStore";
 import { useParams } from "react-router-dom";
 import CompanyInactiveBanner from "@/components/common/CompanyInactiveBanner";
+import OfflineBanner from '@/components/common/OfflineBanner';
 
 // Section Components
 import DeductionManageSection from "@/components/company/payroll/deductions/manage/DeductionManageSection";
@@ -49,6 +50,7 @@ export default function DeductionPage() {
 
   return (
     <div className="flex h-auto bg-gray-100">
+      <OfflineBanner/>
       <div className="flex-1 flex flex-col p-6 bg-white rounded-md overflow-hidden">
         <h1 className="text-3xl font-bold mb-6 text-gray-800">
           Deduction Management

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import OfflineBanner from '@/components/common/OfflineBanner';
 
 //import settings section components
 import OverviewSettingsSection from '@/components/company/settings/OverviewSettingsSection';
@@ -29,6 +30,7 @@ export default function CompanySettings() {
 
   return (
     <div className="flex h-auto bg-gray-100">
+      <OfflineBanner/>
       <div className="flex-1 flex flex-col p-6 bg-white rounded-md overflow-hidden">
         <h1 className="text-3xl font-bold mb-6 text-gray-800">Company Settings</h1>
 

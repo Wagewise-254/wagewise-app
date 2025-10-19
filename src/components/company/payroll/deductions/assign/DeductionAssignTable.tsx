@@ -8,6 +8,8 @@ import {
   useReactTable,
   getPaginationRowModel,
   getFilteredRowModel,
+  getSortedRowModel,
+  SortingFn,
 } from "@tanstack/react-table";
 import {
   Table,
@@ -24,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Check, X} from "lucide-react";
+import { MoreHorizontal, Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 
@@ -46,6 +48,35 @@ export type AssignedDeduction = {
   end_year: number | null;
 };
 
+// Define month order map for numerical sorting
+const monthOrder: { [key: string]: number } = {
+  January: 1,
+  February: 2,
+  March: 3,
+  April: 4,
+  May: 5,
+  June: 6,
+  July: 7,
+  August: 8,
+  September: 9,
+  October: 10,
+  November: 11,
+  December: 12,
+};
+
+// Custom sorting function for Month/Year fields
+const periodSort: SortingFn<AssignedDeduction> = (rowA, rowB) => {
+  const a = rowA.original;
+  const b = rowB.original;
+
+  // Create a sortable integer (e.g., 202507 for July 2025)
+  const sortA = a.start_year * 100 + monthOrder[a.start_month];
+  const sortB = b.start_year * 100 + monthOrder[b.start_month];
+
+  if (sortA > sortB) return 1;
+  if (sortA < sortB) return -1;
+  return 0;
+};
 
 interface Props {
   data: AssignedDeduction[];
@@ -64,7 +95,9 @@ const DeductionAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
     },
     {
       accessorFn: (row) =>
-        row.employee ? `${row.employee.first_name} ${row.employee.last_name}` : row.department?.name,
+        row.employee
+          ? `${row.employee.first_name} ${row.employee.last_name}`
+          : row.department?.name,
       id: "assigned_to",
       header: "Assigned To",
       cell: (info) => info.getValue() as string,
@@ -74,7 +107,9 @@ const DeductionAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
       header: "Value",
       cell: (info) => {
         const row = info.row.original;
-        return `${info.getValue()}${row.calculation_type === "Percentage" ? "%" : ""}`;
+        return `${info.getValue()}${
+          row.calculation_type === "Percentage" ? "%" : ""
+        }`;
       },
     },
     {
@@ -84,18 +119,23 @@ const DeductionAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
     {
       accessorKey: "is_recurring",
       header: "Recurring",
-      cell: ({ row }) => (
-        row.original.is_recurring ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />
-      ),
+      cell: ({ row }) =>
+        row.original.is_recurring ? (
+          <Check className="h-4 w-4 text-green-500" />
+        ) : (
+          <X className="h-4 w-4 text-red-500" />
+        ),
     },
     {
       accessorFn: (row) => `${row.start_month} ${row.start_year}`,
       id: "start_period",
       header: "Start Period",
       cell: (info) => info.getValue() as string,
+      sortingFn: periodSort,
     },
     {
-       accessorFn: (row) => row.end_month ? `${row.end_month} ${row.end_year}` : 'N/A (Ongoing)',
+      accessorFn: (row) =>
+        row.end_month ? `${row.end_month} ${row.end_year}` : "N/A (Ongoing)",
       id: "end_period",
       header: "End Period",
       cell: (info) => info.getValue() as string,
@@ -112,8 +152,12 @@ const DeductionAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDelete(row.original)}>Delete</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onEdit(row.original)}>
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onDelete(row.original)}>
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -126,6 +170,15 @@ const DeductionAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    initialState: {
+      sorting: [
+        {
+          id: "start_period",
+          desc: true, // 'true' for descending (latest date first)
+        },
+      ],
+    },
     onGlobalFilterChange: setGlobalFilter,
     state: {
       globalFilter,
@@ -177,7 +230,10 @@ const DeductionAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   No results.
                 </TableCell>
               </TableRow>

@@ -4,7 +4,8 @@ import { useCompanyStore } from '@/stores/companyStore';
 import { CompanyCard } from '@/components/dashboard/CompanyCard';
 import { AddCompanyDialog } from '@/components/dashboard/AddCompanyDialog';
 import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react'; // <-- Import spinner
+import { Loader2 } from 'lucide-react'; 
+import OfflineBanner from '@/components/common/OfflineBanner';
 
 const RootDashboard = () => {
   const { companies, fetchCompanies, loading } = useCompanyStore();
@@ -25,6 +26,7 @@ const RootDashboard = () => {
 
   return (
     <div className="container mx-auto">
+      <OfflineBanner/>
       {/* Top action bar */}
       <div className="flex items-center justify-between mb-6">
         <Input

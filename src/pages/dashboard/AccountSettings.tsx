@@ -16,6 +16,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import OfflineBanner from '@/components/common/OfflineBanner';
 
 export default function AccountSettings() {
   const navigate = useNavigate();
@@ -91,6 +92,7 @@ export default function AccountSettings() {
 
   return (
     <div className="container mx-auto p-6">
+      <OfflineBanner/>
       {/* Back button */}
       <Button
         variant="ghost"

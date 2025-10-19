@@ -171,7 +171,12 @@ export default function EmployeesTable() {
   const { companyId } = useParams();
   const { employees, deleteEmployee, deleteEmployees } = useHrStore();
 
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+   const [sorting, setSorting] = React.useState<SortingState>([
+    {
+      id: "employee_number",
+      desc: false, // 'false' for ascending
+    },
+  ]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = React.useState({});
   const [globalFilter, setGlobalFilter] = React.useState('');

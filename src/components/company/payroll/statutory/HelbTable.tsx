@@ -41,7 +41,16 @@ interface HelbDataTableProps {
 }
 
 const HelbDataTable: React.FC<HelbDataTableProps> = ({ data, onEdit, onDelete }) => {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([
+  {
+    id: "first_name",
+    desc: false, // Alphabetical/Ascending
+  },
+  {
+    id: "last_name",
+    desc: false, // Secondary sort
+  },
+]);
 
   // Memoize the columns to prevent unnecessary re-renders
   const columns: ColumnDef<EmployeeWithHelb>[] = React.useMemo(
@@ -125,8 +134,8 @@ const HelbDataTable: React.FC<HelbDataTableProps> = ({ data, onEdit, onDelete })
   });
 
   return (
-    <div className="rounded-md border">
-      <Table>
+    <div className="rounded-md border px-2">
+      <Table className="">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>

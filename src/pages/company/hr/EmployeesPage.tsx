@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useCompanyStore } from "@/stores/companyStore";
 import { cn } from "@/lib/utils";
 import  CompanyInactiveBanner  from "@/components/common/CompanyInactiveBanner";
+import OfflineBanner from '@/components/common/OfflineBanner';
 
 // Section Components
 import EmployeeSection from "@/components/company/hr/employee/EmployeeSection";
@@ -24,7 +25,7 @@ export default function DeductionPage() {
     );
 
 
-    // 🧠 2️⃣ Handle inactive/suspended company
+    // Handle inactive/suspended company
 if (company && company.status !== "active") {
   return (
     <CompanyInactiveBanner
@@ -51,6 +52,7 @@ if (company && company.status !== "active") {
 
   return (
     <div className="flex h-auto bg-gray-100">
+      <OfflineBanner/>
       <div className="flex-1 flex flex-col p-6 bg-white rounded-md overflow-hidden">
         <h1 className="text-3xl font-bold mb-6 text-gray-800">
           Employee Management

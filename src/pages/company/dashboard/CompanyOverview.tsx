@@ -6,6 +6,7 @@ import { API_BASE_URL } from "@/config";
 import { toast } from "sonner";
 import { format } from 'date-fns';
 import  CompanyInactiveBanner  from "@/components/common/CompanyInactiveBanner";
+import OfflineBanner from '@/components/common/OfflineBanner';
 import {
   Card,
   CardContent,
@@ -195,6 +196,7 @@ if (company && company.status !== "active") {
   if (error) {
     return (
       <div className="text-center text-red-500 mt-8">
+        <OfflineBanner/>
         <p>Error: {error}</p>
         <p>Please check your network connection or try again later.</p>
       </div>
@@ -211,6 +213,7 @@ if (company && company.status !== "active") {
 
   return (
     <div className="p-6">
+      <OfflineBanner/>
       <h1 className="text-3xl font-bold tracking-tight mb-6">Company Overview</h1>
 
       {/* Top cards (bento row) */}

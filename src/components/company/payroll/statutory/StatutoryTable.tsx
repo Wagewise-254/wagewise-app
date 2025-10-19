@@ -5,6 +5,7 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   getFilteredRowModel,
+  getSortedRowModel,
   ColumnDef,
   flexRender,
 } from "@tanstack/react-table";
@@ -51,30 +52,42 @@ export function StatutoryTable({ data, onEdit }: StatutoryTableProps) {
     {
       accessorKey: "pays_paye",
       header: "PAY",
-      cell: ({ row }) => (
-        row.original.pays_paye ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />
-      ),
+      cell: ({ row }) =>
+        row.original.pays_paye ? (
+          <Check className="h-4 w-4 text-green-500" />
+        ) : (
+          <X className="h-4 w-4 text-red-500" />
+        ),
     },
     {
       accessorKey: "pays_nssf",
       header: "NSSF",
-      cell: ({ row }) => (
-        row.original.pays_nssf ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />
-      ),
+      cell: ({ row }) =>
+        row.original.pays_nssf ? (
+          <Check className="h-4 w-4 text-green-500" />
+        ) : (
+          <X className="h-4 w-4 text-red-500" />
+        ),
     },
     {
       accessorKey: "pays_housing_levy",
       header: "Housing Levy",
-      cell: ({ row }) => (
-        row.original.pays_housing_levy ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />
-      ),
+      cell: ({ row }) =>
+        row.original.pays_housing_levy ? (
+          <Check className="h-4 w-4 text-green-500" />
+        ) : (
+          <X className="h-4 w-4 text-red-500" />
+        ),
     },
     {
       accessorKey: "pays_helb",
       header: "HELB",
-      cell: ({ row }) => (
-        row.original.pays_helb ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />
-      ),
+      cell: ({ row }) =>
+        row.original.pays_helb ? (
+          <Check className="h-4 w-4 text-green-500" />
+        ) : (
+          <X className="h-4 w-4 text-red-500" />
+        ),
     },
     {
       id: "actions",
@@ -106,6 +119,15 @@ export function StatutoryTable({ data, onEdit }: StatutoryTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    initialState: {
+      sorting: [
+        {
+          id: "employee_number",
+          desc: false, 
+        },
+      ],
+    },
     state: {
       globalFilter,
     },
@@ -117,7 +139,7 @@ export function StatutoryTable({ data, onEdit }: StatutoryTableProps) {
       <div className="flex items-center py-4">
         <Input
           placeholder="Search employees by Employee No..."
-          value={globalFilter ?? ''}
+          value={globalFilter ?? ""}
           onChange={(event) => setGlobalFilter(String(event.target.value))}
           className="max-w-sm"
         />
@@ -162,7 +184,7 @@ export function StatutoryTable({ data, onEdit }: StatutoryTableProps) {
           )}
         </TableBody>
       </Table>
-       <div className="flex items-center justify-end space-x-2 py-4 px-2">
+      <div className="flex items-center justify-end space-x-2 py-4 px-2">
         <Button
           variant="outline"
           size="sm"

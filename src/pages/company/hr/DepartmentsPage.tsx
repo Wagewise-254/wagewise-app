@@ -5,6 +5,7 @@ import { useCompanyStore } from "@/stores/companyStore";
 import AddDepartmentDialog from "@/components/company/hr/AddDepartmentDialog";
 import DepartmentsTable from "@/components/company/hr/DepartmentsTable";
 import CompanyInactiveBanner from "@/components/common/CompanyInactiveBanner";
+import OfflineBanner from '@/components/common/OfflineBanner';
 
 // ✅ Import ShadCN Card components
 import {
@@ -40,6 +41,7 @@ const DepartmentsPage: React.FC = () => {
 
   return (
     <div className="container mx-auto p-6">
+      <OfflineBanner/>
       {/* ✅ Card wrapper */}
       <Card className="shadow-md">
         <CardHeader className="flex flex-row items-center justify-between">

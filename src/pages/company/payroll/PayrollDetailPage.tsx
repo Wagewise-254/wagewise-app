@@ -70,6 +70,15 @@ const PayrollDetailsPage = () => {
   const itemsPerPage = 10;
   const [isBulkSending, setIsBulkSending] = useState(false);
 
+  // Sort payroll details by employee name
+const sortDetails = (data: PayrollDetail[]): PayrollDetail[] => {
+  return [...data].sort((a, b) => {
+    const nameA = `${a.employee.first_name} ${a.employee.last_name}`;
+    const nameB = `${b.employee.first_name} ${b.employee.last_name}`;
+    return nameA.localeCompare(nameB); // Ascending alphabetical sort
+  });
+};
+
   const fetchPayrollDetails = useCallback(async () => {
     if (!companyId || !runId || !session) {
       toast.error("Invalid request parameters.");
@@ -90,7 +99,8 @@ const PayrollDetailsPage = () => {
       if (!res.ok) {
         throw new Error(data.error || "Failed to fetch payroll details.");
       }
-      setDetails(data);
+      const sortedData = sortDetails(data);
+      setDetails(sortedData);
     } catch (error: unknown) {
       console.error(error);
       toast.error((error as Error).message || "An unexpected error occurred.");

@@ -1,7 +1,11 @@
 //import React from "react";
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useParams } from "react-router-dom";
 import { Button } from '@/components/ui/button';
+import { useCompanyStore } from "@/stores/companyStore";
 import { cn } from '@/lib/utils';
+import  CompanyInactiveBanner  from "@/components/common/CompanyInactiveBanner";
+import OfflineBanner from '@/components/common/OfflineBanner';
 
 //import settings section components
 import AnnualReportSection from '@/components/company/reports/ReportAnnualSection';
@@ -12,6 +16,26 @@ type SettingTab = 'annual' | 'payroll' | 'p9';
 
 export default function CompanyReports() {
   const [currentSettingTab, setCurrentSettingTab] = useState<SettingTab>('annual');
+  //const [error, setError] = useState<string | null>(null);
+  const { companyId } = useParams<{ companyId: string }>();
+  const { companies } = useCompanyStore();
+
+   // Find the current company from store
+      const company = useMemo(
+        () => companies.find((c) => c.id === companyId),
+        [companies, companyId]
+      );
+  
+  
+      // Handle inactive/suspended company
+  if (company && company.status !== "active") {
+    return (
+      <CompanyInactiveBanner
+        companyId={companyId!}
+        status={company.status}
+      />
+    );
+  }
   
   const renderTabContent = () => {
     switch (currentSettingTab) {
@@ -32,6 +56,7 @@ export default function CompanyReports() {
 
   return (
     <div className="flex h-auto bg-gray-100">
+      <OfflineBanner />
       <div className="flex-1 flex flex-col p-6 bg-white rounded-md overflow-hidden">
         <h1 className="text-3xl font-bold mb-6 text-gray-800">Company Reports</h1>
 
