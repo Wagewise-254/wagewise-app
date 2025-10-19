@@ -26,6 +26,10 @@ import { API_BASE_URL } from "@/config"; // Assuming DataTable is in the same fo
 export type Bank = {
   bank_code: string;
   bank_name: string;
+  branches: {
+    branch_name: string;
+    branch_code: string;
+  }[];
 };
 
 interface EditBankDialogProps {
@@ -54,6 +58,9 @@ const [paymentMethod, setPaymentMethod] = useState<"Cash" | "Bank" | "M-Pesa">(e
   const [phoneNumber, setPhoneNumber] = useState(
     employee?.employee_bank_details?.phone_number || ""
   );
+  const [branchCode, setBranchCode] = useState(
+    employee?.employee_bank_details?.branch_code || ""
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,8 +72,15 @@ const [paymentMethod, setPaymentMethod] = useState<"Cash" | "Bank" | "M-Pesa">(e
       setBankCode(employee.employee_bank_details?.bank_code || "");
       setAccountNumber(employee.employee_bank_details?.account_number || "");
       setPhoneNumber(employee.employee_bank_details?.phone_number || "");
+      setBranchCode(employee.employee_bank_details?.branch_code || "");
     }
   }, [employee]);
+
+  // Handle bank code change to reset branch code
+  const handleBankCodeChange = (newBankCode: string) => {
+    setBankCode(newBankCode);
+    setBranchCode(""); // Reset branch code when bank changes
+  };
 
   const handleSave = async () => {
     if (!employee || !session) {
@@ -85,6 +99,7 @@ const [paymentMethod, setPaymentMethod] = useState<"Cash" | "Bank" | "M-Pesa">(e
       bank_name: paymentMethod === "Bank" ? selectedBank?.bank_name : null,
       bank_code: paymentMethod === "Bank" ? bankCode : null,
       account_number: paymentMethod === "Bank" ? accountNumber : null,
+      branch_code: paymentMethod === "Bank" ? branchCode : null,
       // Only include phone number if the payment method is 'M-Pesa'
       phone_number: paymentMethod === "M-Pesa" ? phoneNumber : null,
     };
@@ -163,7 +178,7 @@ const [paymentMethod, setPaymentMethod] = useState<"Cash" | "Bank" | "M-Pesa">(e
                 <Label htmlFor="bank" className="text-right">
                   Bank
                 </Label>
-                <Select value={bankCode} onValueChange={setBankCode}>
+                <Select value={bankCode} onValueChange={handleBankCodeChange}>
                   <SelectTrigger id="bank" className="col-span-3">
                     <SelectValue placeholder="Select Bank" />
                   </SelectTrigger>
@@ -176,6 +191,32 @@ const [paymentMethod, setPaymentMethod] = useState<"Cash" | "Bank" | "M-Pesa">(e
                   </SelectContent>
                 </Select>
               </div>
+              {/* CONDITIONAL FIELD FOR BRANCH CODE */}
+              {bankCode && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="branch" className="text-right">
+                    Branch Code
+                  </Label>
+                  <Select value={branchCode} onValueChange={setBranchCode}>
+                    <SelectTrigger id="branch" className="col-span-3">
+                      <SelectValue placeholder="Select Branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {banks
+                        .find((b) => b.bank_code === bankCode)
+                        ?.branches.map((branch) => (
+                          <SelectItem
+                            key={branch.branch_code}
+                            value={branch.branch_code}
+                          >
+                            {/* Display name and code for clarity */}
+                            {`${branch.branch_name} (${branch.branch_code})`} 
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="account-number" className="text-right">
                   Account No.

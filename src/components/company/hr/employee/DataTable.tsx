@@ -38,6 +38,7 @@ export type Employee = {
     bank_name?: string;
     account_number?: string;
     bank_code?: string;
+    branch_code?: string;
     phone_number?: string;
   };
 };
