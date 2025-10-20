@@ -42,7 +42,7 @@ const SplashScreen = () => {
             transition={{ duration: 0.6, ease: "easeOut" }}
           />
           <motion.h1
-            className="text-2xl font-semibold tracking-wide mb-2"
+            className="text-xl font-semibold tracking-wide mb-2"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
@@ -69,7 +69,7 @@ const SplashScreen = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8, duration: 0.5 }}
           >
-            v2.1.7
+            v2.1.8
           </motion.div>
         </motion.div>
       </AnimatePresence>

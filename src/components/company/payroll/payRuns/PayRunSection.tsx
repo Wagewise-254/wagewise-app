@@ -20,6 +20,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { MoreHorizontal, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -218,23 +229,82 @@ const PayRunSection = () => {
                     <DropdownMenuItem onClick={() => handleViewDetails(run.id)}>
                       View Details
                     </DropdownMenuItem>
-                    {run.status === "Draft" && (
+                   {run.status === "Draft" && (
                       <>
-                        <DropdownMenuItem
-                          onClick={() => handleRecalculateRun(run)}
-                        >
-                          Recalculate
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleCompleteRun(run.id)}
-                        >
-                          Complete
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleCancelRun(run.id)}
-                        >
-                          Cancel
-                        </DropdownMenuItem>
+                        {/* Recalculate Confirmation Dialog */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            {/* onSelect prevents the DropdownMenu from closing when the AlertDialog is triggered */}
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              Recalculate
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirm Recalculation</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action will <span className="font-bold">permanently delete</span> the existing draft payroll for{" "}
+                                <span className="font-bold">{run.payroll_month}, {run.payroll_year}</span> and create a new one. 
+                                Are you sure you want to proceed?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleRecalculateRun(run)}>
+                                Yes, Recalculate
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
+                        {/* Complete Confirmation Dialog (NEW) */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              Complete
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirm Payroll Completion</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Completing the payroll for <span className="font-bold">{run.payroll_month}, {run.payroll_year}</span> is <span className="font-bold">irreversible</span>. This will finalize all payments and statutory deductions 
+                                (e.g., update HELB balances). Are you sure you want to finalize this payroll run?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Review Draft</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleCompleteRun(run.id)}>
+                                Yes, Complete Payroll
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
+                        {/* Cancel Confirmation Dialog */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              Cancel Run
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirm Cancellation</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will mark the draft payroll for{" "}
+                                <span className="font-bold">{run.payroll_month}, {run.payroll_year}</span> as <span className="font-bold">Cancelled</span>.
+                                This action cannot be reversed, and you will need to create a new run for this period.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Back</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleCancelRun(run.id)}>
+                                Yes, Cancel Run
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </>
                     )}
                   </DropdownMenuContent>

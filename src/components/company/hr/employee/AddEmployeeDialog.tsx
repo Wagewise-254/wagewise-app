@@ -215,7 +215,7 @@ const AddEmployeeDialog: React.FC = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="department_id">Department</Label>
-              <Select onValueChange={(value) => handleSelectChange(value, 'department_id')} value={formData.department_id}>
+              <Select onValueChange={(value) => handleSelectChange(value, 'department_id')} value={formData.department_id} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a department" />
                 </SelectTrigger>
