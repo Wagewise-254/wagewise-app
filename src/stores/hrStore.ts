@@ -47,6 +47,11 @@ export interface Employee {
   departments: { name: string } | null;
 }
 
+interface UpdateStatusPayload {
+  employee_status: string;
+  employee_status_effective_date: string; 
+}
+
 interface HrState {
   employees: Employee[];
   departments: Department[];
@@ -58,7 +63,7 @@ interface HrState {
   updateEmployee: (companyId: string, employeeId: string, employeeData: Partial<Employee>) => Promise<boolean>;
   deleteEmployee: (companyId: string, employeeId: string) => Promise<boolean>;
   deleteEmployees: (companyId: string, employeeIds: string[]) => Promise<boolean>;
-  updateEmployeeStatus: (companyId: string, employeeId: string, employeeData: Partial<Employee>) => Promise<boolean>;
+  updateEmployeeStatus: (companyId: string, employeeId: string, updateData: UpdateStatusPayload) => Promise<boolean>;
 
   fetchDepartments: (companyId: string) => Promise<void>;
   addDepartment: (companyId: string, departmentData: Omit<Department, 'id' | 'company_id' | 'created_at' | 'updated_at' | 'employee_count'>) => Promise<boolean>;
@@ -182,7 +187,7 @@ export const useHrStore = create<HrState>((set) => ({
     }
   },
 
-  updateEmployeeStatus: async (companyId, employeeId, statusData) => {
+  updateEmployeeStatus: async (companyId, employeeId, updateData) => {
     set({ loading: true, error: null });
     const { session } = useAuthStore.getState();
     const token = session?.access_token;
@@ -190,7 +195,7 @@ export const useHrStore = create<HrState>((set) => ({
 
     if (!token) {
     set({ loading: false, error: 'Authentication token missing.' });
-    toast.error('Authentication failed. Please log in again.');
+    //toast.error('Authentication failed. Please log in again.');
     return false;
   }
 
@@ -201,7 +206,7 @@ export const useHrStore = create<HrState>((set) => ({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(statusData),
+        body: JSON.stringify(updateData),
       });
 
       if (!response.ok) {
