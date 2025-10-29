@@ -16,11 +16,14 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-import DeductionAssignTable, { AssignedDeduction } from "./DeductionAssignTable";
+import DeductionAssignTable, {
+  AssignedDeduction,
+} from "./DeductionAssignTable";
 import AddDeductionDialog from "./AddDeductionDialog";
 import EditDeductionDialog from "./EditDeductionDialog";
 import DeleteDeductionDialog from "./DeleteDeductionDialog";
 import ImportDeductionDialog from "./ImportDeductionDialog";
+import BulkDeleteDeductionDialog from "./BulkDeleteDeductionDialog";
 import { FileUp } from "lucide-react";
 
 // Define helper types for data fetching
@@ -47,20 +50,20 @@ export type RawDeduction = {
   department_id: string | null;
   value: number;
   calculation_type: "Fixed" | "Percentage";
-   is_recurring: boolean;
+  is_recurring: boolean;
   start_month: string;
   start_year: number;
   end_month: string | null;
   end_year: number | null;
 };
 
-
-
 const DeductionAssignSection = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const { session } = useAuthStore();
 
-  const [assignedDeductions, setAssignedDeductions] = useState<AssignedDeduction[]>([]);
+  const [assignedDeductions, setAssignedDeductions] = useState<
+    AssignedDeduction[]
+  >([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [deductionTypes, setDeductionTypes] = useState<DeductionType[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -72,7 +75,10 @@ const DeductionAssignSection = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedDeduction, setSelectedDeduction] = useState<AssignedDeduction | null>(null);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [selectedDeduction, setSelectedDeduction] =
+    useState<AssignedDeduction | null>(null);
+  const [deductionsToDelete, setDeductionsToDelete] = useState<string[]>([]);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -107,23 +113,34 @@ const DeductionAssignSection = () => {
       const departmentsData = await departmentsResponse.json();
 
       // Create maps for efficient lookup
-      const employeesMap = new Map(employeesData.map((emp: Employee) => [emp.id, emp]));
-      const deductionTypesMap = new Map(deductionTypesData.map((type: DeductionType) => [type.id, type]));
-      const departmentsMap = new Map(departmentsData.map((dept: Department) => [dept.id, dept]));
+      const employeesMap = new Map(
+        employeesData.map((emp: Employee) => [emp.id, emp])
+      );
+      const deductionTypesMap = new Map(
+        deductionTypesData.map((type: DeductionType) => [type.id, type])
+      );
+      const departmentsMap = new Map(
+        departmentsData.map((dept: Department) => [dept.id, dept])
+      );
 
       // Enrich deductions data with nested objects
-      const enrichedDeductions = deductionsData.map((deduction: RawDeduction) => ({
-        ...deduction,
-        deduction_type: deductionTypesMap.get(deduction.deduction_type_id),
-        employee: deduction.employee_id ? employeesMap.get(deduction.employee_id) : null,
-        department: deduction.department_id ? departmentsMap.get(deduction.department_id) : null,
-      }));
+      const enrichedDeductions = deductionsData.map(
+        (deduction: RawDeduction) => ({
+          ...deduction,
+          deduction_type: deductionTypesMap.get(deduction.deduction_type_id),
+          employee: deduction.employee_id
+            ? employeesMap.get(deduction.employee_id)
+            : null,
+          department: deduction.department_id
+            ? departmentsMap.get(deduction.department_id)
+            : null,
+        })
+      );
 
       setAssignedDeductions(enrichedDeductions);
       setEmployees(employeesData);
       setDeductionTypes(deductionTypesData);
       setDepartments(departmentsData);
-
     } catch (err) {
       console.error(err);
       setError("Failed to load data. Please try again.");
@@ -152,6 +169,12 @@ const DeductionAssignSection = () => {
     setIsDeleteDialogOpen(true);
   };
 
+  const handleBulkDeleteClick = (deductionIds: string[]) => {
+    // <-- ADD THIS
+    setDeductionsToDelete(deductionIds);
+    setIsBulkDeleteDialogOpen(true);
+  };
+
   const handleCloseEditDialog = () => {
     setIsEditDialogOpen(false);
     setSelectedDeduction(null);
@@ -170,8 +193,8 @@ const DeductionAssignSection = () => {
 
   // Add an import success handler
   const handleImportSuccess = () => {
-      setIsImportDialogOpen(false);
-      fetchData();
+    setIsImportDialogOpen(false);
+    fetchData();
   };
 
   return (
@@ -179,26 +202,28 @@ const DeductionAssignSection = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div className="flex flex-col">
-            <CardTitle className="text-2xl font-bold">Assigned Deductions</CardTitle>
+            <CardTitle className="text-2xl font-bold">
+              Assigned Deductions
+            </CardTitle>
             <CardDescription className="text-sm text-gray-500">
               View and manage deductions assigned to employees or departments.
             </CardDescription>
           </div>
           <div className="flex gap-2">
             <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsImportDialogOpen(true)} // <-- Add this button handler
-                className="flex items-center gap-2"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsImportDialogOpen(true)} 
+              className="flex items-center gap-2"
             >
-                <FileUp className="h-4 w-4" /> Bulk Import
+              <FileUp className="h-4 w-4" /> Bulk Import
             </Button>
-          <Button
-            onClick={() => setIsAddDialogOpen(true)}
-            className="bg-[#7F5EFD] text-white hover:bg-[#6a4ad3]"
-          >
-            Assign Deduction
-          </Button>
+            <Button
+              onClick={() => setIsAddDialogOpen(true)}
+              className="bg-[#7F5EFD] text-white hover:bg-[#6a4ad3]"
+            >
+              Assign Deduction
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -207,11 +232,14 @@ const DeductionAssignSection = () => {
               <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
             </div>
           ) : error ? (
-            <div className="text-center text-red-500 py-10">
-              {error}
-            </div>
+            <div className="text-center text-red-500 py-10">{error}</div>
           ) : (
-            <DeductionAssignTable data={assignedDeductions} onEdit={handleEdit} onDelete={handleDelete} />
+            <DeductionAssignTable
+              data={assignedDeductions}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onBulkDeleteClick={handleBulkDeleteClick}
+            />
           )}
         </CardContent>
       </Card>
@@ -251,12 +279,28 @@ const DeductionAssignSection = () => {
           onDeleted={handleUpdateSuccess}
         />
       )}
+
+      {/* New Bulk Delete Dialog */}
+      {isBulkDeleteDialogOpen &&
+        deductionsToDelete.length > 0 && ( // <-- ADD THIS BLOCK
+          <BulkDeleteDeductionDialog
+            companyId={companyId!}
+            deductionIds={deductionsToDelete}
+            isOpen={isBulkDeleteDialogOpen}
+            onClose={() => {
+              setIsBulkDeleteDialogOpen(false);
+              setDeductionsToDelete([]); // Clear selection upon close
+            }}
+            onDeleted={handleUpdateSuccess}
+          />
+        )}
+
       {/* New Bulk Import Dialog */}
       {isImportDialogOpen && (
         <ImportDeductionDialog
-            isOpen={isImportDialogOpen}
-            onClose={() => setIsImportDialogOpen(false)}
-            onUpdated={handleImportSuccess}
+          isOpen={isImportDialogOpen}
+          onClose={() => setIsImportDialogOpen(false)}
+          onUpdated={handleImportSuccess}
         />
       )}
     </>

@@ -227,7 +227,7 @@ const PayrollFilesSection = () => {
               <Button
                 onClick={() => handleDownloadReport("kra-sec-b1")}
                 disabled={downloading}
-                className="w-full"
+                className="w-full bg-[#7F5EFD] cursor-pointer"
               >
                 {downloading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -237,7 +237,7 @@ const PayrollFilesSection = () => {
               <Button
                 onClick={() => handleDownloadReport("nssf-return")}
                 disabled={downloading}
-                className="w-full"
+                className="w-full bg-[#7F5EFD] cursor-pointer"
               >
                 {downloading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -247,7 +247,7 @@ const PayrollFilesSection = () => {
               <Button
                 onClick={() => handleDownloadReport("shif-return")}
                 disabled={downloading}
-                className="w-full"
+                 className="w-full bg-[#7F5EFD] cursor-pointer"
               >
                 {downloading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -257,7 +257,7 @@ const PayrollFilesSection = () => {
               <Button
                 onClick={() => handleDownloadReport("housing-levy-return")}
                 disabled={downloading}
-                className="w-full"
+                 className="w-full bg-[#7F5EFD] cursor-pointer"
               >
                 {downloading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -267,7 +267,7 @@ const PayrollFilesSection = () => {
               <Button
                 onClick={() => handleDownloadReport("helb-report")}
                 disabled={downloading}
-                className="w-full"
+                 className="w-full bg-[#7F5EFD] cursor-pointer"
               >
                 {downloading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -277,7 +277,7 @@ const PayrollFilesSection = () => {
               <Button
                 onClick={() => handleDownloadReport("bank-payment")}
                 disabled={downloading}
-                className="w-full"
+                 className="w-full bg-[#7F5EFD] cursor-pointer"
               >
                 {downloading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -287,7 +287,7 @@ const PayrollFilesSection = () => {
               <Button
                 onClick={() => handleDownloadReport("mpesa-payment")}
                 disabled={downloading}
-                className="w-full"
+                 className="w-full bg-[#7F5EFD] cursor-pointer"
               >
                 {downloading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -297,7 +297,7 @@ const PayrollFilesSection = () => {
               <Button
                 onClick={() => handleDownloadReport("cash-payment")}
                 disabled={downloading}
-                className="w-full"
+                 className="w-full bg-[#7F5EFD] cursor-pointer"
               >
                 {downloading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -307,7 +307,7 @@ const PayrollFilesSection = () => {
               <Button
                 onClick={() => handleDownloadReport("payroll-summary")}
                 disabled={downloading}
-                className="w-full"
+                 className="w-full bg-[#7F5EFD] cursor-pointer"
               >
                 {downloading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -317,7 +317,7 @@ const PayrollFilesSection = () => {
               <Button
                 onClick={() => handleDownloadReport("allowance-report")}
                 disabled={downloading}
-                className="w-full"
+                className="w-full bg-[#7F5EFD] cursor-pointer"
               >
                 {downloading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -327,7 +327,7 @@ const PayrollFilesSection = () => {
               <Button
                 onClick={() => handleDownloadReport("deduction-report")}
                 disabled={downloading}
-                className="w-full"
+                 className="w-full bg-[#7F5EFD] cursor-pointer"
               >
                 {downloading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

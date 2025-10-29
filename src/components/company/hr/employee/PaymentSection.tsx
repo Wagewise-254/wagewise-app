@@ -65,7 +65,7 @@ const PaymentSection = () => {
 
   const handleImportSuccess = () => {
     setIsImportDialogOpen(false);
-    fetchData(); // <-- REFTECH DATA AFTER SUCCESSFUL IMPORT
+    fetchData(); // <-- REFETCH DATA AFTER SUCCESSFUL IMPORT
   };
 
   if (loading) {

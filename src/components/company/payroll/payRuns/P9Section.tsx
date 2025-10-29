@@ -36,7 +36,13 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
-import { Loader2, MoreHorizontal, Download, Mail } from "lucide-react";
+import {
+  Loader2,
+  MoreHorizontal,
+  Download,
+  Mail,
+  FileText,
+} from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -81,6 +87,7 @@ const P9Section = () => {
   const [openYear, setOpenYear] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -152,6 +159,22 @@ const P9Section = () => {
   useEffect(() => {
     fetchP9Data();
   }, [fetchP9Data]);
+
+  //const p9aDownloadEndpoint = `${API_BASE_URL}/companies/${companyId}/employees/${employeeId}/p9a/${selectedYear}`;
+
+  const handlePreviewPdf = (employeeId: string) => {
+    const token = session?.access_token; 
+
+    if (!token) {
+      toast.error("Authentication token is missing. Please log in again.");
+      return;
+    }
+    setPreviewUrl(
+      `${API_BASE_URL}/companies/${companyId}/employees/${employeeId}/p9a/${selectedYear}?preview=true&token=${token}`
+    );
+
+    window.open(previewUrl, "_blank");
+  };
 
   // Handle single employee download
   const handleDownloadP9A = useCallback(
@@ -415,7 +438,12 @@ const P9Section = () => {
               </Popover>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#7F5EFD] cursor-pointer " disabled={!selectedYear}>Generate P9A</Button>
+                  <Button
+                    className="bg-[#7F5EFD] cursor-pointer "
+                    disabled={!selectedYear}
+                  >
+                    Generate P9A
+                  </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl p-6">
                   <DialogHeader>
@@ -458,7 +486,9 @@ const P9Section = () => {
                           <TableHead className="w-[50px]">
                             <Checkbox
                               checked={isAllSelected}
-                              onCheckedChange={(checked: boolean) => handleSelectAll(checked)}
+                              onCheckedChange={(checked: boolean) =>
+                                handleSelectAll(checked)
+                              }
                             />
                           </TableHead>
                           <TableHead>Employee</TableHead>
@@ -467,40 +497,67 @@ const P9Section = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                         {paginatedEmployees.length > 0 ? (
+                        {paginatedEmployees.length > 0 ? (
                           paginatedEmployees.map((employee) => (
                             <TableRow key={employee.id}>
                               <TableCell>
                                 <Checkbox
-                                  checked={selectedEmployees.includes(employee.id)}
-                                  onCheckedChange={(checked: boolean) => handleSelectEmployee(employee.id, checked)}
+                                  checked={selectedEmployees.includes(
+                                    employee.id
+                                  )}
+                                  onCheckedChange={(checked: boolean) =>
+                                    handleSelectEmployee(employee.id, checked)
+                                  }
                                 />
                               </TableCell>
                               <TableCell className="font-medium">
                                 {employee.first_name} {employee.last_name}
                               </TableCell>
-                              <TableCell>
-                                {employee.employee_number}
-                              </TableCell>
+                              <TableCell>{employee.employee_number}</TableCell>
                               <TableCell className="text-right">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <Button
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0"
+                                    >
                                       <span className="sr-only">Open menu</span>
                                       <MoreHorizontal className="h-4 w-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleDownloadP9A(employee.id, `${employee.first_name} ${employee.last_name}`)}>
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        handleDownloadP9A(
+                                          employee.id,
+                                          `${employee.first_name} ${employee.last_name}`
+                                        )
+                                      }
+                                    >
                                       <Download className="mr-2 h-4 w-4" />
                                       {downloading === employee.id && (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                       )}
                                       Download P9A
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleEmailSingleP9A(employee.id, selectedYear!)}>
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        handleEmailSingleP9A(
+                                          employee.id,
+                                          selectedYear!
+                                        )
+                                      }
+                                    >
                                       <Mail className="mr-2 h-4 w-4" />
                                       Email P9A
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        handlePreviewPdf(employee.id)
+                                      }
+                                    >
+                                      <FileText className="mr-2 h-4 w-4" />{" "}
+                                      Preview
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -521,7 +578,11 @@ const P9Section = () => {
                     <Pagination>
                       <PaginationContent>
                         <PaginationItem>
-                          <PaginationPrevious onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} />
+                          <PaginationPrevious
+                            onClick={() =>
+                              setCurrentPage((prev) => Math.max(1, prev - 1))
+                            }
+                          />
                         </PaginationItem>
                         {[...Array(totalPages)].map((_, index) => (
                           <PaginationItem key={index}>
@@ -534,7 +595,13 @@ const P9Section = () => {
                           </PaginationItem>
                         ))}
                         <PaginationItem>
-                          <PaginationNext onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} />
+                          <PaginationNext
+                            onClick={() =>
+                              setCurrentPage((prev) =>
+                                Math.min(totalPages, prev + 1)
+                              )
+                            }
+                          />
                         </PaginationItem>
                       </PaginationContent>
                     </Pagination>

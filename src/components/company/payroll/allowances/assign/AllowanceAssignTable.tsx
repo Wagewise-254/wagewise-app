@@ -5,6 +5,7 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  RowSelectionState,
   useReactTable,
   getPaginationRowModel,
   getFilteredRowModel,
@@ -26,7 +27,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Check, X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { MoreHorizontal, Check, X, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 
@@ -90,12 +92,72 @@ interface Props {
   data: Allowance[];
   onEdit: (allowance: Allowance) => void;
   onDelete: (allowance: Allowance) => void;
+  onBulkDelete: (allowanceIds: string[]) => void;
 }
 
-const AllowanceAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
+const BulkDeleteButton = ({
+  table,
+  onBulkDeleteClick,
+}: {
+  table: ReturnType<typeof useReactTable<Allowance>>;
+  onBulkDeleteClick: (allowanceIds: string[]) => void;
+}) => {
+  //use the actual selected row count from react-table state
+  const selectedRowCount = Object.keys(table.getState().rowSelection).length;
+
+  if (selectedRowCount === 0) {
+    return null;
+  }
+
+  const handleBulkDelete = () => {
+    //get the IDs of the selected rows
+    const selectedIds = table
+      .getSelectedRowModel()
+      .rows.map((row) => row.original.id);
+    onBulkDeleteClick(selectedIds);
+    // Do NOT reset selection here, let the parent component handle the state update after successful deletion.
+  };
+
+  return (
+    <Button
+      variant="destructive"
+      className="flex items-center space-x-2 ml-4 text-white"
+      onClick={handleBulkDelete}
+    >
+      <Trash2 className="h-4 w-4" />
+      <span>Delete ({selectedRowCount})</span>
+    </Button>
+  );
+};
+
+const AllowanceAssignTable: React.FC<Props> = ({ data, onEdit, onDelete, onBulkDelete }) => {
   const [globalFilter, setGlobalFilter] = useState("");
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const columns: ColumnDef<Allowance>[] = [
+    {
+          // <-- ADD THIS NEW COLUMN OBJECT
+          id: "select",
+          header: ({ table }) => (
+            <Checkbox
+              checked={
+                table.getIsAllPageRowsSelected() ||
+                (table.getIsSomePageRowsSelected() && "indeterminate")
+              }
+              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+              aria-label="Select all"
+            />
+          ),
+          cell: ({ row }) => (
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label="Select row"
+            />
+          ),
+          enableSorting: false,
+          enableHiding: false,
+        },
     {
       accessorKey: "allowance_types.name",
       header: "Allowance Type",
@@ -180,11 +242,12 @@ const AllowanceAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    onRowSelectionChange: setRowSelection,
     initialState: {
       sorting: [
         {
           id: "start_period",
-          desc: true, // 'true' for descending (latest date first)
+          desc: true, // 'true' for descending (latest date first))
         },
       ],
     },
@@ -197,17 +260,22 @@ const AllowanceAssignTable: React.FC<Props> = ({ data, onEdit, onDelete }) => {
     onGlobalFilterChange: setGlobalFilter,
     state: {
       globalFilter,
+      rowSelection,
     },
   });
 
   return (
     <div className="space-y-4">
-      <Input
+      <div className="flex items-center py-4">
+        <Input
         placeholder="Search by employee name.."
         value={globalFilter ?? ""}
         onChange={(event) => setGlobalFilter(event.target.value)}
         className="max-w-sm"
       />
+      <BulkDeleteButton table={table} onBulkDeleteClick={onBulkDelete} />
+      </div>
+      
       <div className="rounded-md border px-2">
         <Table>
           <TableHeader>

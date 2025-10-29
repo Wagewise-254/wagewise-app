@@ -28,6 +28,7 @@ const EmployeeSection = () => {
     }
   }, [companyId, fetchEmployees]);
 
+
   return (
     <div className="container mx-auto p-6">
       <Card className="shadow-md">

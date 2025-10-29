@@ -10,7 +10,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { MoreHorizontal, Trash2 } from "lucide-react"
+import { MoreHorizontal, Trash2} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -169,7 +169,7 @@ const columns: ColumnDef<Employee>[] = [
 
 export default function EmployeesTable() {
   const { companyId } = useParams();
-  const { employees, deleteEmployee, deleteEmployees } = useHrStore();
+  const { employees, deleteEmployee, deleteEmployees} = useHrStore();
 
    const [sorting, setSorting] = React.useState<SortingState>([
     {
@@ -312,7 +312,7 @@ export default function EmployeesTable() {
         {selectedRowCount > 0 && (
           <Button
             variant="destructive"
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2 text-white"
             onClick={handleBulkDelete}
           >
             <Trash2 className="h-4 w-4" />

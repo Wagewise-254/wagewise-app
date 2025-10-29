@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Loader2, Mail, Download } from "lucide-react";
+import { MoreHorizontal, Loader2, Mail, Download, FileText } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -64,6 +64,7 @@ const PayrollDetailsPage = () => {
   const navigate = useNavigate();
   const [details, setDetails] = useState<PayrollDetail[]>([]);
   const [loading, setLoading] = useState(true);
+   const [previewUrl, setPreviewUrl] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -112,6 +113,21 @@ const sortDetails = (data: PayrollDetail[]): PayrollDetail[] => {
   useEffect(() => {
     fetchPayrollDetails();
   }, [fetchPayrollDetails]);
+
+  // New function to handle payslip preview
+  const handlePreviewPdf = (payrollDetailId: string) => {
+    if (!companyId || !session) {
+      toast.error("Authentication token is missing. Please log in again.");
+      return;
+    }
+
+    setPreviewUrl(
+      `${API_BASE_URL}/company/${companyId}/payroll/payslip/${payrollDetailId}/download?preview=true&token=${session.access_token}`
+    );
+
+    // Open the preview URL in a new tab
+    window.open(previewUrl, "_blank");
+  };
 
   // New function to handle payslip download
   const handleDownloadPayslip = async (payrollDetailId: string) => {
@@ -426,6 +442,11 @@ const sortDetails = (data: PayrollDetail[]): PayrollDetail[] => {
                           onClick={() => handleEmailSinglePayslip(detail.id)}
                         >
                           <Mail className="mr-2 h-4 w-4" /> Email Payslip
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handlePreviewPdf(detail.id)}
+                        >
+                          <FileText className="mr-2 h-4 w-4" /> Preview Payslip
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
