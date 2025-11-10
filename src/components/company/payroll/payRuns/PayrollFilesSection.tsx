@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import {
   Command,
   CommandEmpty,
@@ -220,121 +222,109 @@ const PayrollFilesSection = () => {
         </div>
         {selectedRun && (
           <>
-            <h3 className="text-lg font-bold mb-4">
-              Download Files for {selectedRun.payroll_number}
+            <h3 className="text-lg font-bold mb-6 text-center">
+              Reports for {selectedRun.payroll_number}
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              <Button
-                onClick={() => handleDownloadReport("kra-sec-b1")}
-                disabled={downloading}
-                className="w-full bg-[#7F5EFD] cursor-pointer"
-              >
-                {downloading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                KRA SEC B1
-              </Button>
-              <Button
-                onClick={() => handleDownloadReport("nssf-return")}
-                disabled={downloading}
-                className="w-full bg-[#7F5EFD] cursor-pointer"
-              >
-                {downloading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                NSSF Return
-              </Button>
-              <Button
-                onClick={() => handleDownloadReport("shif-return")}
-                disabled={downloading}
-                 className="w-full bg-[#7F5EFD] cursor-pointer"
-              >
-                {downloading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                SHIF Return
-              </Button>
-              <Button
-                onClick={() => handleDownloadReport("housing-levy-return")}
-                disabled={downloading}
-                 className="w-full bg-[#7F5EFD] cursor-pointer"
-              >
-                {downloading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Housing Levy
-              </Button>
-              <Button
-                onClick={() => handleDownloadReport("helb-report")}
-                disabled={downloading}
-                 className="w-full bg-[#7F5EFD] cursor-pointer"
-              >
-                {downloading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                HELB Report
-              </Button>
-              <Button
-                onClick={() => handleDownloadReport("bank-payment")}
-                disabled={downloading}
-                 className="w-full bg-[#7F5EFD] cursor-pointer"
-              >
-                {downloading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Bank File
-              </Button>
-              <Button
-                onClick={() => handleDownloadReport("mpesa-payment")}
-                disabled={downloading}
-                 className="w-full bg-[#7F5EFD] cursor-pointer"
-              >
-                {downloading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                M-Pesa File
-              </Button>
-              <Button
-                onClick={() => handleDownloadReport("cash-payment")}
-                disabled={downloading}
-                 className="w-full bg-[#7F5EFD] cursor-pointer"
-              >
-                {downloading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Cash Sheet
-              </Button>
-              <Button
-                onClick={() => handleDownloadReport("payroll-summary")}
-                disabled={downloading}
-                 className="w-full bg-[#7F5EFD] cursor-pointer"
-              >
-                {downloading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Payroll Summary
-              </Button>
-              <Button
-                onClick={() => handleDownloadReport("allowance-report")}
-                disabled={downloading}
-                className="w-full bg-[#7F5EFD] cursor-pointer"
-              >
-                {downloading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Allowance Report
-              </Button>
-              <Button
-                onClick={() => handleDownloadReport("deduction-report")}
-                disabled={downloading}
-                 className="w-full bg-[#7F5EFD] cursor-pointer"
-              >
-                {downloading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Deduction Report
-              </Button>
-            </div>
+
+            <Tabs defaultValue="statutory" className="w-full">
+              <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto mb-6">
+                <TabsTrigger value="statutory">Statutory</TabsTrigger>
+                <TabsTrigger value="payments">Payments</TabsTrigger>
+                <TabsTrigger value="internal">Internal</TabsTrigger>
+              </TabsList>
+
+              {/* Statutory Reports */}
+              <TabsContent value="statutory">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {[
+                    { type: "kra-sec-b1", label: "KRA SEC B1" },
+                    { type: "nssf-return", label: "NSSF Return" },
+                    { type: "shif-return", label: "SHIF Return" },
+                    { type: "housing-levy-return", label: "Housing Levy" },
+                    { type: "helb-report", label: "HELB Report" },
+                  ].map((r) => (
+                    <Button
+                      key={r.type}
+                      onClick={() => handleDownloadReport(r.type)}
+                      disabled={downloading}
+                      className="w-full bg-[#7F5EFD] hover:bg-[#6D4EFA]"
+                    >
+                      {downloading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : null}
+                      {r.label}
+                    </Button>
+                  ))}
+                </div>
+              </TabsContent>
+
+              {/* Payment Files */}
+              <TabsContent value="payments">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-4">
+                  {[
+                    { type: "bank-payment", label: "Bank File" },
+                    { type: "mpesa-payment", label: "M-Pesa File" },
+                    { type: "cash-payment", label: "Cash Sheet" },
+                  ].map((r) => (
+                    <Button
+                      key={r.type}
+                      onClick={() => handleDownloadReport(r.type)}
+                      disabled={downloading}
+                      className="w-full bg-[#7F5EFD] hover:bg-[#6D4EFA]"
+                    >
+                      {downloading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : null}
+                      {r.label}
+                    </Button>
+                  ))}
+                </div>
+              </TabsContent>
+
+              {/* Internal Reports */}
+              <TabsContent value="internal">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {[
+                    { type: "payroll-summary", label: "Payroll Summary" },
+                    { type: "annual-report", label: "Annual Report" },
+                    { type: "allowance-report", label: "Allowance Report" },
+                    { type: "deduction-report", label: "Deduction Report" },
+                  ].map((r) => (
+                    <div
+                      key={r.type}
+                      className="flex flex-col gap-2 items-center justify-between bg-gray-50 border rounded-lg p-3 hover:shadow-sm transition"
+                    >
+                      <span className="font-medium text-gray-800 text-sm">
+                        {r.label}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={downloading}
+                          onClick={() =>
+                            toast.info(`${r.label} preview not available yet.`)
+                          }
+                        >
+                          Preview
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="bg-[#7F5EFD] hover:bg-[#6D4EFA]"
+                          disabled={downloading}
+                          onClick={() => handleDownloadReport(r.type)}
+                        >
+                          {downloading ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          Download
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
           </>
         )}
         {!selectedRun && payrollRuns.length > 0 && (
