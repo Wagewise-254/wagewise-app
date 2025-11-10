@@ -8,6 +8,7 @@ import OfflineBanner from "@/components/common/OfflineBanner";
 
 const SplashScreen = () => {
   const navigate = useNavigate();
+  const appVersion = import.meta.env.VITE_APP_VERSION;
 
   // Ping backend
   useEffect(() => {
@@ -69,7 +70,7 @@ const SplashScreen = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8, duration: 0.5 }}
           >
-            v2.2.0
+            v{appVersion}
           </motion.div>
         </motion.div>
       </AnimatePresence>

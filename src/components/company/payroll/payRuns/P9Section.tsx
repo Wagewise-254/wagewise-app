@@ -87,7 +87,6 @@ const P9Section = () => {
   const [openYear, setOpenYear] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -169,9 +168,9 @@ const P9Section = () => {
       toast.error("Authentication token is missing. Please log in again.");
       return;
     }
-    setPreviewUrl(
-      `${API_BASE_URL}/companies/${companyId}/employees/${employeeId}/p9a/${selectedYear}?preview=true&token=${token}`
-    );
+
+    // Construct the preview URL
+    const previewUrl = `${API_BASE_URL}/companies/${companyId}/employees/${employeeId}/p9a/${selectedYear}?preview=true&token=${token}`;
 
     window.open(previewUrl, "_blank");
   };

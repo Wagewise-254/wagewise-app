@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
-import { toast } from 'sonner';
+import { showToast } from '@/utils/ToastUtils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,13 +20,13 @@ const LoginPage = () => {
     e.preventDefault();
     try {
       await login(email, password);
-      toast.success('Login successful! Welcome back.');
+      showToast("success", "Login successful! Welcome back.")
       navigate('/dashboard'); // Redirect to a new dashboard route
     } catch (error: unknown) {
       if (error instanceof Error) {
-        toast.error(error.message);
+        showToast("error", "Error", error.message);
       } else {
-        toast.error('An error occurred during login.');
+        showToast("error", 'An error occurred during login.');
       }
     }
   };

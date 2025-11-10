@@ -64,7 +64,6 @@ const PayrollDetailsPage = () => {
   const navigate = useNavigate();
   const [details, setDetails] = useState<PayrollDetail[]>([]);
   const [loading, setLoading] = useState(true);
-   const [previewUrl, setPreviewUrl] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -121,12 +120,11 @@ const sortDetails = (data: PayrollDetail[]): PayrollDetail[] => {
       return;
     }
 
-    setPreviewUrl(
-      `${API_BASE_URL}/company/${companyId}/payroll/payslip/${payrollDetailId}/download?preview=true&token=${session.access_token}`
-    );
+    // Construct the preview URL
+    const pdfUrl = `${API_BASE_URL}/company/${companyId}/payroll/payslip/${payrollDetailId}/download?preview=true&token=${session.access_token}`;
 
     // Open the preview URL in a new tab
-    window.open(previewUrl, "_blank");
+    window.open(pdfUrl, "_blank");
   };
 
   // New function to handle payslip download
