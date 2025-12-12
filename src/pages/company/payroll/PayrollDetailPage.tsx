@@ -113,7 +113,7 @@ const sortDetails = (data: PayrollDetail[]): PayrollDetail[] => {
     fetchPayrollDetails();
   }, [fetchPayrollDetails]);
 
-  // New function to handle payslip preview
+  // function to handle payslip preview
   const handlePreviewPdf = (payrollDetailId: string) => {
     if (!companyId || !session) {
       toast.error("Authentication token is missing. Please log in again.");

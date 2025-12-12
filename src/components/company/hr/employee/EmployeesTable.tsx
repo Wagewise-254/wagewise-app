@@ -10,7 +10,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { MoreHorizontal, Trash2} from "lucide-react"
+import { MoreHorizontal, Trash2, Loader2} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -169,7 +169,7 @@ const columns: ColumnDef<Employee>[] = [
 
 export default function EmployeesTable() {
   const { companyId } = useParams();
-  const { employees, deleteEmployee, deleteEmployees} = useHrStore();
+  const { employees, deleteEmployee, deleteEmployees, loading: isFetchingEmployees} = useHrStore();
 
    const [sorting, setSorting] = React.useState<SortingState>([
     {
@@ -341,7 +341,17 @@ export default function EmployeesTable() {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {isFetchingEmployees ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <div className="flex items-center justify-center space-x-2">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span className="text-sm text-gray-500">Loading employees...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) :
+            table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}

@@ -1,7 +1,8 @@
-// src/pages/company/payroll/PayrollFilesSection.tsx
+// src/components/company/payroll/PayrollFilesSection.tsx
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "@/config";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
@@ -42,6 +43,7 @@ type PayrollRun = {
 
 const PayrollFilesSection = () => {
   const { session } = useAuthStore();
+  const navigate = useNavigate();
   const { companyId } = useParams<{ companyId: string }>();
   const [loading, setLoading] = useState(true);
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
@@ -83,6 +85,55 @@ const PayrollFilesSection = () => {
   useEffect(() => {
     fetchPayrollRuns();
   }, [fetchPayrollRuns]);
+
+  const handlePreviewReport = async (report: {
+    type: string;
+    label: string;
+  }) => {
+    if (!selectedRun) {
+      toast.error("Please select a payroll run first.");
+      return;
+    }
+
+    // 1. Get the token from the auth store
+  const token = session?.access_token;
+  if (!token) {
+    toast.error("Authentication token not found. Please log in again.");
+    return;
+  }
+
+   let fileType = "";
+      switch (report.type) {
+        case "kra-sec-b1":
+        case "housing-levy-return":
+        case "bank-payment":
+        case "mpesa-payment":
+          fileType = "csv";
+          break;
+        case "cash-payment":
+          fileType = "pdf";
+          break;
+        case "nssf-return":
+        case "shif-return":
+        case "helb-report":
+        case "payroll-summary":
+        case "allowance-report":
+        case "deduction-report":
+          fileType = "xlsx";
+          break;
+        default:
+          fileType = "xlsx";
+      }
+
+  // 2. Construct the API URL
+  const reportUrl = `${API_BASE_URL}/companies/${companyId}/payroll/runs/${selectedRun.id}/reports/${report.type}?download=false&token=${token}`;
+
+  navigate(
+    `/company/${companyId}/payroll/report-preview?file=${encodeURIComponent(
+      reportUrl
+    )}&name=${encodeURIComponent(report.label)}&type=${fileType}` 
+  );
+  };
 
   const handleDownloadReport = async (reportType: string) => {
     if (!selectedRun) {
@@ -158,6 +209,65 @@ const PayrollFilesSection = () => {
     );
   }
 
+  // === NEW: Unified report list ===
+  const REPORTS = {
+    statutory: [
+      { type: "kra-sec-b1", label: "KRA SEC B1" },
+      { type: "nssf-return", label: "NSSF Return" },
+      { type: "shif-return", label: "SHIF Return" },
+      { type: "housing-levy-return", label: "Housing Levy" },
+      { type: "helb-report", label: "HELB Report" },
+    ],
+    payments: [
+      { type: "bank-payment", label: "Bank File" },
+      { type: "mpesa-payment", label: "M-Pesa File" },
+      { type: "cash-payment", label: "Cash Sheet" },
+    ],
+    internal: [
+      { type: "payroll-summary", label: "Payroll Summary" },
+      { type: "annual-report", label: "Annual Report" },
+      { type: "allowance-report", label: "Allowance Report" },
+      { type: "deduction-report", label: "Deduction Report" },
+    ],
+  };
+
+  // === NEW: Universal report card UI ===
+  const renderReportCard = (report: { type: string; label: string }) => {
+    return (
+      <div
+        key={report.type}
+        className="flex flex-col gap-2 items-center justify-between bg-gray-50 border rounded-lg p-3 hover:shadow-sm transition"
+      >
+        <span className="font-medium text-gray-800 text-sm">
+          {report.label}
+        </span>
+
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={downloading}
+            onClick={() => handlePreviewReport(report)}
+          >
+            Preview
+          </Button>
+
+          <Button
+            size="sm"
+            className="bg-[#7F5EFD] hover:bg-[#6D4EFA]"
+            disabled={downloading}
+            onClick={() => handleDownloadReport(report.type)}
+          >
+            {downloading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            Download
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Card className="w-full max-w-4xl mx-auto p-6">
       <CardHeader className="text-center">
@@ -227,101 +337,36 @@ const PayrollFilesSection = () => {
             </h3>
 
             <Tabs defaultValue="statutory" className="w-full">
-              <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto mb-6">
-                <TabsTrigger value="statutory">Statutory</TabsTrigger>
-                <TabsTrigger value="payments">Payments</TabsTrigger>
-                <TabsTrigger value="internal">Internal</TabsTrigger>
+              <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto mb-6 cursor-pointer">
+                <TabsTrigger value="statutory" className="cursor-pointer">
+                  Statutory
+                </TabsTrigger>
+                <TabsTrigger value="payments" className="cursor-pointer">
+                  Payments
+                </TabsTrigger>
+                <TabsTrigger value="internal" className="cursor-pointer">
+                  Internal
+                </TabsTrigger>
               </TabsList>
 
               {/* Statutory Reports */}
               <TabsContent value="statutory">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {[
-                    { type: "kra-sec-b1", label: "KRA SEC B1" },
-                    { type: "nssf-return", label: "NSSF Return" },
-                    { type: "shif-return", label: "SHIF Return" },
-                    { type: "housing-levy-return", label: "Housing Levy" },
-                    { type: "helb-report", label: "HELB Report" },
-                  ].map((r) => (
-                    <Button
-                      key={r.type}
-                      onClick={() => handleDownloadReport(r.type)}
-                      disabled={downloading}
-                      className="w-full bg-[#7F5EFD] hover:bg-[#6D4EFA]"
-                    >
-                      {downloading ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : null}
-                      {r.label}
-                    </Button>
-                  ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {REPORTS.statutory.map(renderReportCard)}
                 </div>
               </TabsContent>
 
               {/* Payment Files */}
               <TabsContent value="payments">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-4">
-                  {[
-                    { type: "bank-payment", label: "Bank File" },
-                    { type: "mpesa-payment", label: "M-Pesa File" },
-                    { type: "cash-payment", label: "Cash Sheet" },
-                  ].map((r) => (
-                    <Button
-                      key={r.type}
-                      onClick={() => handleDownloadReport(r.type)}
-                      disabled={downloading}
-                      className="w-full bg-[#7F5EFD] hover:bg-[#6D4EFA]"
-                    >
-                      {downloading ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : null}
-                      {r.label}
-                    </Button>
-                  ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {REPORTS.payments.map(renderReportCard)}
                 </div>
               </TabsContent>
 
               {/* Internal Reports */}
               <TabsContent value="internal">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {[
-                    { type: "payroll-summary", label: "Payroll Summary" },
-                    { type: "annual-report", label: "Annual Report" },
-                    { type: "allowance-report", label: "Allowance Report" },
-                    { type: "deduction-report", label: "Deduction Report" },
-                  ].map((r) => (
-                    <div
-                      key={r.type}
-                      className="flex flex-col gap-2 items-center justify-between bg-gray-50 border rounded-lg p-3 hover:shadow-sm transition"
-                    >
-                      <span className="font-medium text-gray-800 text-sm">
-                        {r.label}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={downloading}
-                          onClick={() =>
-                            toast.info(`${r.label} preview not available yet.`)
-                          }
-                        >
-                          Preview
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="bg-[#7F5EFD] hover:bg-[#6D4EFA]"
-                          disabled={downloading}
-                          onClick={() => handleDownloadReport(r.type)}
-                        >
-                          {downloading ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : null}
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                  {REPORTS.internal.map(renderReportCard)}
                 </div>
               </TabsContent>
             </Tabs>
