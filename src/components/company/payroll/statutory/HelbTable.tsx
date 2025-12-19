@@ -23,9 +23,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationLink,
+  PaginationNext,
+} from "@/components/ui/pagination";
 import { MoreHorizontal } from "lucide-react";
 import { EmployeeWithHelb } from "@/components/company/payroll/statutory/HelbStatutorySection";
-
 
 export type HelbRecord = {
   id: string;
@@ -40,17 +47,25 @@ interface HelbDataTableProps {
   onDelete: (employee: EmployeeWithHelb) => void;
 }
 
-const HelbDataTable: React.FC<HelbDataTableProps> = ({ data, onEdit, onDelete }) => {
+const HelbDataTable: React.FC<HelbDataTableProps> = ({
+  data,
+  onEdit,
+  onDelete,
+}) => {
   const [sorting, setSorting] = React.useState<SortingState>([
-  {
-    id: "first_name",
-    desc: false, // Alphabetical/Ascending
-  },
-  {
-    id: "last_name",
-    desc: false, // Secondary sort
-  },
-]);
+    {
+      id: "first_name",
+      desc: false, // Alphabetical/Ascending
+    },
+    {
+      id: "last_name",
+      desc: false, // Secondary sort
+    },
+  ]);
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   // Memoize the columns to prevent unnecessary re-renders
   const columns: ColumnDef<EmployeeWithHelb>[] = React.useMemo(
@@ -58,37 +73,39 @@ const HelbDataTable: React.FC<HelbDataTableProps> = ({ data, onEdit, onDelete })
       {
         accessorKey: "first_name",
         header: "First Name",
-        cell: info => info.getValue(),
+        cell: (info) => info.getValue(),
       },
       {
         accessorKey: "last_name",
         header: "Last Name",
-        cell: info => info.getValue(),
+        cell: (info) => info.getValue(),
       },
       {
         accessorKey: "helb_deductions.helb_account_number",
         header: "HELB Account Number",
-        cell: info => info.getValue() || "N/A",
+        cell: (info) => info.getValue() || "N/A",
       },
       {
         accessorKey: "helb_deductions.monthly_deduction",
         header: "Monthly Deduction",
-       cell: info => {
-      const value = info.getValue<number>();
-      return value ? `KES ${value.toFixed(2)}` : "N/A";
-    },
+        cell: (info) => {
+          const value = info.getValue<number>();
+          return value ? `KES ${value.toFixed(2)}` : "N/A";
+        },
       },
       {
         accessorKey: "helb_deductions.status",
         header: "Status",
-        cell: info => info.getValue() || "Not Added",
+        cell: (info) => info.getValue() || "Not Added",
       },
       {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => {
           const employee = row.original;
-          const hasHelbRecord = employee.helb_deductions !== null && employee.helb_deductions !== undefined;
+          const hasHelbRecord =
+            employee.helb_deductions !== null &&
+            employee.helb_deductions !== undefined;
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -100,10 +117,16 @@ const HelbDataTable: React.FC<HelbDataTableProps> = ({ data, onEdit, onDelete })
               <DropdownMenuContent align="end">
                 {hasHelbRecord ? (
                   <>
-                    <DropdownMenuItem onClick={() => onEdit(employee)} className="cursor-pointer">
+                    <DropdownMenuItem
+                      onClick={() => onEdit(employee)}
+                      className="cursor-pointer"
+                    >
                       Edit
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onDelete(employee)} className="cursor-pointer">
+                    <DropdownMenuItem
+                      onClick={() => onDelete(employee)}
+                      className="cursor-pointer"
+                    >
                       Delete
                     </DropdownMenuItem>
                   </>
@@ -128,8 +151,10 @@ const HelbDataTable: React.FC<HelbDataTableProps> = ({ data, onEdit, onDelete })
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
+    onPaginationChange: setPagination,
     state: {
       sorting,
+      pagination,
     },
   });
 
@@ -176,23 +201,42 @@ const HelbDataTable: React.FC<HelbDataTableProps> = ({ data, onEdit, onDelete })
         </TableBody>
       </Table>
       {/* Pagination controls */}
-      <div className="flex items-center justify-end space-x-2 py-4 px-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
+      <div className="flex justify-center mt-4">
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => table.previousPage()}
+                className={
+                  !table.getCanPreviousPage()
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer"
+                }
+              />
+            </PaginationItem>
+            {Array.from({ length: table.getPageCount() }, (_, index) => (
+              <PaginationItem key={index}>
+                <PaginationLink
+                  isActive={table.getState().pagination.pageIndex === index}
+                  onClick={() => table.setPageIndex(index)}
+                  className="cursor-pointer"
+                >
+                  {index + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => table.nextPage()}
+                className={
+                  !table.getCanNextPage()
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer"
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
     </div>
   );

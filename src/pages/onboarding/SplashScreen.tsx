@@ -60,7 +60,7 @@ const SplashScreen = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            Launching WageWise...
+            Launching ...
           </motion.p>
 
           {/* Version text */}

@@ -444,7 +444,7 @@ const P9Section = () => {
                     Generate P9A
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-4xl p-6">
+                <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
                   <DialogHeader>
                     <DialogTitle>P9A for {selectedYear}</DialogTitle>
                     <DialogDescription>
@@ -573,6 +573,7 @@ const P9Section = () => {
                       </TableBody>
                     </Table>
                   </div>
+                  {/* pagination */}
                   <div className="flex justify-center mt-4">
                     <Pagination>
                       <PaginationContent>
@@ -581,6 +582,7 @@ const P9Section = () => {
                             onClick={() =>
                               setCurrentPage((prev) => Math.max(1, prev - 1))
                             }
+                            className={currentPage === 1 ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
                           />
                         </PaginationItem>
                         {[...Array(totalPages)].map((_, index) => (
@@ -588,6 +590,7 @@ const P9Section = () => {
                             <PaginationLink
                               isActive={currentPage === index + 1}
                               onClick={() => setCurrentPage(index + 1)}
+                              className="cursor-pointer"
                             >
                               {index + 1}
                             </PaginationLink>
@@ -600,6 +603,7 @@ const P9Section = () => {
                                 Math.min(totalPages, prev + 1)
                               )
                             }
+                            className={currentPage === totalPages ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
                           />
                         </PaginationItem>
                       </PaginationContent>

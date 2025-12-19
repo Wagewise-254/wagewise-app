@@ -24,6 +24,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationLink,
+  PaginationNext,
+} from "@/components/ui/pagination";
 import { MoreHorizontal } from "lucide-react";
 
 // This Employee type should be the single source of truth for employee data structure.
@@ -33,7 +41,8 @@ export type Employee = {
   first_name: string; // Add this
   last_name: string; // Add this
   employee_number: string;
-  employee_bank_details?: { // Add this nested object
+  employee_bank_details?: {
+    // Add this nested object
     payment_method: "Cash" | "Bank" | "M-Pesa";
     bank_name?: string;
     account_number?: string;
@@ -50,11 +59,15 @@ interface DataTableProps {
 
 export function DataTable({ data, onEdit }: DataTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([
-  {
-    id: "employee_number",
-    desc: false, // 'false' for ascending
-  },
-]);
+    {
+      id: "employee_number",
+      desc: false, // 'false' for ascending
+    },
+  ]);
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   // Define table columns, making them reusable and type-safe.
   const columns: ColumnDef<Employee>[] = [
@@ -64,40 +77,40 @@ export function DataTable({ data, onEdit }: DataTableProps) {
     },
     {
       cell: ({ row }) => (
-      <span>
-        {row.original.first_name} {row.original.last_name}
-      </span>
-    ),
+        <span>
+          {row.original.first_name} {row.original.last_name}
+        </span>
+      ),
       header: "Employee Name",
-    },   
+    },
     {
       accessorKey: "employee_bank_details.payment_method",
       header: "Payment Method",
     },
     {
       header: "Bank Name",
-    accessorKey: "employee_bank_details.bank_name",
-    cell: ({ row }) =>
-      row.original.employee_bank_details?.payment_method === "Bank"
-        ? row.original.employee_bank_details?.bank_name || "-"
-        : "-",
+      accessorKey: "employee_bank_details.bank_name",
+      cell: ({ row }) =>
+        row.original.employee_bank_details?.payment_method === "Bank"
+          ? row.original.employee_bank_details?.bank_name || "-"
+          : "-",
     },
     {
       header: "Account No.",
-    accessorKey: "employee_bank_details.account_number",
-    cell: ({ row }) =>
-      row.original.employee_bank_details?.payment_method === "Bank"
-        ? row.original.employee_bank_details?.account_number || "-"
-        : "-",
+      accessorKey: "employee_bank_details.account_number",
+      cell: ({ row }) =>
+        row.original.employee_bank_details?.payment_method === "Bank"
+          ? row.original.employee_bank_details?.account_number || "-"
+          : "-",
     },
     {
-        header: "M-Pesa No.",
-    accessorKey: "employee_bank_details.phone_number",
-    cell: ({ row }) =>
-      row.original.employee_bank_details?.payment_method === "M-Pesa"
-        ? row.original.employee_bank_details?.phone_number || "-"
-        : "-",
-      },
+      header: "M-Pesa No.",
+      accessorKey: "employee_bank_details.phone_number",
+      cell: ({ row }) =>
+        row.original.employee_bank_details?.payment_method === "M-Pesa"
+          ? row.original.employee_bank_details?.phone_number || "-"
+          : "-",
+    },
     {
       id: "actions",
       header: "Actions",
@@ -127,11 +140,13 @@ export function DataTable({ data, onEdit }: DataTableProps) {
     columns,
     state: {
       sorting,
+      pagination,
     },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    onPaginationChange: setPagination,
   });
 
   return (
@@ -176,24 +191,43 @@ export function DataTable({ data, onEdit }: DataTableProps) {
           )}
         </TableBody>
       </Table>
-       {/* Pagination controls */}
-       <div className="flex items-center justify-end space-x-2 py-4 px-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </Button>
+      {/* Pagination controls */}
+      <div className="flex justify-center mt-4">
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => table.previousPage()}
+                className={
+                  !table.getCanPreviousPage()
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer"
+                }
+              />
+            </PaginationItem>
+            {Array.from({ length: table.getPageCount() }, (_, index) => (
+              <PaginationItem key={index}>
+                <PaginationLink
+                  isActive={table.getState().pagination.pageIndex === index}
+                  onClick={() => table.setPageIndex(index)}
+                  className="cursor-pointer"
+                >
+                  {index + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => table.nextPage()}
+                className={
+                  !table.getCanNextPage()
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer"
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
     </div>
   );

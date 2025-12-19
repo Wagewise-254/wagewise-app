@@ -463,6 +463,7 @@ const sortDetails = (data: PayrollDetail[]): PayrollDetail[] => {
                   onClick={() =>
                     setCurrentPage((prev) => Math.max(1, prev - 1))
                   }
+                  className={currentPage === 1 ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
                 />
               </PaginationItem>
               {[...Array(totalPages)].map((_, index) => (
@@ -470,6 +471,8 @@ const sortDetails = (data: PayrollDetail[]): PayrollDetail[] => {
                   <PaginationLink
                     isActive={currentPage === index + 1}
                     onClick={() => setCurrentPage(index + 1)}
+                    className="cursor-pointer"
+
                   >
                     {index + 1}
                   </PaginationLink>
@@ -480,6 +483,7 @@ const sortDetails = (data: PayrollDetail[]): PayrollDetail[] => {
                   onClick={() =>
                     setCurrentPage((prev) => Math.min(totalPages, prev + 1))
                   }
+                  className={currentPage === totalPages ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
                 />
               </PaginationItem>
             </PaginationContent>

@@ -381,14 +381,15 @@ export default function EmployeesTable() {
             <PaginationItem>
               <PaginationPrevious
                 onClick={() => table.previousPage()}
-                className={!table.getCanPreviousPage() ? "cursor-not-allowed opacity-50" : ""}
+                className={!table.getCanPreviousPage() ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
               />
-            </PaginationItem>
+            </PaginationItem >
             {Array.from({ length: table.getPageCount() }, (_, index) => (
               <PaginationItem key={index}>
                 <PaginationLink
                   isActive={table.getState().pagination.pageIndex === index}
                   onClick={() => table.setPageIndex(index)}
+                  className="cursor-pointer"
                 >
                   {index + 1}
                 </PaginationLink>
@@ -397,7 +398,7 @@ export default function EmployeesTable() {
             <PaginationItem>
               <PaginationNext
                 onClick={() => table.nextPage()}
-                className={!table.getCanNextPage() ? "cursor-not-allowed opacity-50" : ""}
+                className={!table.getCanNextPage() ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
               />
             </PaginationItem>
           </PaginationContent>

@@ -299,7 +299,7 @@ const PayrollFilesSection = () => {
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0">
+            <PopoverContent className="w-[300px] max-h-[350px] p-0 overflow-auto">
               <Command>
                 <CommandInput placeholder="Search payroll run..." />
                 <CommandEmpty>No payroll run found.</CommandEmpty>
