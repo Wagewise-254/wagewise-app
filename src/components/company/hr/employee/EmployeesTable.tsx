@@ -441,21 +441,3 @@ export default function EmployeesTable() {
   );
 }
 
-// Create a simple dialog for now to fulfill the view details request
-/*
-const EmployeeDetailsDialog = ({ isOpen, onClose, employee }: { isOpen: boolean, onClose: () => void, employee: Employee | null }) => {
-  if (!isOpen || !employee) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-xl font-bold">Employee Details</h2>
-        <p className="mt-4">
-          Details for: <strong>{employee.first_name} {employee.last_name}</strong>
-        </p>
-        <div className="mt-6 flex justify-end">
-          <Button onClick={onClose}>Close</Button>
-        </div>
-      </div>
-    </div>
-  );
-}; */
