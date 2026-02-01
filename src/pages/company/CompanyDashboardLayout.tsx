@@ -7,10 +7,10 @@ import OfflineBanner from '@/components/common/OfflineBanner';
 
 const CompanyDashboardLayout = () => {
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen overflow-hidden">
       <OfflineBanner /> {/* Global offline indicator */}
       <CompanyTopBar />
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         <CompanySidebar />
         <main className="flex-1 bg-gray-100 p-6 overflow-y-auto">
           <Outlet />

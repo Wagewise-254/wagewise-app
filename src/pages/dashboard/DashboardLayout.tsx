@@ -5,7 +5,7 @@ import OfflineBanner from '@/components/common/OfflineBanner';
 
 const DashboardLayout = () => {
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen overflow-hidden">
         <OfflineBanner/>
       <TopBar />
       <main className="flex-1 bg-gray-100 p-6 overflow-y-auto">
