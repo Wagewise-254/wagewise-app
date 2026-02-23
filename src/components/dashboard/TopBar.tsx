@@ -1,9 +1,8 @@
 // src/components/dashboard/TopBar.tsx
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
-
-// ShadCN UI Components
+import { toast } from "sonner";
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -14,6 +13,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Icons
 import { HelpCircle } from 'lucide-react';
@@ -21,20 +25,36 @@ import companyLogo from "@/assets/android-chrome-512x512.png"
 
 const TopBar: React.FC = () => {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const { activeWorkspace } = useAuthStore();
 
-  // --- FIX 1: Read from 'user_name' instead of 'display_name' ---
-  const fullName = user?.user_metadata?.user_name || ''; // Changed key here
-  const firstName = fullName.split(' ')[0] || 'User';
-  const userEmail = user?.email || 'No email';
+   const fullName = activeWorkspace?.full_names ?? "";
+  const firstName = fullName.split(" ")[0] || "User";
+  const userEmail = user?.email || "No email";
+
+
+  const handleLogout = async () => {
+    toast.info("Logging out");
+    await logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <header className="bg-[#7F5EFD] text-white shadow-md z-50">
       <div className="flex items-center justify-between h-16 px-6">
-        {/* Left Side: Logo */}
+         {/* Left Side: Logo */}
         <div className="flex items-center space-x-2">
-          <Link to="/dashboard"> {/* Ensure this link points to your main dashboard */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+               <Link to="/dashboard">
             <img src={companyLogo} alt="Wagewise" className="h-8 w-auto" />
           </Link>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Home</p>
+            </TooltipContent>
+          </Tooltip>
+         
         </div>
 
         {/* Right Side: Actions and Profile */}
@@ -94,7 +114,10 @@ const TopBar: React.FC = () => {
               <DropdownMenuItem className='cursor-pointer' asChild>
                 <Link to="/dashboard/account-settings">Account Settings</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className='cursor-pointer' onClick={logout}>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={handleLogout}
+              >
                 Log out
               </DropdownMenuItem>
             </DropdownMenuContent>

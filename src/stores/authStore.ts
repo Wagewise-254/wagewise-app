@@ -1,87 +1,151 @@
-// src/stores/authStore.ts
+// frontend/src/stores/authStore.ts
+
 import { create } from 'zustand';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '@/lib/supabaseClient';
 import { Session, User } from '@supabase/supabase-js';
 import { API_BASE_URL } from '@/config';
 
-interface AuthState {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
-  error: string | null;
-  checkUser: () => void;
-  signUp: (email: string, password: string, userName: string) => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
+
+export interface Company {
+    id: string;
+    business_name: string;
+    industry?: string;
+    logo_url?: string;
+    status: 'PENDING' | 'APPROVED' | 'SUSPENDED';
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  session: null,
-  loading: true,
-  error: null,
+interface CompanyMembership {
+    role: 'ADMIN' | 'MANAGER' | 'VIEWER';
+    company_id: string;
+    companies: Company;
+}
 
-  checkUser: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      set({ user: session.user, session, loading: false });
-    } else {
-      set({ user: null, session: null, loading: false });
-    }
-  },
+export interface WorkspaceMembership {
+    workspace_id: string;
+    role: "OWNER" | "ADMIN" | "MANAGER" | "VIEWER";
+    full_names: string;
+    email: string;
+    workspaces: {
+        id: string;
+        name: string;
+        status: "ACTIVE" | "PENDING" | "SUSPENDED";
+    };
+}
 
-  signUp: async (email, password, userName) => {
-    set({ loading: true, error: null });
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          user_name: userName, // You can add custom data like this
-        },
-      },
-    });
+interface AuthState {
+    user: User | null;
+    session: Session | null;
+    workspaces: WorkspaceMembership[];
+    companies: CompanyMembership[];
 
-    if (error) {
-      set({ error: error.message, loading: false });
-      throw error;
-    }
+    activeWorkspace: WorkspaceMembership | null;
+    activeCompany: CompanyMembership | null;
+    loading: boolean;
+    error: string | null;
+    isWorkspaceActive: () => boolean;
+    isWorkspacePending: () => boolean;
+    isWorkspaceSuspended: () => boolean;
+    getCompanyRole: (companyId: string) => string | null;
+    checkUser: () => void;
+    login: (email: string, password: string) => Promise<void>;
+    loadContext: () => Promise<void>;
+    logout: () => Promise<void>;
+}
 
-    if (data.user) {
-      // After successful sign up, send welcome email via your backend
-      await fetch(`${API_BASE_URL}/welcome-email`, { // Your backend URL
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, userName }),
-      });
-      set({ user: data.user, session: data.session, loading: false });
-    }
-  },
+export const useAuthStore = create<AuthState>((set, get) => ({
+    user: null,
+    session: null,
+    workspaces: [],
+    companies: [],
+    activeWorkspace: null,
+    activeCompany: null,
+    loading: false,
+    error: null,
 
-  login: async (email, password) => {
-    set({ loading: true, error: null });
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    isWorkspaceActive: () =>
+        get().activeWorkspace?.workspaces.status === 'ACTIVE',
 
-    if (error) {
-      set({ error: error.message, loading: false });
-      throw error;
-    }
+    isWorkspacePending: () =>
+        get().activeWorkspace?.workspaces.status === 'PENDING',
 
-    if (data.user) {
-      set({ user: data.user, session: data.session, loading: false });
-    }
-  },
+    isWorkspaceSuspended: () =>
+        get().activeWorkspace?.workspaces.status === 'SUSPENDED',
 
-  logout: async () => {
-    set({ loading: true, error: null });
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      set({ error: error.message, loading: false });
-    } else {
-      set({ user: null, session: null, loading: false });
-    }
-  },
+    getCompanyRole: (companyId: string) => {
+        const membership = get().companies.find(
+            (c) => c.company_id === companyId
+        );
+        return membership?.role ?? null;
+    },
+
+
+    checkUser: async () => {
+        set({ loading: true });
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            set({ user: null, session: null, loading: false });
+            return;
+        }
+
+        set({ user: session.user, session });
+        await get().loadContext();
+        set({ loading: false });
+    },
+
+    login: async (email, password) => {
+        set({ loading: true, error: null });
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (error) {
+            set({ error: error.message, loading: false });
+            throw error;
+        }
+
+        set({ user: data.user, session: data.session });
+        await get().loadContext();
+        set({ loading: false });
+    },
+
+    loadContext: async () => {
+        const {
+            data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) return;
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/me/context`, {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            const context = await res.json();
+
+            set({
+                workspaces: context.workspaces ?? [],
+                companies: context.companies ?? [],
+                activeWorkspace: context.workspaces?.[0] ?? null,
+                activeCompany: context.companies?.[0] ?? null,
+            });
+        } catch (err) {
+            console.error("Failed to load context", err);
+        }
+    },
+
+    logout: async () => {
+        set({ loading: true, error: null });
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            set({ error: error.message, loading: false });
+        } else {
+            set({
+                user: null,
+                session: null,
+                workspaces: [],
+                activeWorkspace: null,
+                loading: false,
+            });
+        }
+    },
 }));

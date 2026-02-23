@@ -1,11 +1,11 @@
-// src/components/company/CompanyTopBar.tsx
-import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { useAuthStore } from '@/stores/authStore';
-import { useCompanyStore } from '@/stores/companyStore';
+// src/components/dashboard/TopBar.tsx
+import React, { useState, useMemo, useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useAuthStore, Company } from "@/stores/authStore";
+import { toast } from "sonner";
 
 // ShadCN UI Components
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,64 +13,118 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ArrowLeft, HelpCircle } from 'lucide-react';
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-interface Company {
-  id: string;
-  business_name: string;
-  // Add other properties of your Company object here
-}
+// Icons
+import { HelpCircle } from "lucide-react";
 
 const CompanyTopBar: React.FC = () => {
   const { user, logout } = useAuthStore();
   const { companyId } = useParams();
-  const { companies, fetchCompanies, loading } = useCompanyStore();
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
+  const navigate = useNavigate();
+   const { companies: companyMemberships } = useAuthStore();
+
+ const companies = useMemo(() => {
+    return companyMemberships.map((m) => m.companies);
+  }, [companyMemberships]);
 
   useEffect(() => {
-    // Fetch companies if they are not already in the store
-    if (companies.length === 0) {
-      fetchCompanies();
-    }
     // Find the company with the matching ID
     const foundCompany = companies.find((c) => c.id === companyId);
     setCurrentCompany(foundCompany || null);
-  }, [companyId, companies, fetchCompanies]);
-  
-  const fullName = user?.user_metadata?.user_name || '';
-  const firstName = fullName.split(' ')[0] || 'User';
-  const userEmail = user?.email || 'No email';
+  }, [companyId, companies]);
+
+  const fullName = useAuthStore.getState().activeWorkspace?.full_names || "";
+  const firstName = fullName.split(" ")[0] || "User";
+  const userEmail = user?.email || "No email";
+
+  const handleLogout = async () => {
+    toast.info("Logging out");
+    await logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
-    <header className="bg-[#7F5EFD] text-white shadow-md z-50">
+    <header className="bg-[#1F3A8A] text-white shadow-md z-50">
       <div className="flex items-center justify-between h-16 px-6">
-        {/* Left Side: Back button and Company Name */}
-        <div className="flex items-center space-x-4">
-          <Link to="/dashboard">
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
-              <ArrowLeft size={22} />
-            </Button>
-          </Link>
-          <h2 className="text-xl font-semibold">
-            {loading ? 'Loading...' : currentCompany?.business_name || 'Company Dashboard'}
-          </h2>
+        {/* Left Side: Logo */}
+        <div className="flex items-center space-x-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/dashboard">
+                <img
+                  src={currentCompany?.logo_url}
+                  alt={currentCompany?.business_name}
+                  className="h-8 w-auto"
+                />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Home</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Right Side: Actions and Profile */}
         <div className="flex items-center space-x-2">
-          <a href="mailto:wagewise.dev@gmail.com" target="_blank" rel="noopener noreferrer">
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
-              <HelpCircle size={22} />
-            </Button>
-          </a>
-          
+          {/* Feedback dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative cursor-pointer h-9 w-9 rounded-full">
-                <Avatar className="cursor-pointer h-9 w-9 bg-amber-400">
-                  <AvatarFallback className="bg-amber-400 text-white font-bold">
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-white/20 hover:text-white font-semibold text-sm"
+              >
+                Feedback
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Contact Us</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="cursor-pointer" asChild>
+                <a href="mailto:wagewise.dev@gmail.com">
+                  📧 wagedesk@gmail.com
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Help dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20 hover:text-white"
+              >
+                <HelpCircle size={22} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Need Help?</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="cursor-pointer" asChild>
+                <a href="mailto:wagewise.dev@gmail.com">
+                  📧 wagedesk@gmail.com
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="relative cursor-pointer h-9 w-9 rounded-full"
+              >
+                <Avatar className="cursor-pointer h-9 w-9 bg-white">
+                  <AvatarFallback className="bg-white text-[#1F3A8A] font-bold">
                     {firstName.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -79,17 +133,22 @@ const CompanyTopBar: React.FC = () => {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{fullName || "User"}</p>
+                  <p className="text-sm font-medium leading-none">
+                    {fullName || "User"}
+                  </p>
                   <p className="text-xs leading-none text-muted-foreground">
                     {userEmail}
                   </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className='cursor-pointer' asChild>
+              <DropdownMenuItem className="cursor-pointer" asChild>
                 <Link to="/dashboard/account-settings">Account Settings</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className='cursor-pointer' onClick={logout}>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={handleLogout}
+              >
                 Log out
               </DropdownMenuItem>
             </DropdownMenuContent>

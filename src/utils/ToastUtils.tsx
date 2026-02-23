@@ -18,7 +18,7 @@ export const showToast = (
     background: BG_COLOR,
     color: ACCENT_COLOR,
     padding: "14px 18px",
-    borderRadius: "12px",
+    borderRadius: "5px",
     fontSize: "15px",
     display: "flex",
     alignItems: "center",

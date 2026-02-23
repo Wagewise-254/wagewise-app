@@ -1,9 +1,10 @@
 import { Toaster } from 'sonner';
 import AppRouterWrapper from './router';
+import { TooltipProvider } from "@/components/ui/tooltip"
 import './index.css'
 import { useEffect } from 'react';
 import { useAuthStore } from './stores/authStore';
-import OfflineBanner from "@/components/common/OfflineBanner";
+import OfflineBanner from "@/components/common/offlinebanner";
 
 function App() {
   const { checkUser } = useAuthStore();
@@ -16,7 +17,7 @@ function App() {
     <>
     <Toaster position="top-right" richColors />
     <OfflineBanner />
-      <AppRouterWrapper />
+     <TooltipProvider><AppRouterWrapper /></TooltipProvider>
     </>
   )
 }

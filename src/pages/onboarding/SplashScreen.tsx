@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import companyLogo from "/icons/android-chrome-512x512.png";
 import { API_BASE_URL } from "@/config";
 import { Loader2 } from "lucide-react";
-import OfflineBanner from "@/components/common/OfflineBanner";
+import OfflineBanner from "@/components/common/offlinebanner";
 
 const SplashScreen = () => {
   const navigate = useNavigate();
@@ -53,15 +53,6 @@ const SplashScreen = () => {
 
           {/* Replace the old bar with a spinning loader */}
           <Loader2 className="animate-spin w-6 h-6 mt-4" />
-
-          <motion.p
-            className="text-sm opacity-90 mt-3"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            Launching ...
-          </motion.p>
 
           {/* Version text */}
           <motion.div
