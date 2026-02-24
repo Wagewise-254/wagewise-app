@@ -10,7 +10,9 @@ import {
   FileText,
   Clock,
   ArrowUpRight,
-  ArrowLeft
+  ArrowLeft,
+  RefreshCw,
+  Info,
 } from "lucide-react";
 import { format, getYear } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -64,6 +66,22 @@ interface PayrollSummary {
   growth_percentage?: number;
 }
 
+interface PayrollRunResponse {
+  message: string;
+  payrollRunId: string;
+  isNewRun: boolean;
+  totals: {
+    totalGrossPay: number;
+    totalStatutoryDeductions: number;
+    totalPaye: number;
+    totalNetPay: number;
+    totalNSSF: number;
+    totalSHIF: number;
+    totalHousingLevy: number;
+    totalHELB: number;
+  };
+}
+
 const years = Array.from({ length: 3 }, (_, i) => getYear(new Date()) - i);
 const months = [
   "January",
@@ -88,6 +106,9 @@ export default function RunPayroll() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(true);
+  const [existingRunForPeriod, setExistingRunForPeriod] =
+    useState<PayrollRun | null>(null);
+  const [checkingExistingRun, setCheckingExistingRun] = useState(false);
 
   // Separate selectors
   const [selectedMonth, setSelectedMonth] = useState<string>(
@@ -99,6 +120,41 @@ export default function RunPayroll() {
 
   const [summary, setSummary] = useState<PayrollSummary | null>(null);
   const [existingRuns, setExistingRuns] = useState<PayrollRun[]>([]);
+
+  // Add this function to check if a run exists for the selected period
+  const checkExistingRunForPeriod = useCallback(
+    async (month: string, year: number) => {
+      if (!companyId || !session?.access_token) return;
+
+      setCheckingExistingRun(true);
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/company/${companyId}/payroll/runs?month=${month}&year=${year}`,
+          {
+            headers: { Authorization: `Bearer ${session?.access_token}` },
+          },
+        );
+        if (response.ok) {
+          const runs = await response.json();
+          const existing = runs.find(
+            (run: PayrollRun) =>
+              run.payroll_month === month && run.payroll_year === year,
+          );
+          setExistingRunForPeriod(existing || null);
+        }
+      } catch (e) {
+        console.error("Error checking existing run:", e);
+      } finally {
+        setCheckingExistingRun(false);
+      }
+    },
+    [companyId, session?.access_token],
+  );
+
+  // Call this when month/year changes
+  useEffect(() => {
+    checkExistingRunForPeriod(selectedMonth, parseInt(selectedYear));
+  }, [selectedMonth, selectedYear, checkExistingRunForPeriod]);
 
   const fetchPayrollSummary = useCallback(async () => {
     setSummaryLoading(true);
@@ -120,22 +176,42 @@ export default function RunPayroll() {
     }
   }, [companyId, session?.access_token]);
 
-  const fetchExistingRuns = useCallback(async () => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/company/${companyId}/payroll/runs?limit=5`,
-        {
-          headers: { Authorization: `Bearer ${session?.access_token}` },
-        },
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setExistingRuns(data);
-      }
-    } catch (e) {
-      console.error("Runs fetch error:", e);
+const fetchRunsWithFilters = useCallback(async (month?: string, year?: number) => {
+  if (!companyId || !session?.access_token) return;
+  
+  try {
+    let url = `${API_BASE_URL}/company/${companyId}/payroll/runs?limit=5`;
+    if (month && year) {
+      url += `&month=${month}&year=${year}`;
     }
-  }, [companyId, session?.access_token]);
+    
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      setExistingRuns(data);
+      
+      // If we're filtering for a specific month/year, set the existing run
+      if (month && year) {
+        const existing = data.find(
+          (run: PayrollRun) => 
+            run.payroll_month === month && 
+            run.payroll_year === year
+        );
+        setExistingRunForPeriod(existing || null);
+      }
+    }
+  } catch (e) {
+    console.error("Runs fetch error:", e);
+  }
+}, [companyId, session?.access_token]);
+
+// Replace fetchExistingRuns with this enhanced version
+const fetchExistingRuns = useCallback(() => {
+  fetchRunsWithFilters();
+}, [fetchRunsWithFilters]);
 
   useEffect(() => {
     fetchPayrollSummary();
@@ -144,6 +220,17 @@ export default function RunPayroll() {
 
   const handleProcessPayroll = async () => {
     setLoading(true);
+
+    // Show initial loading toast
+    const loadingToast = toast.loading(
+      existingRunForPeriod
+        ? "Re-synchronizing existing payroll run..."
+        : "Initializing new payroll run...",
+      {
+        description: `Processing ${selectedMonth} ${selectedYear}`,
+      },
+    );
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/company/${companyId}/payroll/sync`,
@@ -159,20 +246,65 @@ export default function RunPayroll() {
           }),
         },
       );
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to process");
+      const data: PayrollRunResponse = await response.json();
+      if (!response.ok) {
+        throw new Error( "Failed to process");
+      }
 
-      toast.success("Payroll cycle initiated successfully");
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+
+      // Show success toast with detailed information
+      if (data.isNewRun) {
+        toast.success("New payroll run created", {
+          description: `Successfully created payroll for ${selectedMonth} ${selectedYear} with ${data.totals.totalGrossPay > 0 ? "calculated figures" : "no employees"}.`,
+          duration: 5000,
+          icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+        });
+
+        // Show additional info toast with totals
+        toast.info("Payroll Summary", {
+          description: (
+            <div className="mt-1 text-sm">
+              <p>Gross Pay: KES {data.totals.totalGrossPay.toLocaleString()}</p>
+              <p>Net Pay: KES {data.totals.totalNetPay.toLocaleString()}</p>
+              <p>PAYE: KES {data.totals.totalPaye.toLocaleString()}</p>
+            </div>
+          ),
+          duration: 6000,
+          icon: <Info className="h-5 w-5 text-blue-500" />,
+        });
+      } else {
+        toast.success("Payroll re-synchronized", {
+          description: `Updated existing payroll for ${selectedMonth} ${selectedYear} with latest changes.`,
+          duration: 5000,
+          icon: <RefreshCw className="h-5 w-5 text-green-500" />,
+        });
+      }
+
       setIsOpen(false);
+
+      // Refresh the runs list
+      fetchExistingRuns();
+      fetchPayrollSummary();
+
+      // Navigate to the review page
       navigate(
         `/company/${companyId}/payroll/${data.payrollRunId}/review-status`,
       );
     } catch (error: unknown) {
-      toast.error((error as Error).message);
+      // Dismiss loading toast and show error
+      toast.dismiss(loadingToast);
+      toast.error("Payroll processing failed", {
+        description: (error as Error).message,
+        duration: 5000,
+      });
     } finally {
       setLoading(false);
     }
   };
+
+  
 
   return (
     <div className="space-y-6">
@@ -269,6 +401,8 @@ export default function RunPayroll() {
                     <ExistingRunPreview
                       month={selectedMonth}
                       year={parseInt(selectedYear)}
+                      existingRun={existingRunForPeriod}
+                      isLoading={checkingExistingRun}
                     />
 
                     <DialogFooter>
@@ -280,13 +414,23 @@ export default function RunPayroll() {
                       </Button>
                       <Button
                         onClick={handleProcessPayroll}
-                        disabled={loading}
-                        className="bg-[#1F3A8A] cursor-pointer"
+                        disabled={loading || checkingExistingRun}
+                        className={`cursor-pointer ${
+                          existingRunForPeriod
+                            ? "bg-amber-600 hover:bg-amber-700"
+                            : "bg-[#1F3A8A] hover:bg-[#162a63]"
+                        }`}
                       >
                         {loading && (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         )}
-                        Initialize Cycle
+                        {loading
+                          ? existingRunForPeriod
+                            ? "Re-synchronizing..."
+                            : "Initializing..."
+                          : existingRunForPeriod
+                            ? "Re-synchronize Payroll"
+                            : "Initialize New Payroll"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -459,19 +603,85 @@ export default function RunPayroll() {
   );
 }
 
-function ExistingRunPreview({ month, year }: { month: string; year: number }) {
+function ExistingRunPreview({
+  month,
+  year,
+  existingRun,
+  isLoading,
+}: {
+  month: string;
+  year: number;
+  existingRun: PayrollRun | null;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 my-2">
+        <div className="flex items-center gap-3 text-slate-600">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <p className="text-sm">Checking for existing payroll runs...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (existingRun) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 my-2">
+        <div className="flex items-start gap-3">
+          <RefreshCw className="h-5 w-5 text-amber-600 mt-0.5" />
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-amber-800">
+              Existing payroll run found for {month} {year}
+            </p>
+            <div className="bg-white/50 rounded-lg p-3 space-y-1">
+              <p className="text-xs text-amber-700">
+                <span className="font-medium">Run ID:</span>{" "}
+                {existingRun.payroll_number}
+              </p>
+              <p className="text-xs text-amber-700">
+                <span className="font-medium">Status:</span>{" "}
+                <Badge
+                  variant="outline"
+                  className="bg-amber-100 text-amber-700 border-amber-300"
+                >
+                  {existingRun.status}
+                </Badge>
+              </p>
+              <p className="text-xs text-amber-700">
+                <span className="font-medium">Employees:</span>{" "}
+                {existingRun.employee_count || 0}
+              </p>
+              {existingRun.total_net_pay > 0 && (
+                <p className="text-xs text-amber-700">
+                  <span className="font-medium">Net Pay:</span> KES{" "}
+                  {existingRun.total_net_pay.toLocaleString()}
+                </p>
+              )}
+            </div>
+            <p className="text-xs text-amber-600">
+              ⚠️ Processing will re-synchronize this run, updating any changes
+              made since last calculation.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 my-2">
       <div className="flex items-center gap-3 text-slate-600">
         <AlertCircle className="h-5 w-5" />
-        <p className="text-sm">
-          Initializing for{" "}
-          <strong>
-            {month} {year}
-          </strong>
-          . This will recalculate all tax bands (PAYE) and statutory rates
-          (NSSF/SHIF) based on current employee settings.
-        </p>
+        <div>
+          <p className="text-sm">
+            Initializing <strong>new payroll</strong> for {month} {year}.
+          </p>
+          <p className="text-xs text-slate-500 mt-1">
+            This will calculate all tax bands (PAYE) and statutory rates
+            (NSSF/SHIF) based on current employee settings.
+          </p>
+        </div>
       </div>
     </div>
   );

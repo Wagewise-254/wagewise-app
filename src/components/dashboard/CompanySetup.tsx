@@ -280,19 +280,23 @@ export default function CompanySetup() {
             </div>
             <DialogHeader>
               <DialogTitle className="text-center text-3xl font-bold text-slate-900 tracking-tight">
-                Setup Submitted
+                Company Created Successfully!
               </DialogTitle>
             </DialogHeader>
-
             <p className="mt-4 text-slate-500 text-base leading-relaxed max-w-sm mx-auto">
-              Your company profile has been created successfully. Our team will
-              review the details shortly. In the meantime, you can manage your
-              workspace settings from the dashboard.
+              Your company profile has been created. Complete the payroll setup to get your workspace ready for employee management.
             </p>
 
-            <div className="mt-12">
+            <div className="mt-12 space-y-4">
               <Button
-                className="w-full bg-[#1F3A8A] hover:bg-[#162a63] h-14 rounded-2xl text-base font-semibold shadow-md transition-all hover:-translate-y-px"
+                className="w-full bg-[#1F3A8A] hover:bg-[#162a63] h-14 cursor-pointer rounded-lg text-base font-semibold shadow-md transition-all hover:-translate-y-px"
+                onClick={() => navigate(`/company/${companyId}/payroll/setup`)}
+              >
+                Continue to Payroll Setup
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full h-12 rounded-lg text-slate-400 hover:text-slate-600 font-medium cursor-pointer"
                 onClick={handleFinish}
               >
                 Return to Dashboard
