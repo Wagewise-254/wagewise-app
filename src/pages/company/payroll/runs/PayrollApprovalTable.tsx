@@ -3,12 +3,14 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PayrollReportTable } from "./PayrollReportTable";
 import { ColumnDef } from "@tanstack/react-table";
 import axios from "axios";
+import { Checkbox } from "@/components/ui/checkbox";
 import { API_BASE_URL } from "@/config";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { CheckCircle2, CircleDashed, XCircle } from "lucide-react";
+import { CheckCircle2, CircleDashed, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface PayrollReportData {
@@ -55,6 +57,8 @@ export default function PayrollApprovalTable() {
   const { companyId, payrollRunId } = useParams();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const { session } = useAuthStore();
 
       const fetchData = useCallback(async () => {
@@ -82,6 +86,34 @@ export default function PayrollApprovalTable() {
     fetchData();
   }, [fetchData]);
 
+  const handleBulkApprove = async () => {
+  if (selectedRows.length === 0) return;
+  
+  setBulkActionLoading(true);
+  const loadingToast = toast.loading(`Approving ${selectedRows.length} items...`);
+  
+  try {
+    await axios.post(
+      `${API_BASE_URL}/company/${companyId}/payroll/reviews/bulk`,
+      {
+        reviewIds: selectedRows,
+        status: "APPROVED",
+      },
+      { headers: { Authorization: `Bearer ${session?.access_token}` } }
+    );
+    
+    toast.dismiss(loadingToast);
+    toast.success(`Successfully approved ${selectedRows.length} items`);
+    setSelectedRows([]);
+    fetchData();
+  } catch (error) {
+    toast.dismiss(loadingToast);
+    toast.error("Failed to bulk approve");
+  } finally {
+    setBulkActionLoading(false);
+  }
+};
+
   const handleStatusUpdate = async (reviewId: string, newStatus: string) => {
     try {
       await axios.patch(
@@ -106,6 +138,25 @@ export default function PayrollApprovalTable() {
   };
 
   const columns: ColumnDef<PayrollReportData>[] = [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={table.getIsAllPageRowsSelected()}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
     { 
       accessorKey: "fullName", 
       header: "Employee",
@@ -222,7 +273,36 @@ export default function PayrollApprovalTable() {
   ];
 
   return (
-    <div className="p-1">      
+    <div className="p-1"> 
+{selectedRows.length > 0 && (
+  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
+    <span className="text-sm text-blue-700">
+      {selectedRows.length} items selected
+    </span>
+    <div className="flex gap-2">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setSelectedRows([])}
+      >
+        Clear
+      </Button>
+      <Button
+        size="sm"
+        className="bg-emerald-600 hover:bg-emerald-700"
+        onClick={handleBulkApprove}
+        disabled={bulkActionLoading}
+      >
+        {bulkActionLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+        ) : (
+          <CheckCircle2 className="h-4 w-4 mr-2" />
+        )}
+        Approve All
+      </Button>
+    </div>
+  </div>
+)}     
       <PayrollReportTable columns={columns} data={data} loading={loading} />
     </div>
   );

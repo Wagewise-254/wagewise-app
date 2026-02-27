@@ -1,3 +1,5 @@
+export type EmployeeStatus = 'ACTIVE' | 'ON LEAVE' | 'TERMINATED' | 'SUSPENDED';
+
 export interface EmployeePaymentDetails {
     id: string;
     employee_id: string;
@@ -45,6 +47,7 @@ export interface Employee {
     hire_date: string;
     job_type: string | null;
     employee_status: string;
+    //employee_status: EmployeeStatus;
     employee_status_effective_date: string;
     id_type: string | null;
     id_number: string | null;

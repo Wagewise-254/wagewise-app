@@ -102,15 +102,6 @@ export default function PayrollPaymentTable() {
       ),
     },
     {
-      accessorKey: "companyAccountNumber",
-      header: "Company Acc No.",
-      cell: ({ row }) => (
-        <span className="text-slate-700 font-medium">
-          {row.original.companyAccountNumber}
-        </span>
-      ),
-    },
-    {
       accessorKey: "bankDetails.accountNumber",
       header: "Employee Acc No.",
       cell: ({ row }) => (
@@ -138,29 +129,11 @@ export default function PayrollPaymentTable() {
       ),
     },
     {
-      accessorKey: "bankDetails.bankCode",
-      header: "Bank Code",
-      cell: ({ row }) => (
-        <span className="text-slate-700 font-medium">
-          {row.original.bankDetails.bankCode || "-"}
-        </span>
-      ),
-    },
-    {
       accessorKey: "bankDetails.branchName",
       header: "Branch Name",
       cell: ({ row }) => (
         <span className="text-slate-700 font-medium">
           {row.original.bankDetails.branchName || "-"}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "bankDetails.branchCode",
-      header: "Branch Code",
-      cell: ({ row }) => (
-        <span className="text-slate-700 font-medium">
-          {row.original.bankDetails.branchCode || "-"}
         </span>
       ),
     },

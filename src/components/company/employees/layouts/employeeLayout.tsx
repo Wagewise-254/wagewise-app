@@ -7,6 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+//import EmployeeStatusSummary from "@/components/EmployeeStatusSummary";
 
 export default function EmployeeLayout() {
   const { companyId } = useParams();
@@ -29,7 +30,7 @@ export default function EmployeeLayout() {
   ];
 
   return (
-    <div className="h-full p-4 overflow-y-auto">
+    <div className="h-full p-2 overflow-y-auto">
       <section className="h-full bg-white border border-slate-200 rounded-md">
         <header className="flex items-start justify-between px-6 pt-5 pb-3  border-slate-200">
           <div className="space-y-1">
@@ -67,7 +68,8 @@ export default function EmployeeLayout() {
         </div>
 
         {/* This renders the actual page component (EmployeeSection, etc.) */}
-        <div className="px-6 py-4 ">
+        <div className="px-6 py-2 ">
+           {/*<EmployeeStatusSummary />*/}
           <Outlet />
         </div>
       </section>

@@ -4,7 +4,7 @@ import {
   LayoutDashboard,
   UserCog2,
   Building2,
-
+  Logs,
 } from "lucide-react";
 
 export default function SettingsSidebar() {
@@ -26,6 +26,11 @@ export default function SettingsSidebar() {
       label: "HRM",
       href: `/company/${companyId}/settings/departments`,
       icon: Building2,
+    },
+    {
+      label: "Logs",
+      href: `/company/${companyId}/settings/logs`,
+      icon: Logs,
     }
   ];
 

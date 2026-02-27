@@ -655,7 +655,7 @@ const P9AReports = () => {
     <Card className="m-2 rounded-sm border border-slate-200 shadow-none">
       <CardHeader className="pb-4">
         <Tooltip>
-          <TooltipTrigger className="cursor-default flex">
+          <TooltipTrigger className="cursor-default self-start">
             <Button
               onClick={() => navigate(`/company/${companyId}/modules`)}
               variant="ghost"
@@ -665,7 +665,7 @@ const P9AReports = () => {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom" align="start">
+          <TooltipContent side="bottom" align="center">
             Back to module overview
           </TooltipContent>
         </Tooltip>

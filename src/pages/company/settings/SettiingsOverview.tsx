@@ -163,7 +163,7 @@ export default function CompanySettingsOverviewPage() {
 
   if (!summary || !settings) {
     return (
-      <div className="flex flex-col items-center justify-center h-96">
+      <div className="flex flex-col items-center justify-center h-96 mt-4">
         <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
         <h3 className="text-lg font-semibold text-slate-900">
           Company not found
@@ -176,7 +176,7 @@ export default function CompanySettingsOverviewPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+    <div className="max-w-6xl mx-auto space-y-6 pb-20 mt-4">
       {/* Minimal Header */}
       <div className="flex items-end justify-between">
         <div>
@@ -398,7 +398,7 @@ export default function CompanySettingsOverviewPage() {
 
 function SettingsSkeleton() {
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 mt-4">
       <div className="flex items-center justify-between">
         <div>
           <Skeleton className="h-8 w-48" />

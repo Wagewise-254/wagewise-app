@@ -11,6 +11,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  Row
 } from "@tanstack/react-table";
 import {
   Table,
@@ -78,9 +79,10 @@ interface Props {
   loading: boolean;
   error: string | null;
   onDeleteSuccess?: () => void;
+   showActions?: boolean;
 }
 
-const EmployeesTable: React.FC<Props> = ({ data, loading, error,  onDeleteSuccess }) => {
+const EmployeesTable: React.FC<Props> = ({ data, loading, error,  onDeleteSuccess, showActions = true }) => {
   const { companyId } = useParams();
   const navigate = useNavigate();
   const session = useAuthStore.getState().session;
@@ -257,10 +259,10 @@ const EmployeesTable: React.FC<Props> = ({ data, loading, error,  onDeleteSucces
         <EmployeeStatusBadge status={toProperCase(row.getValue("employee_status"))}/>
       ),
     },
-    {
+   ...(showActions ? [{
       id: "actions",
       header: () => <div className="text-right">Actions</div>,
-      cell: ({ row }) => (
+      cell: ({ row }: { row: Row<Employee> }) => (
         <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
           <Button
             variant="ghost"
@@ -278,7 +280,7 @@ const EmployeesTable: React.FC<Props> = ({ data, loading, error,  onDeleteSucces
           </Button>
         </div>
       ),
-    },
+    }] : []),
   ];
   const table = useReactTable({
     data,

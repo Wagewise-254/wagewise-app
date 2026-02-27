@@ -1,21 +1,24 @@
 import { HashRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useEffect } from "react";
-import { supabase } from "./lib/supabaseClient.ts";
-import SplashScreen from "./pages/onboarding/SplashScreen";
-import NotFound from "./pages/NotFound.tsx";
+import SplashScreen from "./pages/onboarding/SplashScreen.tsx";
 import LoginPage from "./pages/onboarding/auth/LoginPage.tsx";
-import RootDashboard from "./pages/dashboard/RootDashboard";
+import RootDashboard from "./pages/dashboard/RootDashboard.tsx";
 import DashboardLayout from "./pages/dashboard/DashboardLayout";
 import AccountSettings from "./pages/dashboard/AccountSettings.tsx";
 import CompanySetup from "./components/dashboard/CompanySetup.tsx";
-import ModuleLayout from "./pages/company/layout/moduleLayout.tsx";
+import { supabase } from "./lib/supabaseClient.ts";
 import ModuleDashboard from "./pages/company/layout/moduleDashboard.tsx";
+import ModuleLayout from "./pages/company/layout/moduleLayout.tsx";
 import EmployeeSection from "./pages/company/employees/employeeSection.tsx";
 import AddEmployees from "./pages/company/employees/AddEmployee.tsx";
 import EmployeeDetailsLayout from "./components/company/employees/layouts/EmployeeDetailsLayout.tsx";
+import EmployeeLayout from "./components/company/employees/layouts/employeeLayout.tsx";
+import NonActiveEmployees from "./pages/company/employees/nonActiveEmployees.tsx";
+import TerminatedEmployees from "./pages/company/employees/TerminatedEmployees.tsx";
 import EmployeeDeductions from "./pages/company/employees/details/Deductions.tsx";
 import PaymentDetails from "./pages/company/employees/details/Payments.tsx";
+import EmployeeHistoryPage from "./pages/company/employees/details/History.tsx";
 import PersonalDetails from "./pages/company/employees/details/PersonalDetails.tsx";
 import ContractDetails from "./pages/company/employees/details/Contracts.tsx";
 import EmployeeAllowances from "./pages/company/employees/details/Allowances.tsx";
@@ -47,6 +50,8 @@ import HRMSettingsLayout from "./pages/company/settings/HRMLayout.tsx";
 import JobTitlesSettings from "./pages/company/settings/JobTitles.tsx";
 import DepartmentSettings from "./pages/company/settings/Departments.tsx";
 import ProfileSettings from "./pages/company/settings/ProfilesSettings.tsx";
+import AuditLogs from "./pages/company/settings/AuditLogs.tsx";
+import NotFound from "./pages/NotFound.tsx";
 
 const ProtectedRoute = () => {
   const session = useAuthStore((state) => state.session);
@@ -87,7 +92,7 @@ const AppRouterWrapper = () => {
         <Route path="/" element={<SplashScreen />} />
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Protected Dashboard Routes with Layout */}
+        {/* Protected Dashboard routes with layouts */}
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<RootDashboard />} />
@@ -101,7 +106,12 @@ const AppRouterWrapper = () => {
           <Route path="/company/:companyId" element={<ModuleLayout />}>
             <Route index element={<Navigate to="modules" replace />} />
             <Route path="modules" element={<ModuleDashboard />} />
-            <Route path="employees" element={<EmployeeSection />} />
+            <Route element={<EmployeeLayout />}>
+             <Route index element={<EmployeeSection />} />
+              <Route path="employees" element={<EmployeeSection />} />
+              <Route path="employees/non-active" element={<NonActiveEmployees />} />
+              <Route path="employees/terminated" element={<TerminatedEmployees />} />
+            </Route>
             <Route path="employees/add-employee" element={<AddEmployees />} />
             {/* Employee details */}
             <Route
@@ -114,6 +124,7 @@ const AppRouterWrapper = () => {
               <Route path="payments" element={<PaymentDetails />} />
               <Route path="deductions" element={<EmployeeDeductions />} />
               <Route path="allowances" element={<EmployeeAllowances />} />
+              <Route path="history" element={<EmployeeHistoryPage />} />
             </Route>
             {/**Payroll specific dashboards */}
 
@@ -159,6 +170,7 @@ const AppRouterWrapper = () => {
                 <Route path="departments" element={<DepartmentSettings />} />
                 <Route path="Job-titles" element={<JobTitlesSettings />} />
               </Route>
+              <Route path="logs" element={<AuditLogs />} />
             </Route>
             {/* Catch all for undefined routes under /company/:companyId */}
             <Route path="*" element={<NotFound />} />
