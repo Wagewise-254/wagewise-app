@@ -7,7 +7,12 @@ import axios from "axios";
 import { API_BASE_URL } from "@/config";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface AllowanceDetail {
   name: string;
@@ -28,6 +33,8 @@ interface PayrollEarningData {
   topAllowances: Record<string, number>;
   otherCashAllowances: number;
   otherAllowances: number;
+  absent_days: number;
+  absent_days_deduction: number;
 }
 
 // Define a proper type for the row data
@@ -67,9 +74,10 @@ export default function PayrollPreparationEarnings() {
           reportData = response.data;
           // Calculate top allowances client-side
           const allowanceCounts: Record<string, number> = {};
-          reportData.forEach(emp => {
-            emp.allowances_details?.forEach(allow => {
-              allowanceCounts[allow.name] = (allowanceCounts[allow.name] || 0) + 1;
+          reportData.forEach((emp) => {
+            emp.allowances_details?.forEach((allow) => {
+              allowanceCounts[allow.name] =
+                (allowanceCounts[allow.name] || 0) + 1;
             });
           });
           allowanceNames = Object.entries(allowanceCounts)
@@ -131,9 +139,7 @@ export default function PayrollPreparationEarnings() {
     },
     {
       accessorKey: "basicSalary",
-      header: () => (
-        <div className="text-right">Basic Salary</div>
-      ),
+      header: () => <div className="text-right">Basic Salary</div>,
       cell: ({ row }) => (
         <div className="text-right font-medium">
           <span className="text-slate-700">
@@ -141,6 +147,44 @@ export default function PayrollPreparationEarnings() {
           </span>
         </div>
       ),
+    },
+    {
+      accessorKey: "absent_days_deduction",
+      header: () => <div className="text-right text-red-600">Absent Days</div>,
+      cell: ({ row }: { row: { original: PayrollEarningData } }) => {
+        const deduction = row.original.absent_days_deduction || 0;
+        const days = row.original.absent_days || 0;
+
+        if (deduction === 0) {
+          return (
+            <div className="text-right">
+              <span className="text-slate-300">-</span>
+            </div>
+          );
+        }
+
+        return (
+          <div className="text-right">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className="bg-red-50 text-red-700 border-red-200 font-mono cursor-help"
+                  >
+                    -{formatNumber(deduction)}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">
+                    {days} day{days !== 1 ? "s" : ""} absent
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        );
+      },
     },
     // Dynamic Cash Allowance Columns
     ...dynamicColumns.map((name) => ({
@@ -164,7 +208,10 @@ export default function PayrollPreparationEarnings() {
         return (
           <div className="text-right">
             {value > 0 ? (
-              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-mono">
+              <Badge
+                variant="outline"
+                className="bg-emerald-50 text-emerald-700 border-emerald-200 font-mono"
+              >
                 +{formatNumber(value)}
               </Badge>
             ) : (
@@ -182,7 +229,10 @@ export default function PayrollPreparationEarnings() {
         return (
           <div className="text-right">
             {value > 0 ? (
-              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 font-mono">
+              <Badge
+                variant="outline"
+                className="bg-amber-50 text-amber-700 border-amber-200 font-mono"
+              >
                 +{formatNumber(value)}
               </Badge>
             ) : (
@@ -200,7 +250,10 @@ export default function PayrollPreparationEarnings() {
         return (
           <div className="text-right">
             {value > 0 ? (
-              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 font-mono">
+              <Badge
+                variant="outline"
+                className="bg-purple-50 text-purple-700 border-purple-200 font-mono"
+              >
                 +{formatNumber(value)}
               </Badge>
             ) : (
@@ -212,9 +265,7 @@ export default function PayrollPreparationEarnings() {
     },
     {
       accessorKey: "grossPay",
-      header: () => (
-        <div className="text-right font-bold">Total Earnings</div>
-      ),
+      header: () => <div className="text-right font-bold">Total Earnings</div>,
       cell: ({ row }) => (
         <div className="text-right">
           <span className="font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded">
@@ -232,7 +283,10 @@ export default function PayrollPreparationEarnings() {
           Earnings Breakdown
         </h2>
         {dynamicColumns.length > 0 && (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+          <Badge
+            variant="outline"
+            className="bg-blue-50 text-blue-700 border-blue-200"
+          >
             Top {dynamicColumns.length} allowances shown
           </Badge>
         )}

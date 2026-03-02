@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { API_BASE_URL } from "@/config";
 import { useAuthStore } from "@/stores/authStore";
-import { Allowance } from "./AllowanceAssignTable";
+import { Allowance } from "@/types/allowance";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -25,6 +25,25 @@ type Props = {
 export default function DeleteAllowanceDialog({ allowance, companyId, isOpen, onClose, onDeleted }: Props) {
   const { session } = useAuthStore();
   const [loading, setLoading] = useState(false);
+
+  const getRecipientDisplay = () => {
+    switch (allowance.applies_to) {
+      case "INDIVIDUAL":
+        return allowance.employees
+          ? `${allowance.employees.first_name} ${allowance.employees.last_name}`
+          : "Unknown Employee";
+      case "COMPANY":
+        return "All Employees";
+      case "DEPARTMENT":
+        return allowance.departments?.name || "Unknown Department";
+      case "SUB_DEPARTMENT":
+        return allowance.sub_departments?.name || "Unknown Sub-department";
+      case "JOB_TITLE":
+        return allowance.job_titles?.title || "Unknown Job Title";
+      default:
+        return "N/A";
+    }
+  };
 
   const handleDelete = async () => {
     setLoading(true);
@@ -41,7 +60,6 @@ export default function DeleteAllowanceDialog({ allowance, companyId, isOpen, on
       }
 
       toast.success("Allowance deleted successfully.");
-
       onDeleted();
       onClose();
     } catch (err) {
@@ -59,8 +77,8 @@ export default function DeleteAllowanceDialog({ allowance, companyId, isOpen, on
           <DialogTitle>Delete Assigned Allowance</DialogTitle>
         </DialogHeader>
         <p>
-          Are you sure you want to delete the allowance <b>{allowance.allowance_types.name}</b> for employee{" "}
-          <b>{`${allowance.employees?.first_name} ${allowance.employees?.last_name}`}</b>? This action cannot be undone.
+          Are you sure you want to delete the allowance <b>{allowance.allowance_types.name}</b> for{" "}
+          <b>{getRecipientDisplay()}</b>? This action cannot be undone.
         </p>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={loading}>

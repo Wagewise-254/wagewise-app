@@ -1,4 +1,5 @@
-// src/components/company/payroll/allowances/ImportAllowanceDialog.tsx
+// src/components/company/payroll/deductions/ImportDeductionDialog.tsx
+
 import React, { useState, useCallback } from "react";
 import {
   Dialog,
@@ -112,17 +113,16 @@ const ImportDeductionDialog: React.FC<ImportDeductionDialogProps> = ({
       );
 
       toast.success(response.data.message);
-      onUpdated(); // Refresh the list of allowances after a successful import
+      onUpdated();
       onClose();
     } catch (error) {
       console.error("Upload error:", error);
       if (axios.isAxiosError(error) && error.response) {
         toast.error(error.response.data.error || "Failed to import deductions.");
         if (error.response.data.details) {
-            error.response.data.details.forEach((detail: string) => {
-                toast.error(detail);
-                console.error(detail);
-            });
+          error.response.data.details.forEach((detail: string) => {
+            toast.error(detail);
+          });
         }
       } else {
         toast.error("Failed to import deductions. Please try again.");
@@ -137,7 +137,7 @@ const ImportDeductionDialog: React.FC<ImportDeductionDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-         <DialogTitle>Import Deductions (Month/Year Based)</DialogTitle>
+          <DialogTitle>Import Deductions (Month/Year Based)</DialogTitle>
           <DialogDescription>
             Download the template, fill it with deduction details including the **Start Month/Year** and **Is Recurring** status, and upload the file.
           </DialogDescription>
@@ -149,7 +149,7 @@ const ImportDeductionDialog: React.FC<ImportDeductionDialogProps> = ({
               onClick={handleDownloadTemplate}
               className="flex items-center cursor-pointer gap-2"
             >
-              <Download className="h-4 w-4 " /> Download Template
+              <Download className="h-4 w-4" /> Download Template
             </Button>
           </div>
           <div className="grid gap-2">

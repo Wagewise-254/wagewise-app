@@ -215,7 +215,7 @@ const EmployeesTable: React.FC<Props> = ({ data, loading, error,  onDeleteSucces
         const emp = row.original;
         return (
           <div className="flex flex-col py-1">
-            <span className="font-semibold text-slate-800">{`${emp.first_name} ${emp.last_name}`}</span>
+            <span className="font-semibold text-slate-800">{`${emp.first_name} ${emp.middle_name} ${emp.last_name}`}</span>
             <span className="text-[11px] text-slate-400 tracking-tight">
               {emp.job_titles?.title || "Staff"}
             </span>

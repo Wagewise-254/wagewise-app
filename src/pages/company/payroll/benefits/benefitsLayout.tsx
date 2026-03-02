@@ -10,6 +10,11 @@ export default function BenefitLayout() {
       href: `/company/${companyId}/payroll/benefits/overview`,
       exact: true,
     },
+    {
+      label: "Absent Days",
+      href: `/company/${companyId}/payroll/benefits/absent-days`,
+      exact: true,
+    },
   ];
 
   return (

@@ -1,5 +1,3 @@
-// src/components/company/payroll/allowances/ImportAllowanceDialog.tsx
-
 import React, { useState, useCallback } from "react";
 import {
   Dialog,
@@ -16,14 +14,14 @@ import { useAuthStore } from "@/stores/authStore";
 import { Loader2, Download, CheckCircle, CloudUpload } from "lucide-react";
 import axios from "axios";
 
-interface ImportAllowanceDialogProps {
+interface ImportAbsentDaysDialogProps {
   companyId: string;
   isOpen: boolean;
   onClose: () => void;
   onUpdated: () => void;
 }
 
-const ImportAllowanceDialog: React.FC<ImportAllowanceDialogProps> = ({
+const ImportAbsentDaysDialog: React.FC<ImportAbsentDaysDialogProps> = ({
   isOpen,
   onClose,
   onUpdated,
@@ -61,7 +59,7 @@ const ImportAllowanceDialog: React.FC<ImportAllowanceDialogProps> = ({
       
       toast.info("Downloading template...");
       const response = await axios.get(
-        `${API_BASE_URL}/company/${companyId}/allowances/template`,
+        `${API_BASE_URL}/company/${companyId}/absent-days/template`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -73,7 +71,7 @@ const ImportAllowanceDialog: React.FC<ImportAllowanceDialogProps> = ({
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "Allowance_Import_Template.xlsx");
+      link.setAttribute("download", "Absent_Days_Import_Template.xlsx");
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -102,7 +100,7 @@ const ImportAllowanceDialog: React.FC<ImportAllowanceDialogProps> = ({
       }
 
       const response = await axios.post(
-        `${API_BASE_URL}/company/${companyId}/allowances/import`,
+        `${API_BASE_URL}/company/${companyId}/absent-days/import`,
         formData,
         {
           headers: {
@@ -118,14 +116,15 @@ const ImportAllowanceDialog: React.FC<ImportAllowanceDialogProps> = ({
     } catch (error) {
       console.error("Upload error:", error);
       if (axios.isAxiosError(error) && error.response) {
-        toast.error(error.response.data.error || "Failed to import allowances.");
+        toast.error(error.response.data.error || "Failed to import absent days.");
         if (error.response.data.details) {
           error.response.data.details.forEach((detail: string) => {
             toast.error(detail);
+            console.error(detail);
           });
         }
       } else {
-        toast.error("Failed to import allowances. Please try again.");
+        toast.error("Failed to import absent days. Please try again.");
       }
     } finally {
       setIsUploading(false);
@@ -137,9 +136,9 @@ const ImportAllowanceDialog: React.FC<ImportAllowanceDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-100.25">
         <DialogHeader>
-          <DialogTitle>Bulk Import Allowances</DialogTitle>
+          <DialogTitle>Bulk Import Absent Days</DialogTitle>
           <DialogDescription>
-            Download the template, fill it with employee allowance data (using months and years), and then upload it.
+            Download the template, fill it with employee absent days data, and then upload it.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -194,4 +193,4 @@ const ImportAllowanceDialog: React.FC<ImportAllowanceDialogProps> = ({
   );
 };
 
-export default ImportAllowanceDialog;
+export default ImportAbsentDaysDialog;

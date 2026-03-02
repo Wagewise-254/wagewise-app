@@ -10,6 +10,7 @@ import {
   useReactTable,
   SortingState,
   TableOptions,
+  RowSelectionState,
 } from "@tanstack/react-table";
 import {
   Table,
@@ -32,18 +33,29 @@ import {
 interface PayrollReportTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-    loading?: boolean;
-    options?: Partial<TableOptions<TData>>;
+  loading?: boolean;
+  options?: Partial<TableOptions<TData>>;
+  // Optional row selection props - if not provided, selection is disabled
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: (updater: React.SetStateAction<RowSelectionState>) => void;
 }
 
 export function PayrollReportTable<TData, TValue>({
   columns,
   data,
-    loading = false,
-    options = {},
+  loading = false,
+  options = {},
+  rowSelection,
+  onRowSelectionChange,
 }: PayrollReportTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
+  const [internalRowSelection, setInternalRowSelection] = useState<RowSelectionState>({});
+
+  // Use provided props if available, otherwise use internal state
+  const hasRowSelection = rowSelection !== undefined && onRowSelectionChange !== undefined;
+  const currentRowSelection = hasRowSelection ? rowSelection : internalRowSelection;
+  const handleRowSelectionChange = hasRowSelection ? onRowSelectionChange : setInternalRowSelection;
 
   const table = useReactTable({
     data,
@@ -54,11 +66,15 @@ export function PayrollReportTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onGlobalFilterChange: setGlobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
-     ...options,
+    // Only enable row selection if props are provided
+    enableRowSelection: hasRowSelection,
+    onRowSelectionChange: handleRowSelectionChange,
+    ...options,
     state: {
       sorting,
       globalFilter,
-         ...options.state,
+      rowSelection: currentRowSelection,
+      ...options.state,
     },
   });
 
@@ -108,6 +124,7 @@ export function PayrollReportTable<TData, TValue>({
                 <TableRow 
                   key={row.id} 
                   className="hover:bg-slate-50 border-slate-200"
+                  data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="py-3">

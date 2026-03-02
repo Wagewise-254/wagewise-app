@@ -29,55 +29,46 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Check, X, Trash2, Building, Users, Briefcase } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  MoreHorizontal,
+  Check,
+  X,
+  Trash2,
+  Building,
+  Users,
+  Briefcase,
+  Calendar,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import {
+  AssignedDeduction,
+  getFormattedStartDate,
+  getFormattedEndDate,
+} from "@/types/deduction";
 
-// Define the type for an assigned Deduction matching backend schema
-export type AssignedDeduction = {
-  id: string;
-  deduction_type_id: string;
-  company_id: string;
-  employee_id: string | null;
-  department_id: string | null;
-  sub_department_id: string | null;
-  job_title_id: string | null;
-  value: number;
-  calculation_type: "FIXED" | "PERCENTAGE";
-  is_recurring: boolean;
-  start_date: string;
-  number_of_months: number | null;
-  end_date: string | null;
-  created_at: string;
-  applies_to: "INDIVIDUAL" | "COMPANY" | "DEPARTMENT" | "SUB_DEPARTMENT" | "JOB_TITLE";
-   metadata: Record<string, unknown>;
-  deduction_types: {
-    name: string;
-    code: string;
-    is_pre_tax: boolean;
-  };
-  employees?: {
-    first_name: string;
-    last_name: string;
-    employee_number: string;
-  };
-  departments?: {
-    name: string;
-  };
-  sub_departments?: {
-    name: string;
-  };
-  job_titles?: {
-    title: string;
-  };
-};
-
-// Helper function to get recipient display name
-const getRecipientDisplay = (deduction: AssignedDeduction) => {
+// Helper function to get recipient display as string (for filtering/search)
+const getRecipientDisplayString = (deduction: AssignedDeduction): string => {
   switch (deduction.applies_to) {
     case "INDIVIDUAL":
       return deduction.employees
-        ? `${deduction.employees.first_name} ${deduction.employees.last_name}`
+        ? `${deduction.employees.first_name} ${deduction.employees.middle_name} ${deduction.employees.last_name} ${deduction.employees.employee_number}`
         : "Unknown Employee";
     case "COMPANY":
       return "All Employees";
@@ -90,6 +81,71 @@ const getRecipientDisplay = (deduction: AssignedDeduction) => {
     default:
       return "N/A";
   }
+};
+
+// Helper function to get recipient display as JSX (for rendering)
+const getRecipientDisplayElement = (deduction: AssignedDeduction) => {
+  switch (deduction.applies_to) {
+    case "INDIVIDUAL":
+      return deduction.employees ? (
+        <div className="flex flex-col">
+          <span>
+            {deduction.employees.first_name} {deduction.employees.middle_name}{" "}
+            {deduction.employees.last_name}
+          </span>
+          <span className="text-xs text-slate-400">
+            {deduction.employees.employee_number}
+          </span>
+        </div>
+      ) : (
+        "Unknown Employee"
+      );
+    case "COMPANY":
+      return "All Employees";
+    case "DEPARTMENT":
+      return deduction.departments?.name || "Unknown Department";
+    case "SUB_DEPARTMENT":
+      return deduction.sub_departments?.name || "Unknown Sub-department";
+    case "JOB_TITLE":
+      return deduction.job_titles?.title || "Unknown Job Title";
+    default:
+      return "N/A";
+  }
+};
+
+// Add this helper function to generate page numbers with ellipsis
+const getPageNumbers = (
+  currentPage: number,
+  totalPages: number,
+): (number | string)[] => {
+  const delta = 2; // Number of pages to show on each side of current page
+  const range: number[] = [];
+  const rangeWithDots: (number | string)[] = [];
+  let l: number | undefined;
+
+  for (let i = 1; i <= totalPages; i++) {
+    if (
+      i === 1 ||
+      i === totalPages ||
+      (i >= currentPage - delta && i <= currentPage + delta)
+    ) {
+      range.push(i);
+    }
+  }
+
+  range.forEach((i) => {
+    if (l) {
+      if (i - l === 2) {
+        rangeWithDots.push(l + 1);
+      } else if (i - l !== 1) {
+        rangeWithDots.push("...");
+      }
+    }
+    rangeWithDots.push(i);
+    l = i;
+  });
+
+  return rangeWithDots;
 };
 
 // Helper function to get recipient icon
@@ -109,11 +165,31 @@ const getRecipientIcon = (applies_to: string) => {
   }
 };
 
-// Custom sorting function for dates
+// Custom sorting function for start date (month/year)
 const dateSort: SortingFn<AssignedDeduction> = (rowA, rowB) => {
-  const a = new Date(rowA.original.start_date).getTime();
-  const b = new Date(rowB.original.start_date).getTime();
-  return a - b;
+  const aYear = rowA.original.start_year;
+  const bYear = rowB.original.start_year;
+  if (aYear !== bYear) return aYear - bYear;
+
+  const monthOrder: Record<string, number> = {
+    January: 1,
+    February: 2,
+    March: 3,
+    April: 4,
+    May: 5,
+    June: 6,
+    July: 7,
+    August: 8,
+    September: 9,
+    October: 10,
+    November: 11,
+    December: 12,
+  };
+
+  return (
+    monthOrder[rowA.original.start_month] -
+    monthOrder[rowB.original.start_month]
+  );
 };
 
 interface Props {
@@ -165,7 +241,7 @@ const DeductionAssignTable: React.FC<Props> = ({
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 20,
   });
 
   const columns: ColumnDef<AssignedDeduction>[] = [
@@ -212,21 +288,25 @@ const DeductionAssignTable: React.FC<Props> = ({
     },
     {
       id: "recipient",
-      header: "Assigned To",
+      header: "Recipient",
+      accessorFn: (row) => getRecipientDisplayString(row), // For filtering/sorting
       cell: ({ row }) => {
         const deduction = row.original;
         const icon = getRecipientIcon(deduction.applies_to);
-        const display = getRecipientDisplay(deduction);
-        
+        const display = getRecipientDisplayElement(deduction);
+
         return (
-          <div className="flex items-center">
-            {icon}
-            <span>{display}</span>
-            {deduction.applies_to !== "INDIVIDUAL" && deduction.applies_to !== "COMPANY" && (
-              <Badge variant="outline" className="ml-2 text-xs">
-                {deduction.applies_to.replace("_", " ")}
-              </Badge>
-            )}
+          <div className="flex items-start gap-1">
+            <div className="mt-0.5">{icon}</div>
+            <div>
+              {display}
+              {deduction.applies_to !== "INDIVIDUAL" &&
+                deduction.applies_to !== "COMPANY" && (
+                  <Badge variant="secondary" className="mt-1 text-xs">
+                    {deduction.applies_to.replace("_", " ")}
+                  </Badge>
+                )}
+            </div>
           </div>
         );
       },
@@ -264,23 +344,38 @@ const DeductionAssignTable: React.FC<Props> = ({
         ),
     },
     {
-      accessorKey: "start_date",
+      id: "start_date",
       header: "Start Date",
-      cell: ({ row }) => new Date(row.original.start_date).toLocaleDateString(),
+      accessorFn: (row) => `${row.start_month} ${row.start_year}`,
+      cell: ({ row }) => {
+        const deduction = row.original;
+        return (
+          <div className="flex items-center gap-1">
+            <Calendar className="h-3 w-3 text-slate-400" />
+            <span>{getFormattedStartDate(deduction)}</span>
+          </div>
+        );
+      },
       sortingFn: dateSort,
     },
     {
-      accessorKey: "end_date",
+      id: "end_date",
       header: "End Date",
+      accessorFn: (row) => {
+        if (row.is_recurring && !row.end_month) return "Ongoing";
+        return row.end_month ? `${row.end_month} ${row.end_year}` : "Ongoing";
+      },
       cell: ({ row }) => {
         const deduction = row.original;
-        if (!deduction.is_recurring && deduction.end_date) {
-          return new Date(deduction.end_date).toLocaleDateString();
-        }
-        if (deduction.is_recurring && deduction.end_date) {
-          return new Date(deduction.end_date).toLocaleDateString();
-        }
-        return <span className="text-muted-foreground">Ongoing</span>;
+        const endDate = getFormattedEndDate(deduction);
+        return endDate === "Ongoing" ? (
+          <span className="text-muted-foreground">Ongoing</span>
+        ) : (
+          <div className="flex items-center gap-1">
+            <Calendar className="h-3 w-3 text-slate-400" />
+            <span>{endDate}</span>
+          </div>
+        );
       },
     },
     {
@@ -327,14 +422,22 @@ const DeductionAssignTable: React.FC<Props> = ({
     globalFilterFn: (row, _columnId, filterValue) => {
       const deduction = row.original;
       const searchStr = filterValue.toLowerCase();
-      
+
       // Search by deduction type
-      if (deduction.deduction_types.name.toLowerCase().includes(searchStr)) return true;
-      
+      if (deduction.deduction_types.name.toLowerCase().includes(searchStr))
+        return true;
+
       // Search by recipient
-      const recipientDisplay = getRecipientDisplay(deduction).toLowerCase();
+      const recipientDisplay =
+        getRecipientDisplayString(deduction).toLowerCase();
       if (recipientDisplay.includes(searchStr)) return true;
-      
+
+      // Search by month/year
+      if (deduction.start_month.toLowerCase().includes(searchStr)) return true;
+      if (deduction.start_year.toString().includes(searchStr)) return true;
+      if (deduction.end_month?.toLowerCase().includes(searchStr)) return true;
+      if (deduction.end_year?.toString().includes(searchStr)) return true;
+
       return false;
     },
     onGlobalFilterChange: setGlobalFilter,
@@ -349,7 +452,7 @@ const DeductionAssignTable: React.FC<Props> = ({
     <div className="space-y-4">
       <div className="flex items-center py-4">
         <Input
-          placeholder="Search by deduction type or recipient..."
+          placeholder="Search by deduction type, recipient, or month..."
           value={globalFilter ?? ""}
           onChange={(event) => setGlobalFilter(event.target.value)}
           className="max-w-sm rounded-sm shadow-none"
@@ -357,7 +460,7 @@ const DeductionAssignTable: React.FC<Props> = ({
         <BulkDeleteButton table={table} onBulkDeleteClick={onBulkDeleteClick} />
       </div>
 
-      <div className="rounded-sm shadow-none px-2  border border-slate-300">
+      <div className="rounded-sm shadow-none px-2 border border-slate-300">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -368,7 +471,7 @@ const DeductionAssignTable: React.FC<Props> = ({
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 ))}
@@ -386,7 +489,7 @@ const DeductionAssignTable: React.FC<Props> = ({
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}
@@ -411,23 +514,95 @@ const DeductionAssignTable: React.FC<Props> = ({
           {table.getFilteredSelectedRowModel().rows.length} of{" "}
           {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
+        <div className="flex items-center space-x-4">
+          {/* Rows per page selector */}
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-slate-600">Show</span>
+            <Select
+              value={`${table.getState().pagination.pageSize}`}
+              onValueChange={(value) => {
+                table.setPageSize(Number(value));
+              }}
+            >
+              <SelectTrigger className="h-8 w-[70px]">
+                <SelectValue
+                  placeholder={table.getState().pagination.pageSize}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 20, 30, 50, 100].map((pageSize) => (
+                  <SelectItem key={pageSize} value={`${pageSize}`}>
+                    {pageSize}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Shadcn Pagination */}
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    table.previousPage();
+                  }}
+                  className={
+                    !table.getCanPreviousPage()
+                      ? "pointer-events-none opacity-50"
+                      : ""
+                  }
+                />
+              </PaginationItem>
+
+              {getPageNumbers(
+                table.getState().pagination.pageIndex + 1,
+                table.getPageCount(),
+              ).map((page, i) => (
+                <PaginationItem key={i}>
+                  {page === "..." ? (
+                    <PaginationEllipsis />
+                  ) : (
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        table.setPageIndex(Number(page) - 1);
+                      }}
+                      isActive={
+                        table.getState().pagination.pageIndex + 1 === page
+                      }
+                    >
+                      {page}
+                    </PaginationLink>
+                  )}
+                </PaginationItem>
+              ))}
+
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    table.nextPage();
+                  }}
+                  className={
+                    !table.getCanNextPage()
+                      ? "pointer-events-none opacity-50"
+                      : ""
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+
+          {/* Page indicator */}
+          <span className="text-sm text-slate-600">
+            Page {table.getState().pagination.pageIndex + 1} of{" "}
+            {table.getPageCount()}
+          </span>
         </div>
       </div>
     </div>

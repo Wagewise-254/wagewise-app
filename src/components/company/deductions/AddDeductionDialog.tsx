@@ -33,13 +33,13 @@ import {
 } from "@/components/ui/select";
 import { Check, ChevronsUpDown, Info, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-//import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { API_BASE_URL } from "@/config";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BorderFloatingField } from "@/components/company/employees/employeeutils";
+import { MONTHS, calculateEndPeriod } from "@/types/deduction";
 
 type Props = {
   companyId: string;
@@ -111,11 +111,13 @@ export default function AddDeductionDialog({
   const [value, setValue] = useState<string>("");
   const [calculationType, setCalculationType] = useState<"FIXED" | "PERCENTAGE">("FIXED");
   const [isRecurring, setIsRecurring] = useState<boolean>(true);
-  const [startDate, setStartDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
-  );
+  const [startMonth, setStartMonth] = useState<string>(MONTHS[new Date().getMonth()]);
+  const [startYear, setStartYear] = useState<number>(new Date().getFullYear());
   const [numberOfMonths, setNumberOfMonths] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  
+  // Computed end month/year
+  const [endMonth, setEndMonth] = useState<string>("");
+  const [endYear, setEndYear] = useState<number | null>(null);
 
   // Popover states
   const [openDeductionType, setOpenDeductionType] = useState(false);
@@ -129,16 +131,28 @@ export default function AddDeductionDialog({
     (sub) => sub.department_id === departmentId
   );
 
-  // Calculate end date when number of months changes
-  useEffect(() => {
-    if (!isRecurring && startDate && numberOfMonths) {
-      const start = new Date(startDate);
-      start.setMonth(start.getMonth() + parseInt(numberOfMonths));
-      setEndDate(start.toISOString().split("T")[0]);
+  // Calculate end month/year when number of months changes
+useEffect(() => {
+  if (!isRecurring && startMonth && startYear && numberOfMonths) {
+    const months = parseInt(numberOfMonths);
+    if (months === 1) {
+      // For 1 month, end is same as start
+      setEndMonth(startMonth);
+      setEndYear(startYear);
     } else {
-      setEndDate("");
+      const { endMonth: calculatedEndMonth, endYear: calculatedEndYear } = calculateEndPeriod(
+        startMonth,
+        startYear,
+        months
+      );
+      setEndMonth(calculatedEndMonth);
+      setEndYear(calculatedEndYear);
     }
-  }, [isRecurring, startDate, numberOfMonths]);
+  } else {
+    setEndMonth("");
+    setEndYear(null);
+  }
+}, [isRecurring, startMonth, startYear, numberOfMonths]);
 
   // Reset form when dialog closes
   useEffect(() => {
@@ -158,9 +172,11 @@ export default function AddDeductionDialog({
     setValue("");
     setCalculationType("FIXED");
     setIsRecurring(true);
-    setStartDate(new Date().toISOString().split("T")[0]);
+    setStartMonth(MONTHS[new Date().getMonth()]);
+    setStartYear(new Date().getFullYear());
     setNumberOfMonths("");
-    setEndDate("");
+    setEndMonth("");
+    setEndYear(null);
   };
 
   const handleDeductionTypeSelect = (type: DeductionType) => {
@@ -178,17 +194,20 @@ export default function AddDeductionDialog({
       toast.error("Please enter a valid value");
       return false;
     }
+    if (!startMonth) {
+      toast.error("Please select a start month");
+      return false;
+    }
+    if (!startYear) {
+      toast.error("Please enter a start year");
+      return false;
+    }
 
     // Validate based on deduction type maximum value
     if (selectedDeductionType?.has_maximum_value && 
         selectedDeductionType.maximum_value && 
         parseFloat(value) > selectedDeductionType.maximum_value) {
       toast.error(`Value cannot exceed ${selectedDeductionType.maximum_value}`);
-      return false;
-    }
-
-    if (!startDate) {
-      toast.error("Please select a start date");
       return false;
     }
 
@@ -239,7 +258,8 @@ export default function AddDeductionDialog({
         value: parseFloat(value),
         calculation_type: calculationType,
         is_recurring: isRecurring,
-        start_date: startDate,
+        start_month: startMonth,
+        start_year: startYear,
         number_of_months: !isRecurring && numberOfMonths ? parseInt(numberOfMonths) : null,
         metadata: {},
       };
@@ -664,7 +684,6 @@ export default function AddDeductionDialog({
             <BorderFloatingField
               label={calculationType === "PERCENTAGE" ? "Percentage %" : "Amount (KES)"}
               type="number"
-             // step={calculationType === "PERCENTAGE" ? "0.01" : "1"}
               value={value}
               onChange={(e) => setValue(e.target.value)}
               required
@@ -733,42 +752,52 @@ export default function AddDeductionDialog({
             />
           </div>
 
-          {/* Date Fields */}
-          <div className="space-y-4">
+          {/* Month/Year Fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-700">Start Month *</Label>
+              <Select value={startMonth} onValueChange={setStartMonth}>
+                <SelectTrigger className="border-slate-200 h-10">
+                  <SelectValue placeholder="Select month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTHS.map((month) => (
+                    <SelectItem key={month} value={month}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <BorderFloatingField
-              label="Start Date"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              label="Start Year"
+              type="number"
+              value={startYear.toString()}
+              onChange={(e) => setStartYear(parseInt(e.target.value) || new Date().getFullYear())}
               required
             />
-
-            {!isRecurring && (
-              <>
-                <BorderFloatingField
-                  label="Number of Months"
-                  type="number"
-                  value={numberOfMonths}
-                  onChange={(e) => setNumberOfMonths(e.target.value)}
-                />
-                {endDate && (
-                  <Alert className="border-blue-200 bg-blue-50/80">
-                    <Info className="h-4 w-4 text-blue-700" />
-                    <AlertDescription className="text-xs text-blue-700">
-                      This deduction will end on{" "}
-                      <span className="font-medium">
-                        {new Date(endDate).toLocaleDateString("en-KE", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </span>
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </>
-            )}
           </div>
+
+          {!isRecurring && (
+            <>
+              <BorderFloatingField
+                label="Number of Months"
+                type="number"
+                value={numberOfMonths}
+                onChange={(e) => setNumberOfMonths(e.target.value)}
+              />
+              {endMonth && endYear && (
+                <Alert className="border-blue-200 bg-blue-50/80">
+                  <Info className="h-4 w-4 text-blue-700" />
+                  <AlertDescription className="text-xs text-blue-700">
+                    This deduction will end in{" "}
+                    <span className="font-medium">{endMonth} {endYear}</span>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </>
+          )}
         </div>
 
         <DialogFooter className="p-6 pt-4 border-t border-slate-100 bg-slate-50/50">
