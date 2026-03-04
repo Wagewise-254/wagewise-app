@@ -21,9 +21,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import DeductionAssignTable, {
-  AssignedDeduction,
-} from "@/components/company/deductions/DeductionAssignTable";
+import DeductionAssignTable from "@/components/company/deductions/DeductionAssignTable";
+import { AssignedDeduction } from "@/types/deduction";
 import AddDeductionDialog, {
   Employee,
   Department,

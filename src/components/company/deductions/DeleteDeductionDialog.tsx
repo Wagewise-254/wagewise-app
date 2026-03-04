@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { API_BASE_URL } from "@/config";
 import { useAuthStore } from "@/stores/authStore";
-import { AssignedDeduction } from "./DeductionAssignTable";
+import { AssignedDeduction } from "@/types/deduction";
 import { useState } from "react";
 import { toast } from "sonner";
 

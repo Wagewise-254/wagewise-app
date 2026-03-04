@@ -11,7 +11,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  Row
+  Row,
 } from "@tanstack/react-table";
 import {
   Table,
@@ -36,7 +36,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { API_BASE_URL } from '@/config';
+import { API_BASE_URL } from "@/config";
 import { Employee } from "@/types/employees";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -61,6 +61,8 @@ const EmployeeStatusBadge = ({ status }: { status: string }) => {
         return "bg-emerald-50 text-emerald-700 border-emerald-200";
       case "On Leave":
         return "bg-amber-50 text-amber-700 border-amber-200";
+      case "Suspended":
+        return "bg-purple-50 text-purple-700 border-purple-200";
       case "Terminated":
         return "bg-rose-50 text-rose-700 border-rose-200";
       default:
@@ -79,10 +81,16 @@ interface Props {
   loading: boolean;
   error: string | null;
   onDeleteSuccess?: () => void;
-   showActions?: boolean;
+  showActions?: boolean;
 }
 
-const EmployeesTable: React.FC<Props> = ({ data, loading, error,  onDeleteSuccess, showActions = true }) => {
+const EmployeesTable: React.FC<Props> = ({
+  data,
+  loading,
+  error,
+  onDeleteSuccess,
+  showActions = true,
+}) => {
   const { companyId } = useParams();
   const navigate = useNavigate();
   const session = useAuthStore.getState().session;
@@ -102,7 +110,7 @@ const EmployeesTable: React.FC<Props> = ({ data, loading, error,  onDeleteSucces
   const [rowSelection, setRowSelection] = React.useState({});
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] =
     React.useState(false);
- // const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  // const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [employeesToDelete, setEmployeesToDelete] = React.useState<string[]>(
     [],
   );
@@ -111,7 +119,7 @@ const EmployeesTable: React.FC<Props> = ({ data, loading, error,  onDeleteSucces
     pageIndex: 0,
     pageSize: 10,
   });
- 
+
   /*
   const handleDeleteClick = (employeeId: string) => {
     setEmployeesToDelete([employeeId]);
@@ -141,34 +149,37 @@ const EmployeesTable: React.FC<Props> = ({ data, loading, error,  onDeleteSucces
 
     try {
       // This implementation sends a separate delete request for each employee
-      const results = await Promise.all(employeesToDelete.map(employeeToDelete =>
-        fetch(`${API_BASE_URL}/company/${companyId}/employees/${employeeToDelete}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        })
-      ));
+      const results = await Promise.all(
+        employeesToDelete.map((employeeToDelete) =>
+          fetch(
+            `${API_BASE_URL}/company/${companyId}/employees/${employeeToDelete}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          ),
+        ),
+      );
 
       //const successfulDeletes = results.filter(res => res.ok);
-      const failedDeletes = results.filter(res => !res.ok);
+      const failedDeletes = results.filter((res) => !res.ok);
 
       if (failedDeletes.length > 0) {
-        throw new Error('Failed to delete some employees.');
+        throw new Error("Failed to delete some employees.");
       }
 
       toast.success(
         `${employeesToDelete.length} employee(s) deleted successfully.`,
       );
       setRowSelection({});
-     setIsBulkDeleteDialogOpen(false);
+      setIsBulkDeleteDialogOpen(false);
 
       // Call the callback to refresh data
       if (onDeleteSuccess) {
         onDeleteSuccess();
       }
-      
-
     } catch (err: unknown) {
       toast.error("Failed to delete employees.");
       console.error((err as Error).message);
@@ -256,31 +267,40 @@ const EmployeesTable: React.FC<Props> = ({ data, loading, error,  onDeleteSucces
       accessorKey: "employee_status",
       header: "Status",
       cell: ({ row }) => (
-        <EmployeeStatusBadge status={toProperCase(row.getValue("employee_status"))}/>
+        <EmployeeStatusBadge
+          status={toProperCase(row.getValue("employee_status"))}
+        />
       ),
     },
-   ...(showActions ? [{
-      id: "actions",
-      header: () => <div className="text-right">Actions</div>,
-      cell: ({ row }: { row: Row<Employee> }) => (
-        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 cursor-pointer text-slate-400 hover:text-blue-600 hover:bg-blue-50"
-            onClick={() =>
-              setEmailDialog({
-                open: true,
-                mode: "single",
-                recipients: [row.original.email as string],
-              })
-            }
-          >
-            <Mail className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-    }] : []),
+    ...(showActions
+      ? [
+          {
+            id: "actions",
+            header: () => <div className="text-right">Actions</div>,
+            cell: ({ row }: { row: Row<Employee> }) => (
+              <div
+                className="flex justify-end"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 cursor-pointer text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                  onClick={() =>
+                    setEmailDialog({
+                      open: true,
+                      mode: "single",
+                      recipients: [row.original.email as string],
+                    })
+                  }
+                >
+                  <Mail className="h-4 w-4" />
+                </Button>
+              </div>
+            ),
+          },
+        ]
+      : []),
   ];
   const table = useReactTable({
     data,

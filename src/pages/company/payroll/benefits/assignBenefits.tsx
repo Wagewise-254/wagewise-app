@@ -19,9 +19,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import AllowanceAssignTable, {
-  Allowance,
-} from "@/components/company/benefits/AllowanceAssignTable";
+import AllowanceAssignTable from "@/components/company/benefits/AllowanceAssignTable";
+import { Allowance } from "@/types/allowance";
 import AddAllowanceDialog from "@/components/company/benefits/AddAllowanceDialog";
 import EditAllowanceDialog from "@/components/company/benefits/EditAllowanceDialog";
 import DeleteAllowanceDialog from "@/components/company/benefits/DeleteAllowanceDialog";
