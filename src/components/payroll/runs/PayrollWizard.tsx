@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -7,96 +7,180 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ChevronRight, ChevronLeft, ArrowLeft, Check } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronLeft,
+  ArrowLeft,
+  Calendar,
+  Circle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import PreparationLayout from "@/pages/company/payroll/runs/PayrollPreparationLayout";
 import PayrollApprovalTable from "@/pages/company/payroll/runs/PayrollApprovalTable";
 import PayrollPaymentTable from "@/pages/company/payroll/runs/PayrollPaymentTable";
-import PayrollPayslipTable from "@/pages/company/payroll/runs/PayrollPayslip..tsx";
+import PayrollPayslipTable from "@/pages/company/payroll/runs/PayrollPayslip";
+import axios from "axios";
+import { useAuthStore } from "@/stores/authStore";
+import { API_BASE_URL } from "@/config";
+import { toast } from "sonner";
 
-// Top Stepper Component
-function TopStepper({ currentStep }: { currentStep: number }) {
+// Define interface for payroll info
+interface PayrollInfo {
+  payroll_month: string;
+  payroll_year: number;
+  payroll_number: string;
+  status: string;
+}
+
+// Enhanced Minimal Stepper Component with better active state
+function MinimalStepper({
+  currentStep,
+  payrollInfo,
+}: {
+  currentStep: number;
+  payrollInfo?: PayrollInfo | null;
+}) {
   const steps = [
-    { number: 1, title: "Prepare" },
-    { number: 2, title: "Review" },
-    { number: 3, title: "Payments" },
-    { number: 4, title: "Payslips" },
+    { number: 1, label: "Prepare" },
+    { number: 2, label: "Review" },
+    { number: 3, label: "Payments" },
+    { number: 4, label: "Payslips" },
   ];
 
+  // Format month display
+  const formattedMonth = payrollInfo
+    ? `${payrollInfo.payroll_month} ${payrollInfo.payroll_year}`
+    : "Loading...";
+
   return (
-    <div className="relative mt-2">
-      {/* Background line - behind the circles */}
-      <div className="absolute top-3.5 left-0 w-full h-0.5 bg-slate-100 z-0" />
+    <div className="flex items-center gap-1">
+      {steps.map((step, index) => {
+        const isCompleted = currentStep > step.number;
+        const isActive = currentStep === step.number;
+        const isLast = index === steps.length - 1;
 
-      {/* Progress line */}
-      <div
-        className="absolute top-3.5 left-0 h-0.5 bg-indigo-600 transition-all duration-500 z-0"
-        style={{
-          width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`,
-        }}
-      />
-
-      <div className="relative flex justify-between z-10">
-        {steps.map((step) => {
-          const isCompleted = currentStep > step.number;
-          const isActive = currentStep === step.number;
-
-          return (
-            <div key={step.number} className="flex flex-col items-center group">
-              {/* Circle Container */}
+        return (
+          <div key={step.number} className="flex items-center">
+            {/* Step Indicator */}
+            <div className="flex items-center gap-2">
               <div
                 className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 bg-white", 
-                  // bg-white above hides the line behind the circle
-                  isCompleted 
-                    ? "bg-indigo-600 border-indigo-600 text-white" 
-                    : isActive 
-                    ? "border-indigo-600 text-indigo-600 " 
-                    : "border-slate-200 text-slate-400"
+                  "flex items-center justify-center text-xs font-medium transition-all duration-300",
+                  isActive && "scale-110 text-indigo-600 font-semibold",
+                  isCompleted && "text-indigo-500",
+                  !isActive && !isCompleted && "text-slate-400",
                 )}
               >
-                {isCompleted ? (
-                  <Check className="h-4 w-4 stroke-[3px]" />
-                ) : (
-                  <span className="text-xs font-bold">{step.number}</span>
+                {/* Active step indicator dot */}
+                {isActive && (
+                  <span className="absolute -top-1 left-1/2 -translate-x-1/2">
+                    <Circle className="h-1.5 w-1.5 fill-indigo-600 text-indigo-600 animate-pulse" />
+                  </span>
                 )}
+
+                <span
+                  className={cn(
+                    "hidden sm:inline relative",
+                    isActive &&
+                      "after:absolute after:-bottom-1 after:left-0 after:right-0 after:h-0.5 after:bg-indigo-600 after:rounded-full",
+                  )}
+                >
+                  {step.label}
+                </span>
+                <span className="sm:hidden">{step.number}</span>
               </div>
 
-              {/* Title */}
-              <span
-                className={cn(
-                  "mt-2 text-[11px] font-semibold tracking-wider transition-colors",
-                  isActive || isCompleted ? "text-indigo-900" : "text-slate-400"
-                )}
-              >
-                {step.title}
-              </span>
+              {/* Show payroll month badge - only show once */}
+              {step.number === 1 && payrollInfo && (
+                <Badge
+                  variant="secondary"
+                  className="bg-indigo-50 text-indigo-700 border-0 text-[10px] px-1.5 py-0.5 font-normal ml-1"
+                >
+                  <Calendar className="h-3 w-3 mr-1" />
+                  {formattedMonth}
+                </Badge>
+              )}
             </div>
-          );
-        })}
-      </div>
+
+            {/* Separator line - only between steps */}
+            {!isLast && (
+              <div
+                className={cn(
+                  "w-6 sm:w-12 h-px mx-2 transition-colors duration-300",
+                  currentStep > step.number ? "bg-indigo-300" : "bg-slate-200",
+                )}
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 export default function PayrollWizard() {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(1); // Start at review
+  const [payrollInfo, setPayrollInfo] = useState<PayrollInfo | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
   const { companyId, payrollRunId } = useParams<{
     companyId: string;
     payrollRunId: string;
   }>();
+  const { session } = useAuthStore();
+
   const totalSteps = 4;
+
+  // Fetch payroll info on mount
+  useEffect(() => {
+    const fetchPayrollInfo = async () => {
+      if (!companyId || !payrollRunId || !session?.access_token) return;
+
+      try {
+        setLoading(true);
+        const response = await axios.get(
+          `${API_BASE_URL}/company/${companyId}/payroll/runs/${payrollRunId}/review-summary`,
+          {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          },
+        );
+
+        if (response.data?.payroll) {
+          setPayrollInfo(response.data.payroll);
+        }
+      } catch (error) {
+        console.error("Failed to fetch payroll info:", error);
+        toast.error("Could not load payroll information");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPayrollInfo();
+  }, [companyId, payrollRunId, session]);
+
+  // Check for step from location state (if coming from review-status with a specific step)
+  useEffect(() => {
+    if (location.state?.step) {
+      setCurrentStep(location.state.step);
+    }
+  }, [location.state]);
 
   const nextStep = () => {
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
+      // Scroll to top on step change
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -118,82 +202,156 @@ export default function PayrollWizard() {
     }
   };
 
+  // Get step title for mobile display
+  const getStepTitle = () => {
+    switch (currentStep) {
+      case 1:
+        return "Preparation";
+      case 2:
+        return "Review";
+      case 3:
+        return "Payments";
+      case 4:
+        return "Payslips";
+      default:
+        return "";
+    }
+  };
+
+  // Add this before the return statement, after the hooks
+if (loading) {
   return (
-    <main className="h-screen flex flex-col bg-white">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-2 py-3">
-          <div className="flex items-center justify-between mb-3">
-            <Tooltip>
-              <TooltipTrigger asChild className="absolute left-6 top-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 cursor-pointer"
-                  onClick={() =>
-                    navigate(
-                      `/company/${companyId}/payroll/${payrollRunId}/review-status`,
-                    )
-                  }
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Back</p>
-              </TooltipContent>
-            </Tooltip>
+    <main className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+        <p className="mt-4 text-sm text-slate-600">Loading payroll information...</p>
+      </div>
+    </main>
+  );
+}
 
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h1 className="text-xl font-semibold tracking-tight text-slate-900">
-                    Payroll Run
-                  </h1>
-                </div>
-                <Badge
-                  variant="secondary"
-                  className="text-xs px-2.5 py-0.5 bg-indigo-50 text-indigo-700 border-0"
-                >
-                  Step {currentStep} / {totalSteps}
-                </Badge>
-              </div>
+  return (
+    <main className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Ultra-minimal header */}
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14">
+            {/* Left section with back button and title */}
+            <div className="flex items-center gap-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 hover:bg-slate-100"
+                    onClick={() =>
+                      navigate(
+                        `/company/${companyId}/payroll/${payrollRunId}/review-status`,
+                      )
+                    }
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Back to review status</p>
+                </TooltipContent>
+              </Tooltip>
 
-              {/* Top Stepper */}
-              <TopStepper currentStep={currentStep} />
+              <div className="h-4 w-px bg-slate-200" />
+
+              <h1 className="text-sm font-medium text-slate-900">
+                Payroll Run
+              </h1>
+
+              {/* Show payroll number on larger screens */}
+              {payrollInfo?.payroll_number && (
+                <>
+                  <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+                  <Badge
+                    variant="outline"
+                    className="hidden sm:inline-flex border-slate-200 text-xs font-normal"
+                  >
+                    #{payrollInfo.payroll_number}
+                  </Badge>
+                </>
+              )}
             </div>
+
+            {/* Center - Minimal Stepper */}
+            <div className="absolute left-1/2 -translate-x-1/2 hidden md:block">
+              <MinimalStepper
+                currentStep={currentStep}
+                payrollInfo={payrollInfo}
+              />
+            </div>
+
+            {/* Right section - empty for balance */}
+            <div className="w-22" />
           </div>
         </div>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          {/* Dynamic Content */}
-          <div className="min-h-100">{renderStepContent()}</div>
+      {/* Main Content - Flexible to push footer down */}
+      <div className="flex-1">
+        <div className="px-2 sm:px-2 lg:px-4 py-2">
+          {/* Mobile header with step info */}
+          <div className="md:hidden mb-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <Badge
+                variant="secondary"
+                className="bg-indigo-50 text-indigo-700"
+              >
+                Step {currentStep} of {totalSteps}
+              </Badge>
+              <div className="text-xs text-slate-500">
+                {getStepTitle()} Stage
+              </div>
+            </div>
+
+            {/* Mobile payroll info */}
+            {payrollInfo && (
+              <div className="flex items-center gap-2 text-xs text-slate-600 bg-white p-2 rounded-lg border border-slate-200">
+                <Calendar className="h-3.5 w-3.5 text-indigo-500" />
+                <span>
+                  {payrollInfo.payroll_month} {payrollInfo.payroll_year}
+                </span>
+                <span className="w-1 h-1 rounded-full bg-slate-300" />
+                <span className="font-mono">#{payrollInfo.payroll_number}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Dynamic Content - Table takes full width */}
+          <div className="bg-white rounded-sm shadow-none border border-slate-200/80 overflow-hidden">
+            {renderStepContent()}
+          </div>
         </div>
       </div>
 
-      {/* Sticky Footer Navigation */}
-      <div className="sticky bottom-0 z-10 bg-white border-t border-slate-200 ">
-        <div className="max-w-6xl mx-auto px-6 py-3">
-          <div className="flex items-center justify-between">
+      {/* Sticky Footer Navigation - Always at bottom */}
+      <div className="sticky bottom-0 border-t border-slate-200/60 bg-white/80 backdrop-blur-xl mt-auto">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14">
             <Button
               variant="ghost"
               size="sm"
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="gap-1.5 text-slate-500 hover:text-slate-900 cursor-pointer"
+              className={cn(
+                "gap-1.5 text-slate-500 hover:text-slate-900 text-xs h-8 px-2 transition-all",
+                currentStep === 1 && "opacity-50 cursor-not-allowed",
+              )}
             >
               <ChevronLeft className="h-3.5 w-3.5" />
               Back
             </Button>
 
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="text-slate-600 border-slate-300 cursor-pointer hover:bg-slate-50"
+                className="text-slate-500 hover:text-slate-900 text-xs h-8 px-3"
                 onClick={() =>
                   navigate(`/company/${companyId}/payroll/history`)
                 }
@@ -205,21 +363,26 @@ export default function PayrollWizard() {
                 size="sm"
                 onClick={() => {
                   if (isLastStep) {
-                    // Navigate to reports on the final step
-                    navigate(`/company/${companyId}/reports/overview`);
+                    // Navigate to the specific payroll run reports page with state
+                    navigate(
+                      `/company/${companyId}/reports/payroll-run/${payrollRunId}`,
+                      {
+                        state: { fromWizard: true, payrollRunId },
+                      },
+                    );
                   } else {
                     nextStep();
                   }
                 }}
                 className={cn(
-                  "transition-all duration-300 gap-1.5 px-5 cursor-pointer",
-                  isLastStep 
-                    ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-100" 
-                    : "bg-indigo-700 hover:bg-indigo-800 text-white"
+                  "h-8 px-4 text-xs font-medium transition-all hover:-translate-y-0.5",
+                  isLastStep
+                    ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                    : "bg-indigo-600 hover:bg-indigo-700 text-white",
                 )}
               >
-                {isLastStep ? "View Final Reports" : "Continue"}
-                {!isLastStep && <ChevronRight className="h-4 w-4" />}
+                {isLastStep ? "View Reports" : "Continue"}
+                {!isLastStep && <ChevronRight className="h-3.5 w-3.5 ml-1" />}
               </Button>
             </div>
           </div>

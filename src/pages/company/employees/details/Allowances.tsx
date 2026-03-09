@@ -22,8 +22,10 @@ interface AllowanceResponse {
   value: number;
   calculation_type: string;
   is_recurring: boolean;
-  start_date: string;
-  end_date: string | null;
+  start_month: string;
+  start_year: string;
+  end_month: string | null;
+  end_year: string | null;
   allowance_types: AllowanceType;
   employees: { id: string };
 }
@@ -64,8 +66,10 @@ export default function EmployeeAllowances() {
             value,
             calculation_type,
             is_recurring,
-            start_date,
-            end_date,
+            start_month,
+            start_year,
+            end_month,
+            end_year,
             allowance_types(name, code, is_cash, is_taxable, description),
             employees!inner(id)
           `)

@@ -1,5 +1,5 @@
 // hooks/useHistory.ts
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from "@/config";
 import { toast } from "sonner";
@@ -67,7 +67,8 @@ export const useHistory = (companyId: string, employeeId: string): HistoryData =
   const session = useAuthStore.getState().session;
   const token = session?.access_token;
 
-  const fetchAll = async () => {
+  // Use useCallback to memoize the fetchAll function
+  const fetchAll = useCallback(async () => {
     if (!companyId || !employeeId || !token) return;
 
     setLoading({ salary: true, status: true, contract: true });
@@ -98,11 +99,11 @@ export const useHistory = (companyId: string, employeeId: string): HistoryData =
     } finally {
       setLoading({ salary: false, status: false, contract: false });
     }
-  };
+  }, [companyId, employeeId, token]); // Dependencies for useCallback
 
   useEffect(() => {
     fetchAll();
-  }, [companyId, employeeId, token]);
+  }, [fetchAll]); // Now fetchAll is stable and won't cause unnecessary re-renders
 
   return { 
     salaryHistory, 

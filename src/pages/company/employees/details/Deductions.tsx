@@ -23,8 +23,10 @@ interface DeductionResponse {
   value: number;
   calculation_type: string;
   is_recurring: boolean;
-  start_date: string;
-  end_date: string | null;
+  start_month: string;
+  start_year: string;
+  end_month: string | null;
+  end_year: string | null;
   deduction_types: DeductionType;
   employees: DeductionEmployee;
 }
@@ -73,8 +75,10 @@ export default function EmployeeDeductions() {
             value,
             calculation_type,
             is_recurring,
-            start_date,
-            end_date,
+            start_month,
+            start_year,
+            end_month,
+            end_year,
             deduction_types(name, code, is_pre_tax),
             employees!inner(id)
           `)

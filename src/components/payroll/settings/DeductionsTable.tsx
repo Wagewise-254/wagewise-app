@@ -5,7 +5,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Pencil, Trash2, Plus, Loader2, CircleOff } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, CircleOff, Info } from "lucide-react";
 
 import {
   Table,
@@ -37,6 +37,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
 import { API_BASE_URL } from "@/config";
@@ -154,7 +155,23 @@ export function OtherDeductionsTable({ companyId }: Props) {
       header: "Deduction",
       cell: ({ row }) => (
         <div className="flex flex-col">
-          <span className="font-medium text-slate-900">{row.original.name}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-slate-900">{row.original.name}</span>
+            {row.original.code === "PENSION" && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-4 w-4 text-slate-400" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-xs">
+                      Pension contributions are tax-deductible up to KES 30,000 combined with NSSF
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
           {row.original.description && (
             <span className="text-xs text-slate-500 truncate max-w-50">
               {row.original.description}
@@ -193,9 +210,14 @@ export function OtherDeductionsTable({ companyId }: Props) {
       header: "Max Limit",
       cell: ({ row }) =>
         row.original.has_maximum_value ? (
-          <span className="font-mono text-sm font-medium">
-            KES {Number(row.original.maximum_value).toLocaleString()}
-          </span>
+          <div className="flex items-center gap-1">
+            <span className="font-mono text-sm font-medium">
+              KES {Number(row.original.maximum_value).toLocaleString()}
+            </span>
+            {row.original.code === "PENSION" && (
+              <span className="text-xs text-slate-400">(combined with NSSF)</span>
+            )}
+          </div>
         ) : (
           <span className="text-slate-400 text-sm">—</span>
         ),
@@ -205,6 +227,8 @@ export function OtherDeductionsTable({ companyId }: Props) {
       header: "",
       cell: ({ row }) => {
         const item = row.original;
+        const isLocked = item.code === "MORTGAGE_INTEREST" || item.code === "PRMF" || item.code === "PENSION";
+        
         return (
           <div className="flex items-center gap-1 justify-end">
             <Button
@@ -214,17 +238,28 @@ export function OtherDeductionsTable({ companyId }: Props) {
                 setEditingItem(item);
                 setOpenDialog(true);
               }}
-              className="h-8 w-8 hover:bg-slate-100"
+              className={cn(
+                "h-8 w-8",
+                isLocked ? "hover:bg-slate-100" : "hover:bg-slate-100"
+              )}
+              disabled={isLocked}
             >
-              <Pencil className="h-4 w-4 text-slate-600" />
+              <Pencil className={cn(
+                "h-4 w-4",
+                isLocked ? "text-slate-300" : "text-slate-600"
+              )} />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setDeleteItem(item)}
               className="h-8 w-8 hover:bg-red-50"
+              disabled={isLocked}
             >
-              <Trash2 className="h-4 w-4 text-red-500" />
+              <Trash2 className={cn(
+                "h-4 w-4",
+                isLocked ? "text-slate-300" : "text-red-500"
+              )} />
             </Button>
           </div>
         );
@@ -246,7 +281,7 @@ export function OtherDeductionsTable({ companyId }: Props) {
             setEditingItem(null);
             setOpenDialog(true);
           }}
-          className="bg-[#1F3A8A] hover:bg-[#162a63] h-10  rounded-sm shadow-none px-4 text-sm font-medium transition-all hover:-translate-y-0.5 cursor-pointer"
+          className="bg-[#1F3A8A] hover:bg-[#162a63] h-10 rounded-sm shadow-none px-4 text-sm font-medium transition-all hover:-translate-y-0.5 cursor-pointer"
         >
           <Plus className="mr-2 h-4 w-4" />
           Add Deduction
@@ -383,6 +418,7 @@ function DeductionDialog({ open, onOpenChange, initialData, onSave }: DialogProp
   const deductionOptions = [
     { label: "Mortgage Interest", value: "MORTGAGE_INTEREST" },
     { label: "Post Retirement Medical Fund (PRMF)", value: "PRMF" },
+    { label: "Pension Contribution", value: "PENSION" },
     { label: "Other", value: "OTHER" },
   ];
 
@@ -424,6 +460,10 @@ function DeductionDialog({ open, onOpenChange, initialData, onSave }: DialogProp
       setIsPreTax(true);
       setHasMaximum(true);
       setMaximumValue(15000);
+    } else if (selectedCode === "PENSION") {
+      setIsPreTax(true);
+      setHasMaximum(true);
+      setMaximumValue(30000);
     } else if (selectedCode === "OTHER") {
       setIsPreTax(false);
       setHasMaximum(false);
@@ -465,7 +505,21 @@ function DeductionDialog({ open, onOpenChange, initialData, onSave }: DialogProp
     resetForm();
   };
 
-  const isLocked = selectedCode === "MORTGAGE_INTEREST" || selectedCode === "PRMF";
+  const isLocked = selectedCode === "MORTGAGE_INTEREST" || selectedCode === "PRMF" || selectedCode === "PENSION";
+
+  // Get description text based on selection
+  const getPreTaxDescription = () => {
+    if (isLocked) return "Locked based on deduction type";
+    return "Deducted before PAYE calculation";
+  };
+
+  const getMaxLimitDescription = () => {
+    if (selectedCode === "PENSION") {
+      return "Combined monthly limit with NSSF (statutory requirement)";
+    }
+    if (isLocked) return "Locked based on deduction type";
+    return "Apply a monthly deduction cap";
+  };
 
   return (
     <Dialog
@@ -496,6 +550,22 @@ function DeductionDialog({ open, onOpenChange, initialData, onSave }: DialogProp
             required
           />
 
+          {selectedCode === "PENSION" && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex gap-2">
+                <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                <div className="text-xs text-blue-700">
+                  <p className="font-medium mb-1">Pension Contribution Rules:</p>
+                  <ul className="list-disc list-inside space-y-0.5 text-blue-600">
+                    <li>Tax-deductible (pre-tax)</li>
+                    <li>Monthly limit of KES 30,000 combined with NSSF</li>
+                    <li>Statutory requirement - cannot be modified</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
           {selectedCode === "OTHER" && (
             <BorderFloatingField
               label="Deduction Name"
@@ -522,9 +592,7 @@ function DeductionDialog({ open, onOpenChange, initialData, onSave }: DialogProp
                 Pre-Tax Deduction
               </Label>
               <p className="text-xs text-slate-500">
-                {isLocked
-                  ? "Locked based on deduction type"
-                  : "Deducted before PAYE calculation"}
+                {getPreTaxDescription()}
               </p>
             </div>
             <Switch
@@ -546,9 +614,7 @@ function DeductionDialog({ open, onOpenChange, initialData, onSave }: DialogProp
                 Has Maximum Limit
               </Label>
               <p className="text-xs text-slate-500">
-                {isLocked
-                  ? "Locked based on deduction type"
-                  : "Apply a monthly deduction cap"}
+                {getMaxLimitDescription()}
               </p>
             </div>
             <Switch
@@ -583,7 +649,8 @@ function DeductionDialog({ open, onOpenChange, initialData, onSave }: DialogProp
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-[#1F3A8A] hover:bg-[#162a63] px-6 rounded-md h-10 text-sm font-medium shadow-sm"
+            disabled={isLocked && !initialData}
+            className="bg-[#1F3A8A] hover:bg-[#162a63] px-6 rounded-md h-10 text-sm font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {initialData ? "Update" : "Save"} Deduction
           </Button>

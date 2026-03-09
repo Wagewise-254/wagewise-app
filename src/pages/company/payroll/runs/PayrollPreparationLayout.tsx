@@ -22,7 +22,7 @@ export default function PreparationLayout() {
   };
 
   return (
-    <div>
+    <div className='p-4'>
       <PreparationTabs 
         onTabChange={setActiveTab}
         defaultActiveTab="overview"

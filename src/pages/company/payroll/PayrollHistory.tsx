@@ -1,6 +1,6 @@
 // src/pages/company/payroll/PayrollHistory.tsx
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ChevronLeft,
@@ -18,7 +18,7 @@ import {
   Filter,
   Calendar,
   ArrowLeft,
-  //Loader2,
+  Loader2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -79,8 +79,16 @@ interface PayrollFilters {
   search: string;
 }
 
+/*
+interface PaginatedResponse {
+  data: PayrollRun[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+}*/
+
 // Constants
-const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 const STATUS_OPTIONS: { value: PayrollStatus | "all"; label: string }[] = [
   { value: "all", label: "All Statuses" },
@@ -184,26 +192,31 @@ export default function PayrollHistory() {
   });
   const [pagination, setPagination] = useState({
     currentPage: 1,
+    pageSize: 10,
     totalPages: 0,
     totalItems: 0,
   });
   const [searchInput, setSearchInput] = useState("");
+  const [isFiltering, setIsFiltering] = useState(false);
 
   // Memoized values
+  /*
   const availableYears = useMemo(() => {
-    const years = payrolls.map((p) => p.payroll_year);
-    return [...new Set(years)].sort((a, b) => b - a);
-  }, [payrolls]);
+    // This will be populated from API response metadata
+    return [];
+  }, []); */
 
   // API calls
   const fetchPayrolls = useCallback(async () => {
     if (!companyId || !token) return;
 
     setLoading(true);
+    setIsFiltering(true);
+    
     try {
       const params = new URLSearchParams({
         page: pagination.currentPage.toString(),
-        limit: PAGE_SIZE.toString(),
+        limit: pagination.pageSize.toString(),
         ...(filters.status !== "all" && { status: filters.status }),
         ...(filters.year !== "all" && { year: filters.year.toString() }),
         ...(filters.search && { search: filters.search }),
@@ -221,15 +234,27 @@ export default function PayrollHistory() {
       }
 
       const data = await response.json();
+      
+      // Handle both array response and paginated response
+      let payrollData: PayrollRun[] = [];
+      let totalItems = 0;
+      let totalPages = 1;
 
-      setPayrolls(Array.isArray(data) ? data : data.data || []);
+      if (Array.isArray(data)) {
+        payrollData = data;
+        totalItems = data.length;
+        totalPages = Math.ceil(data.length / pagination.pageSize);
+      } else {
+        payrollData = data.data || [];
+        totalItems = data.totalItems || payrollData.length;
+        totalPages = data.totalPages || Math.ceil(totalItems / pagination.pageSize);
+      }
+
+      setPayrolls(payrollData);
       setPagination((prev) => ({
         ...prev,
-        totalPages:
-          data.totalPages ||
-          Math.ceil((Array.isArray(data) ? data.length : 0) / PAGE_SIZE) ||
-          1,
-        totalItems: data.totalItems || (Array.isArray(data) ? data.length : 0),
+        totalPages,
+        totalItems,
       }));
     } catch (error) {
       console.error("Failed to fetch payrolls:", error);
@@ -237,8 +262,9 @@ export default function PayrollHistory() {
       setPayrolls([]);
     } finally {
       setLoading(false);
+      setIsFiltering(false);
     }
-  }, [companyId, token, pagination.currentPage, filters]);
+  }, [companyId, token, pagination.currentPage, pagination.pageSize, filters]);
 
   useEffect(() => {
     fetchPayrolls();
@@ -315,6 +341,15 @@ export default function PayrollHistory() {
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
+  const handlePageSizeChange = (value: string) => {
+    const newSize = parseInt(value, 10);
+    setPagination((prev) => ({
+      ...prev,
+      pageSize: newSize,
+      currentPage: 1, // Reset to first page when changing page size
+    }));
+  };
+
   const handlePageChange = (newPage: number) => {
     setPagination((prev) => ({ ...prev, currentPage: newPage }));
     // Scroll to top of table
@@ -350,11 +385,17 @@ export default function PayrollHistory() {
     filters.search ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
+  const startItem = (pagination.currentPage - 1) * pagination.pageSize + 1;
+  const endItem = Math.min(
+    pagination.currentPage * pagination.pageSize,
+    pagination.totalItems
+  );
+
   return (
-    <div className="space-y-6 mt-2  md:p-2 lg:p-4 max-w-7xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex ">
+        <div className="flex items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -425,25 +466,23 @@ export default function PayrollHistory() {
                 </SelectContent>
               </Select>
 
-              {availableYears.length > 0 && (
-                <Select
-                  value={filters.year.toString()}
-                  onValueChange={handleYearFilter}
-                >
-                  <SelectTrigger className="w-30 h-10 border-slate-300 rounded-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#1F3A8A]">
-                    <Calendar className="h-4 w-4 mr-2 text-slate-400" />
-                    <SelectValue placeholder="Filter by year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Years</SelectItem>
-                    {availableYears.map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <Select
+                value={filters.year.toString()}
+                onValueChange={handleYearFilter}
+              >
+                <SelectTrigger className="w-30 h-10 border-slate-300 rounded-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#1F3A8A]">
+                  <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {[2024, 2023, 2022].map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {activeFilterCount > 0 && (
                 <Button
@@ -453,13 +492,45 @@ export default function PayrollHistory() {
                   className="h-10 px-3 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                 >
                   <Filter className="h-4 w-4 mr-2" />
-                  Clear Filters ({activeFilterCount})
+                  Clear ({activeFilterCount})
                 </Button>
               )}
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Table Header with Page Size Selector */}
+      <div className="flex items-center justify-between px-4">
+        <div className="flex items-center gap-4">
+          {isFiltering && (
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Updating...</span>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500">Show</span>
+          <Select
+            value={pagination.pageSize.toString()}
+            onValueChange={handlePageSizeChange}
+          >
+            <SelectTrigger className="h-8 w-16 text-xs border-slate-200 bg-slate-50/50 rounded-sm shadow-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map(size => (
+                <SelectItem key={size} value={size.toString()} className="text-xs">
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-xs text-slate-500">entries</span>
+        </div>
+      </div>
 
       {/* Main Table */}
       <Card className="border-slate-300 rounded-sm shadow-none overflow-hidden">
@@ -632,71 +703,95 @@ export default function PayrollHistory() {
           </Table>
         </div>
 
-        {/* Pagination */}
+        {/* Enhanced Pagination */}
         {pagination.totalPages > 0 && (
           <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 bg-slate-50/50">
             <p className="text-sm text-slate-600 order-2 sm:order-1">
-              Showing{" "}
-              <span className="font-medium">
-                {(pagination.currentPage - 1) * PAGE_SIZE + 1}
-              </span>{" "}
-              to{" "}
-              <span className="font-medium">
-                {Math.min(
-                  pagination.currentPage * PAGE_SIZE,
-                  pagination.totalItems,
-                )}
-              </span>{" "}
-              of <span className="font-medium">{pagination.totalItems}</span>{" "}
-              results
+              Showing <span className="font-medium">{startItem}</span> to{" "}
+              <span className="font-medium">{endItem}</span> of{" "}
+              <span className="font-medium">{pagination.totalItems}</span> results
             </p>
 
-            <div className="flex items-center gap-2 order-1 sm:order-2">
+            <div className="flex items-center gap-1 order-1 sm:order-2">
+              {/* First page button */}
               <Button
                 variant="outline"
-                size="sm"
+                size="icon"
                 onClick={() => handlePageChange(1)}
                 disabled={pagination.currentPage === 1}
-                className="hidden sm:flex border-slate-200 hover:bg-slate-100"
+                className="h-8 w-8 p-0 border-slate-200 hover:bg-slate-100"
               >
                 <ChevronsLeft className="h-4 w-4" />
                 <span className="sr-only">First page</span>
               </Button>
 
+              {/* Previous page button */}
               <Button
                 variant="outline"
-                size="sm"
+                size="icon"
                 onClick={() => handlePageChange(pagination.currentPage - 1)}
                 disabled={pagination.currentPage === 1}
-                className="border-slate-200 hover:bg-slate-100"
+                className="h-8 w-8 p-0 border-slate-200 hover:bg-slate-100"
               >
-                <ChevronLeft className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Previous</span>
+                <ChevronLeft className="h-4 w-4" />
+                <span className="sr-only">Previous page</span>
               </Button>
 
-              <span className="text-sm px-4 py-2 bg-white border border-slate-200 rounded-md font-medium">
-                {pagination.currentPage}
-                <span className="text-slate-400 mx-1">/</span>
-                {pagination.totalPages}
-              </span>
+              {/* Page numbers */}
+              <div className="flex items-center gap-1 mx-2">
+                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                  .filter(page => {
+                    const current = pagination.currentPage;
+                    return page === 1 || 
+                           page === pagination.totalPages || 
+                           Math.abs(page - current) <= 1;
+                  })
+                  .map((page, index, array) => {
+                    if (index > 0 && array[index - 1] !== page - 1) {
+                      return (
+                        <span key={`ellipsis-${page}`} className="px-2 text-xs text-slate-400">
+                          ...
+                        </span>
+                      );
+                    }
+                    return (
+                      <Button
+                        key={page}
+                        variant={pagination.currentPage === page ? "default" : "outline"}
+                        size="icon"
+                        onClick={() => handlePageChange(page)}
+                        className={cn(
+                          "h-8 w-8 p-0 text-xs font-medium",
+                          pagination.currentPage === page
+                            ? "bg-[#1F3A8A] hover:bg-[#162a63] text-white border-[#1F3A8A]"
+                            : "border-slate-200 hover:bg-slate-100 text-slate-700"
+                        )}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  })}
+              </div>
 
+              {/* Next page button */}
               <Button
                 variant="outline"
-                size="sm"
+                size="icon"
                 onClick={() => handlePageChange(pagination.currentPage + 1)}
                 disabled={pagination.currentPage === pagination.totalPages}
-                className="border-slate-200 hover:bg-slate-100"
+                className="h-8 w-8 p-0 border-slate-200 hover:bg-slate-100"
               >
-                <span className="hidden sm:inline">Next</span>
-                <ChevronRight className="h-4 w-4 sm:ml-1" />
+                <ChevronRight className="h-4 w-4" />
+                <span className="sr-only">Next page</span>
               </Button>
 
+              {/* Last page button */}
               <Button
                 variant="outline"
-                size="sm"
+                size="icon"
                 onClick={() => handlePageChange(pagination.totalPages)}
                 disabled={pagination.currentPage === pagination.totalPages}
-                className="hidden sm:flex border-slate-200 hover:bg-slate-100"
+                className="h-8 w-8 p-0 border-slate-200 hover:bg-slate-100"
               >
                 <ChevronsRight className="h-4 w-4" />
                 <span className="sr-only">Last page</span>

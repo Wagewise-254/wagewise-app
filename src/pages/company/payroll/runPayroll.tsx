@@ -13,6 +13,10 @@ import {
   ArrowLeft,
   RefreshCw,
   Info,
+  Users,
+  Timer,
+  Calendar,
+  Construction,
 } from "lucide-react";
 import { format, getYear } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -304,14 +308,13 @@ const fetchExistingRuns = useCallback(() => {
     }
   };
 
-  
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mb-4">
+      {/* Main Payroll Processing Card */}
       <Card className="rounded-sm mt-4 border-slate-300 shadow-none overflow-hidden">
         <CardContent className="p-0">
           <div className="grid grid-cols-1 md:grid-cols-3">
-            {/* Left: Main Action */}
+            {/* Left: Main Action - Monthly Payroll */}
             <div className="p-8 border-r border-slate-100 flex flex-col justify-between">
               <div>
                 <Tooltip>
@@ -330,11 +333,10 @@ const fetchExistingRuns = useCallback(() => {
                   </TooltipContent>
                 </Tooltip>
                 <h2 className="text-2xl font-bold text-slate-900">
-                  Payroll Processing
+                  Monthly Payroll
                 </h2>
                 <p className="text-slate-500 mt-2 text-sm leading-relaxed">
-                  Manage your monthly payroll cycles, recalculate statutory
-                  deductions, and prepare disbursements.
+                  Process full-time employee salaries, statutory deductions, and monthly benefits.
                 </p>
               </div>
 
@@ -346,16 +348,16 @@ const fetchExistingRuns = useCallback(() => {
                       className="w-full bg-[#1F3A8A] hover:bg-[#162a63] rounded-sm shadow-none group cursor-pointer"
                     >
                       <TrendingUp className="mr-2 h-5 w-5" />
-                      Prepare New Cycle
+                      Prepare Monthly Cycle
                       <ChevronRight className="ml-auto h-4 w-4 group-hover:translate-x-1 transition-transform" />
                     </Button>
                   </DialogTrigger>
 
                   <DialogContent className="sm:max-w-xl">
                     <DialogHeader>
-                      <DialogTitle>Process Payroll Cycle</DialogTitle>
+                      <DialogTitle>Process Monthly Payroll</DialogTitle>
                       <DialogDescription>
-                        Select the period to generate or update payroll figures.
+                        Select the period to generate or update monthly payroll figures.
                       </DialogDescription>
                     </DialogHeader>
 
@@ -525,6 +527,107 @@ const fetchExistingRuns = useCallback(() => {
                   View History
                 </Button>
               </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Casual Workers Section - NEW */}
+      <Card className="rounded-sm border-slate-300 shadow-none overflow-hidden bg-linear-to-r from-slate-50 to-white">
+        <CardContent className="p-0">
+          <div className="grid grid-cols-1 md:grid-cols-3">
+            {/* Left: Casual Workers Action */}
+            <div className="p-8 border-r border-slate-100 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-8 w-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                    <Construction className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">
+                    Coming Soon
+                  </Badge>
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  Casual Workers
+                </h2>
+                <p className="text-slate-500 mt-2 text-sm leading-relaxed">
+                  Process payments for daily, weekly, or contract-based workers. 
+                  Perfect for temporary staff and freelancers.
+                </p>
+              </div>
+
+              <div className="mt-8">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full border-dashed border-2 border-slate-300 bg-white/50 hover:bg-slate-100 rounded-sm cursor-not-allowed opacity-75"
+                  disabled
+                >
+                  <Timer className="mr-2 h-5 w-5 text-slate-400" />
+                  Process Casual Payments
+                  <Badge className="ml-auto bg-slate-200 text-slate-600 border-0">
+                    Soon
+                  </Badge>
+                </Button>
+              </div>
+            </div>
+
+            {/* Center: Quick Stats Placeholder */}
+            <div className="p-8 border-r border-slate-100 bg-slate-50/30 space-y-6">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Active Casual Workers
+                </span>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-slate-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">—</p>
+                    <p className="text-xs text-slate-500">Coming soon</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Pending Timesheets
+                </span>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center">
+                    <Calendar className="h-5 w-5 text-slate-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">—</p>
+                    <p className="text-xs text-slate-500">Awaiting data</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Payment Types Preview */}
+            <div className="p-8 flex flex-col justify-center space-y-6">
+              <div>
+                <p className="text-sm text-slate-500 mb-2">Supported payment cycles</p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 rounded-full bg-slate-300"></div>
+                    <span className="text-slate-600">Daily wages</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 rounded-full bg-slate-300"></div>
+                    <span className="text-slate-600">Weekly settlements</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-2 w-2 rounded-full bg-slate-300"></div>
+                    <span className="text-slate-600">Project-based contracts</span>
+                  </div>
+                </div>
+              </div>
+              <Separator />
+              <p className="text-xs text-slate-400 italic">
+                No statutory deductions • Flexible payment schedules
+              </p>
             </div>
           </div>
         </CardContent>

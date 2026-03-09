@@ -117,46 +117,62 @@ export default function PayrollApprovalTable() {
     fetchData();
   }, [fetchData]);
 
-  // 2. Handle Bulk Approval Logic
-  const handleBulkApprove = async () => {
-    // Get indices of selected rows
-    const selectedIndices = Object.keys(rowSelection).filter(
-      (key) => rowSelection[key],
-    );
+// In the handleBulkApprove function, update this part:
 
-    // Map indices to actual reviewIds
-    const selectedReviewIds = selectedIndices
-      .map((index) => data[parseInt(index)]?.reviewId)
-      .filter((id) => !!id);
+const handleBulkApprove = async () => {
+  // Get the selected row IDs from the table (these are the IDs from getRowId)
+  const selectedRowIds = Object.keys(rowSelection).filter(
+    (key) => rowSelection[key],
+  );
 
-    if (selectedReviewIds.length === 0) return;
+  if (selectedRowIds.length === 0) return;
 
-    setBulkActionLoading(true);
-    const loadingToast = toast.loading(
-      `Approving ${selectedReviewIds.length} items...`,
-    );
+  setBulkActionLoading(true);
+  const loadingToast = toast.loading(
+    `Approving ${selectedRowIds.length} items...`,
+  );
 
-    try {
-      await axios.post(
-        `${API_BASE_URL}/company/${companyId}/payroll/reviews/bulk`,
-        {
-          reviewIds: selectedReviewIds,
-          status: "APPROVED",
-        },
-        { headers: { Authorization: `Bearer ${session?.access_token}` } },
-      );
+  try {
+    // Map the selected row IDs to review IDs by finding matching rows
+    const selectedReviewIds = data
+      .filter(item => selectedRowIds.includes(item.reviewId) || 
+                      selectedRowIds.includes(item.id) ||
+                      selectedRowIds.includes(item.employeeId))
+      .map(item => item.reviewId)
+      .filter(id => !!id);
 
+    if (selectedReviewIds.length === 0) {
       toast.dismiss(loadingToast);
-      toast.success("Items approved successfully");
-      setRowSelection({}); // Clear checkboxes
-      fetchData(); // Refresh list
-    } catch (error) {
-      toast.dismiss(loadingToast);
-      toast.error("Failed to bulk approve items");
-    } finally {
+      toast.error("No valid review IDs found for selected items");
       setBulkActionLoading(false);
+      return;
     }
-  };
+
+    await axios.post(
+      `${API_BASE_URL}/company/${companyId}/payroll/reviews/bulk`,
+      {
+        reviewIds: selectedReviewIds,
+        status: "APPROVED",
+      },
+      { headers: { Authorization: `Bearer ${session?.access_token}` } },
+    );
+
+    toast.dismiss(loadingToast);
+    toast.success(`${selectedReviewIds.length} items approved successfully`);
+    setRowSelection({}); // Clear checkboxes
+    fetchData(); // Refresh list
+  } catch (error) {
+    toast.dismiss(loadingToast);
+    console.error("Bulk approval error:", error);
+    if (axios.isAxiosError(error)) {
+      toast.error(error.response?.data?.error || "Failed to bulk approve items");
+    } else {
+      toast.error("Failed to bulk approve items");
+    }
+  } finally {
+    setBulkActionLoading(false);
+  }
+};
 
  const handleStatusUpdate = useCallback(async (reviewId: string, newStatus: string) => {
   if (!reviewId) {
@@ -209,18 +225,25 @@ export default function PayrollApprovalTable() {
             aria-label="Select all"
           />
         ),
-        cell: ({ row }) => (
+       cell: ({ row }) => {
+        // Get the original data for this row
+        const original = row.original;
+        
+        // Check if this item is already approved/rejected
+        const isDisabled = 
+          original.myStatus === "APPROVED" || 
+          original.myStatus === "REJECTED";
+        
+        return (
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             className="border border-slate-300 shadow-none rounded-sm"
             aria-label="Select row"
-            disabled={
-              row.original.myStatus === "APPROVED" ||
-              row.original.myStatus === "REJECTED"
-            }
+            disabled={isDisabled}
           />
-        ),
+        );
+      },
         enableSorting: false,
         enableHiding: false,
       },
@@ -339,7 +362,7 @@ export default function PayrollApprovalTable() {
               onValueChange={(value) => handleStatusUpdate(reviewId, value)}
               disabled={isUpdating}
             >
-              <SelectTrigger className="w-[140px] border rounded-sm shadow-none border-slate-300 bg-white hover:bg-slate-50 h-8">
+              <SelectTrigger className="w-35 border rounded-sm shadow-none border-slate-300 bg-white hover:bg-slate-50 h-8">
                 {isUpdating ? (
                   <div className="flex items-center gap-2">
                     <Loader2 className="h-3 w-3 animate-spin" />

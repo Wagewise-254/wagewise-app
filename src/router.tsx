@@ -43,6 +43,7 @@ import PayrollSetup from "./components/payroll/settings/PayrollSetup.tsx";
 import ReportLayout from "./pages/company/reports/ReportLayout.tsx";
 import ReportOverview from "./pages/company/reports/ReportOverview.tsx";
 import ReportPreviewPage from "./pages/company/reports/ReportPreviewPage.tsx";
+import PayrollRunReports from "./pages/company/reports/PayrollRunReports.tsx";
 import AnnualReports from "./pages/company/reports/AnnualReports.tsx";
 import P9AReports from "./pages/company/reports/P9A-Reports.tsx";
 import SettingsLayout from "./pages/company/settings/SettingsLayout.tsx";
@@ -156,12 +157,14 @@ const AppRouterWrapper = () => {
             <Route path="deductions/assign" element={<AssignDeductions />} />
             <Route path="payroll/setup" element={<PayrollSetup />} />
             {/**Report specific dashboards */}
+            
             <Route path="reports" element={<ReportLayout />}>
               <Route index element={<ReportOverview />} />
               <Route path="overview" element={<ReportOverview />} />
               <Route path="annual" element={<AnnualReports />} />
               <Route path="p9a" element={<P9AReports />} />
               <Route path="report-preview" element={<ReportPreviewPage />} />
+              <Route path="payroll-run/:payrollRunId" element={<PayrollRunReports />} />
             </Route>
             {/**Report specific dashboards */}
             <Route path="settings" element={<SettingsLayout />}>

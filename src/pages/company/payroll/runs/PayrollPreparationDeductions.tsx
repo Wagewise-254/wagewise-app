@@ -7,6 +7,7 @@ import axios from "axios";
 import { API_BASE_URL } from "@/config";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 //import { Progress } from "@/components/ui/progress";
 
 interface PayrollReportData {
@@ -19,6 +20,7 @@ interface PayrollReportData {
   nssf: number;
   shif: number;
   housingLevy: number;
+  helbDeduction: number;
   otherDeductions: number; 
   totalDeductions: number;
   netPay: number;
@@ -89,6 +91,20 @@ export default function PayrollPreparationDeductions() {
     return <Badge variant="outline">{type || "N/A"}</Badge>;
   };
 
+  // Calculate summary stats
+  const summaryStats = {
+    totalGross: data.reduce((sum, item) => sum + (item.grossPay || 0), 0),
+    totalPAYE: data.reduce((sum, item) => sum + (item.paye || 0), 0),
+    totalNSSF: data.reduce((sum, item) => sum + (item.nssf || 0), 0),
+    totalSHIF: data.reduce((sum, item) => sum + (item.shif || 0), 0),
+    totalHousing: data.reduce((sum, item) => sum + (item.housingLevy || 0), 0),
+    totalHELB: data.reduce((sum, item) => sum + (item.helbDeduction || 0), 0),
+    totalOther: data.reduce((sum, item) => sum + (item.otherDeductions || 0), 0),
+    totalDeductions: data.reduce((sum, item) => sum + (item.totalDeductions || 0), 0),
+    totalNet: data.reduce((sum, item) => sum + (item.netPay || 0), 0),
+    employeeCount: data.length,
+  };
+
   const columns: ColumnDef<PayrollReportData>[] = [
     {
       accessorKey: "fullName",
@@ -118,18 +134,18 @@ export default function PayrollPreparationDeductions() {
     },
     {
       accessorKey: "grossPay",
-      header: () => <div className="text-right">Gross Pay</div>,
+      header: "Gross Pay",
       cell: ({ row }) => (
-        <div className="text-right font-medium text-slate-700">
+        <div className="font-medium text-slate-700">
           {formatCurrency(row.original.grossPay)}
         </div>
       ),
     },
     {
       accessorKey: "paye",
-      header: () => <div className="text-right">PAYE</div>,
+      header: "PAYE",
       cell: ({ row }) => (
-        <div className="text-right">
+        <div>
           <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 font-mono">
             {formatCurrency(row.original.paye)}
           </Badge>
@@ -138,45 +154,54 @@ export default function PayrollPreparationDeductions() {
     },
     {
       accessorKey: "nssf",
-      header: () => <div className="text-right">NSSF</div>,
+      header: "NSSF",
       cell: ({ row }) => (
-        <div className="text-right font-medium text-slate-700">
+        <div className="font-medium text-slate-700">
           {formatCurrency(row.original.nssf)}
         </div>
       ),
     },
     {
       accessorKey: "shif",
-      header: () => <div className="text-right">SHIF</div>,
+      header: "SHIF",
       cell: ({ row }) => (
-        <div className="text-right font-medium text-slate-700">
+        <div className="font-medium text-slate-700">
           {formatCurrency(row.original.shif)}
         </div>
       ),
     },
     {
       accessorKey: "housingLevy",
-      header: () => <div className="text-right">Housing</div>,
+      header: "Housing",
       cell: ({ row }) => (
-        <div className="text-right font-medium text-slate-700">
+        <div className="font-medium text-slate-700">
           {formatCurrency(row.original.housingLevy)}
         </div>
       ),
     },
     {
-      accessorKey: "otherDeductions",
-      header: () => <div className="text-right">Other</div>,
+      accessorKey: "helbDeduction",
+      header: "HELB",
       cell: ({ row }) => (
-        <div className="text-right font-medium text-slate-700">
+        <div className="font-medium text-slate-700">
+          {formatCurrency(row.original.helbDeduction)}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "otherDeductions",
+      header: "Other",
+      cell: ({ row }) => (
+        <div className="font-medium text-slate-700">
           {formatCurrency(row.original.otherDeductions)}
         </div>
       ),
     },
     {
       accessorKey: "totalDeductions",
-      header: () => <div className="text-right font-bold">Total</div>,
+      header: "Total",
       cell: ({ row }) => (
-        <div className="text-right">
+        <div>
           <span className="font-bold text-rose-600">
             {formatCurrency(row.original.totalDeductions)}
           </span>
@@ -185,11 +210,11 @@ export default function PayrollPreparationDeductions() {
     },
     {
       accessorKey: "netPay",
-      header: () => <div className="text-right font-bold">Net Pay</div>,
+      header: "Net Pay",
       cell: ({ row }) => {
         const deductionRate = ((row.original.totalDeductions / row.original.grossPay) * 100).toFixed(1);
         return (
-          <div className="text-right">
+          <div>
             <span className="font-bold text-emerald-600">
               {formatCurrency(row.original.netPay)}
             </span>
@@ -203,15 +228,51 @@ export default function PayrollPreparationDeductions() {
   ];
 
   return (
-    <div className="p-1">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold text-slate-900">
-          Deductions Breakdown
-        </h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Statutory and voluntary deductions per employee
-        </p>
-      </div>
+    <div className="space-y-4">
+      {/* Minimized Summary Stats */}
+      <Card className="border-slate-200 shadow-none">
+        <CardContent className="p-3">
+          <div className="flex flex-wrap items-center gap-3">            
+            <div className="flex items-center gap-2 bg-red-50 px-3 py-1.5 rounded-full border border-red-100">
+              <span className="text-xs text-red-600">PAYE:</span>
+              <span className="text-sm font-semibold text-red-700">KES {formatCurrency(summaryStats.totalPAYE)}</span>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
+              <span className="text-xs text-blue-600">NSSF:</span>
+              <span className="text-sm font-semibold text-blue-700">KES {formatCurrency(summaryStats.totalNSSF)}</span>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-cyan-50 px-3 py-1.5 rounded-full border border-cyan-100">
+              <span className="text-xs text-cyan-600">SHIF:</span>
+              <span className="text-sm font-semibold text-cyan-700">KES {formatCurrency(summaryStats.totalSHIF)}</span>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-100">
+              <span className="text-xs text-amber-600">Housing:</span>
+              <span className="text-sm font-semibold text-amber-700">KES {formatCurrency(summaryStats.totalHousing)}</span>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-purple-50 px-3 py-1.5 rounded-full border border-purple-100">
+              <span className="text-xs text-purple-600">HELB:</span>
+              <span className="text-sm font-semibold text-purple-700">KES {formatCurrency(summaryStats.totalHELB)}</span>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-100">
+              <span className="text-xs text-rose-600">Total Ded:</span>
+              <span className="text-sm font-semibold text-rose-700">KES {formatCurrency(summaryStats.totalDeductions)}</span>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+              <span className="text-xs text-emerald-600">Net:</span>
+              <span className="text-sm font-semibold text-emerald-700">KES {formatCurrency(summaryStats.totalNet)}</span>
+            </div>
+            
+          </div>
+        </CardContent>
+      </Card>
+      
+      
       <PayrollReportTable columns={columns} data={data} loading={loading} />
     </div>
   );
