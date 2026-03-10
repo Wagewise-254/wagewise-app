@@ -54,6 +54,9 @@ import DepartmentSettings from "./pages/company/settings/Departments.tsx";
 import ProfileSettings from "./pages/company/settings/ProfilesSettings.tsx";
 import AuditLogs from "./pages/company/settings/AuditLogs.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import ForgotPasswordPage from "./pages/onboarding/resetPassword/ForgotPasswordPage.tsx";
+import VerifyCodePage from "./pages/onboarding/resetPassword/VerifyCodePage.tsx";
+import ResetPasswordPage from "./pages/onboarding/resetPassword/ResetPasswordPage.tsx";
 
 const ProtectedRoute = () => {
   const session = useAuthStore((state) => state.session);
@@ -93,6 +96,9 @@ const AppRouterWrapper = () => {
       <Routes>
         <Route path="/" element={<SplashScreen />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/verify-code" element={<VerifyCodePage />} />
 
         {/* Protected Dashboard routes with layouts */}
         <Route element={<ProtectedRoute />}>

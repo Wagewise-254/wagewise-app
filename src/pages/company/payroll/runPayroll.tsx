@@ -1,4 +1,5 @@
 // src/pages/company/payroll/RunPayroll.tsx
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -17,6 +18,9 @@ import {
   Timer,
   Calendar,
   Construction,
+  Ban,
+  ShieldAlert,
+  // Remove Users2 if not used
 } from "lucide-react";
 import { format, getYear } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -29,6 +33,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+// Remove Alert imports if not used
 import {
   Select,
   SelectContent,
@@ -70,6 +75,8 @@ interface PayrollSummary {
   growth_percentage?: number;
 }
 
+// This is used in the component
+/*
 interface PayrollRunResponse {
   message: string;
   payrollRunId: string;
@@ -83,6 +90,16 @@ interface PayrollRunResponse {
     totalSHIF: number;
     totalHousingLevy: number;
     totalHELB: number;
+  };
+}*/
+
+// Define a proper type for API errors
+interface ApiError {
+  status: number;
+  error?: {
+    error?: string;
+    message?: string;
+    details?: string;
   };
 }
 
@@ -102,6 +119,44 @@ const months = [
   "December",
 ];
 
+// Helper function to get user-friendly error message with proper typing
+const getErrorMessage = (error: ApiError, existingRun: PayrollRun | null): string => {
+  // Handle different error scenarios
+  if (error.status === 403) {
+    if (error.error?.error?.includes('APPROVED')) {
+      return `Payroll for ${existingRun?.payroll_month} ${existingRun?.payroll_year} has already been approved and cannot be modified.`;
+    }
+    if (error.error?.error?.includes('LOCKED')) {
+      return `Payroll for ${existingRun?.payroll_month} ${existingRun?.payroll_year} is locked and cannot be modified.`;
+    }
+    if (error.error?.error?.includes('PAID')) {
+      return `Payroll for ${existingRun?.payroll_month} ${existingRun?.payroll_year} has already been paid and cannot be modified.`;
+    }
+    return `You don't have permission to modify this payroll. Please contact your administrator.`;
+  }
+  
+  if (error.status === 404) {
+    if (error.error?.message?.includes('No eligible employees')) {
+      return `No eligible employees found for ${existingRun?.payroll_month} ${existingRun?.payroll_year}. Please check employee contracts and statuses.`;
+    }
+    return `Payroll run not found or no data available for the selected period.`;
+  }
+  
+  if (error.status === 400) {
+    if (error.error?.error?.includes('Invalid month')) {
+      return `Please select a valid month and year.`;
+    }
+    return error.error?.message || 'Invalid request. Please check your input.';
+  }
+  
+  if (error.status === 409) {
+    return `A payroll run for ${existingRun?.payroll_month} ${existingRun?.payroll_year} is already in progress.`;
+  }
+  
+  // Default error message
+  return error.error?.message || 'Failed to process payroll. Please try again.';
+};
+
 export default function RunPayroll() {
   const navigate = useNavigate();
   const { session } = useAuthStore();
@@ -113,6 +168,12 @@ export default function RunPayroll() {
   const [existingRunForPeriod, setExistingRunForPeriod] =
     useState<PayrollRun | null>(null);
   const [checkingExistingRun, setCheckingExistingRun] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    type: 'error' | 'warning' | 'info';
+  } | null>(null);
 
   // Separate selectors
   const [selectedMonth, setSelectedMonth] = useState<string>(
@@ -127,33 +188,44 @@ export default function RunPayroll() {
 
   // Add this function to check if a run exists for the selected period
   const checkExistingRunForPeriod = useCallback(
-    async (month: string, year: number) => {
-      if (!companyId || !session?.access_token) return;
+  async (month: string, year: number) => {
+    if (!companyId || !session?.access_token) return;
 
-      setCheckingExistingRun(true);
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/company/${companyId}/payroll/runs?month=${month}&year=${year}`,
-          {
-            headers: { Authorization: `Bearer ${session?.access_token}` },
-          },
-        );
-        if (response.ok) {
-          const runs = await response.json();
-          const existing = runs.find(
-            (run: PayrollRun) =>
-              run.payroll_month === month && run.payroll_year === year,
-          );
-          setExistingRunForPeriod(existing || null);
+    setCheckingExistingRun(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/company/${companyId}/payroll/runs?month=${month}&year=${year}`,
+        {
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+        },
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Handle both array and paginated response
+        let runs: PayrollRun[] = [];
+        
+        if (Array.isArray(data)) {
+          runs = data;
+        } else if (data.data && Array.isArray(data.data)) {
+          runs = data.data;
         }
-      } catch (e) {
-        console.error("Error checking existing run:", e);
-      } finally {
-        setCheckingExistingRun(false);
+        
+        const existing = runs.find(
+          (run: PayrollRun) =>
+            run.payroll_month === month && run.payroll_year === year,
+        );
+        setExistingRunForPeriod(existing || null);
       }
-    },
-    [companyId, session?.access_token],
-  );
+    } catch (e) {
+      console.error("Error checking existing run:", e);
+    } finally {
+      setCheckingExistingRun(false);
+    }
+  },
+  [companyId, session?.access_token],
+);
 
   // Call this when month/year changes
   useEffect(() => {
@@ -195,11 +267,24 @@ const fetchRunsWithFilters = useCallback(async (month?: string, year?: number) =
     
     if (response.ok) {
       const data = await response.json();
-      setExistingRuns(data);
+      
+      // Handle both array and paginated response
+      let runs: PayrollRun[] = [];
+      
+      if (Array.isArray(data)) {
+        runs = data;
+      } else if (data.data && Array.isArray(data.data)) {
+        runs = data.data;
+      } else {
+        console.error("Unexpected data format:", data);
+        runs = [];
+      }
+      
+      setExistingRuns(runs);
       
       // If we're filtering for a specific month/year, set the existing run
       if (month && year) {
-        const existing = data.find(
+        const existing = runs.find(
           (run: PayrollRun) => 
             run.payroll_month === month && 
             run.payroll_year === year
@@ -224,6 +309,7 @@ const fetchExistingRuns = useCallback(() => {
 
   const handleProcessPayroll = async () => {
     setLoading(true);
+    setErrorDetails(null);
 
     // Show initial loading toast
     const loadingToast = toast.loading(
@@ -250,9 +336,79 @@ const fetchExistingRuns = useCallback(() => {
           }),
         },
       );
-      const data: PayrollRunResponse = await response.json();
+
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error( "Failed to process");
+        // Handle different error status codes with specific messages
+        const error: ApiError = {
+          status: response.status,
+          error: data
+        };
+        
+        if (response.status === 403) {
+          if (data.error?.includes('APPROVED')) {
+            setErrorDetails({
+              show: true,
+              title: "Payroll Already Approved",
+              message: `Payroll for ${selectedMonth} ${selectedYear} has been approved and cannot be modified. If you need to make changes, please create an adjustment or contact your administrator.`,
+              type: 'warning'
+            });
+          } else if (data.error?.includes('LOCKED')) {
+            setErrorDetails({
+              show: true,
+              title: "Payroll Locked",
+              message: `Payroll for ${selectedMonth} ${selectedYear} is locked. Only administrators can unlock it for modifications.`,
+              type: 'warning'
+            });
+          } else if (data.error?.includes('PAID')) {
+            setErrorDetails({
+              show: true,
+              title: "Payroll Already Paid",
+              message: `Payroll for ${selectedMonth} ${selectedYear} has already been paid and cannot be modified. Please create a new payroll run for adjustments.`,
+              type: 'error'
+            });
+          } else {
+            setErrorDetails({
+              show: true,
+              title: "Access Denied",
+              message: data.message || "You don't have permission to modify this payroll.",
+              type: 'error'
+            });
+          }
+        } else if (response.status === 404) {
+          if (data.message?.includes('No eligible employees')) {
+            setErrorDetails({
+              show: true,
+              title: "No Eligible Employees",
+              message: `No active employees found for ${selectedMonth} ${selectedYear}. Please check employee contracts and ensure they have active status for this period.`,
+              type: 'warning'
+            });
+          } else {
+            setErrorDetails({
+              show: true,
+              title: "Payroll Not Found",
+              message: data.message || "The requested payroll run could not be found.",
+              type: 'error'
+            });
+          }
+        } else if (response.status === 400) {
+          setErrorDetails({
+            show: true,
+            title: "Invalid Request",
+            message: data.error || "Please check your input and try again.",
+            type: 'error'
+          });
+        } else {
+          setErrorDetails({
+            show: true,
+            title: "Processing Failed",
+            message: data.message || "An unexpected error occurred. Please try again.",
+            type: 'error'
+          });
+        }
+        
+        throw error;
       }
 
       // Dismiss loading toast
@@ -287,6 +443,7 @@ const fetchExistingRuns = useCallback(() => {
       }
 
       setIsOpen(false);
+      setErrorDetails(null);
 
       // Refresh the runs list
       fetchExistingRuns();
@@ -296,12 +453,17 @@ const fetchExistingRuns = useCallback(() => {
       navigate(
         `/company/${companyId}/payroll/${data.payrollRunId}/review-status`,
       );
-    } catch (error: unknown) {
-      // Dismiss loading toast and show error
+    } catch (error) {
+      // Dismiss loading toast
       toast.dismiss(loadingToast);
+      
+      // Show error toast with user-friendly message
+      const apiError = error as ApiError;
+      const errorMessage = getErrorMessage(apiError, existingRunForPeriod);
       toast.error("Payroll processing failed", {
-        description: (error as Error).message,
-        duration: 5000,
+        description: errorMessage,
+        duration: 7000,
+        icon: <Ban className="h-5 w-5 text-red-500" />,
       });
     } finally {
       setLoading(false);
@@ -310,6 +472,32 @@ const fetchExistingRuns = useCallback(() => {
 
   return (
     <div className="space-y-6 mb-4">
+      {/* Error Alert Dialog */}
+      <Dialog open={errorDetails?.show} onOpenChange={(open) => !open && setErrorDetails(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {errorDetails?.type === 'warning' ? (
+                <ShieldAlert className="h-5 w-5 text-amber-500" />
+              ) : errorDetails?.type === 'info' ? (
+                <Info className="h-5 w-5 text-blue-500" />
+              ) : (
+                <Ban className="h-5 w-5 text-red-500" />
+              )}
+              {errorDetails?.title}
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              {errorDetails?.message}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setErrorDetails(null)}>
+              Got it
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Main Payroll Processing Card */}
       <Card className="rounded-sm mt-4 border-slate-300 shadow-none overflow-hidden">
         <CardContent className="p-0">
@@ -729,12 +917,25 @@ function ExistingRunPreview({
   }
 
   if (existingRun) {
+    // Check if the existing run is in a blocked state
+    const isBlocked = ["APPROVED", "LOCKED", "PAID"].includes(existingRun.status);
+    
     return (
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 my-2">
+      <div className={`border rounded-xl p-4 my-2 ${
+        isBlocked 
+          ? "bg-red-50 border-red-200" 
+          : "bg-amber-50 border-amber-200"
+      }`}>
         <div className="flex items-start gap-3">
-          <RefreshCw className="h-5 w-5 text-amber-600 mt-0.5" />
+          {isBlocked ? (
+            <ShieldAlert className="h-5 w-5 text-red-600 mt-0.5" />
+          ) : (
+            <RefreshCw className="h-5 w-5 text-amber-600 mt-0.5" />
+          )}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-amber-800">
+            <p className={`text-sm font-medium ${
+              isBlocked ? "text-red-800" : "text-amber-800"
+            }`}>
               Existing payroll run found for {month} {year}
             </p>
             <div className="bg-white/50 rounded-lg p-3 space-y-1">
@@ -746,7 +947,11 @@ function ExistingRunPreview({
                 <span className="font-medium">Status:</span>{" "}
                 <Badge
                   variant="outline"
-                  className="bg-amber-100 text-amber-700 border-amber-300"
+                  className={
+                    isBlocked
+                      ? "bg-red-100 text-red-700 border-red-300"
+                      : "bg-amber-100 text-amber-700 border-amber-300"
+                  }
                 >
                   {existingRun.status}
                 </Badge>
@@ -762,10 +967,19 @@ function ExistingRunPreview({
                 </p>
               )}
             </div>
-            <p className="text-xs text-amber-600">
-              ⚠️ Processing will re-synchronize this run, updating any changes
-              made since last calculation.
-            </p>
+            {isBlocked ? (
+              <p className="text-xs text-red-600">
+                ⚠️ This payroll is {existingRun.status.toLowerCase()} and cannot be modified. 
+                {existingRun.status === "LOCKED" && " Contact an administrator to unlock it."}
+                {existingRun.status === "APPROVED" && " Create an adjustment if changes are needed."}
+                {existingRun.status === "PAID" && " Paid payrolls cannot be modified."}
+              </p>
+            ) : (
+              <p className="text-xs text-amber-600">
+                ⚠️ Processing will re-synchronize this run, updating any changes
+                made since last calculation.
+              </p>
+            )}
           </div>
         </div>
       </div>

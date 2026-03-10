@@ -19,10 +19,15 @@ import {
   Calendar,
   ArrowLeft,
   Loader2,
+  Lock,
+  RefreshCw,
+  Unlock,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -45,6 +50,14 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -58,8 +71,8 @@ import { API_BASE_URL } from "@/config";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-// Types
-type PayrollStatus = "DRAFT" | "UNDER_REVIEW" | "APPROVED" | "PAID";
+// Types - Update to include all possible statuses
+type PayrollStatus = "DRAFT" | "UNDER_REVIEW" | "APPROVED" | "LOCKED" | "PAID" | "REJECTED" | "CANCELLED";
 
 interface PayrollRun {
   id: string;
@@ -79,13 +92,174 @@ interface PayrollFilters {
   search: string;
 }
 
-/*
-interface PaginatedResponse {
-  data: PayrollRun[];
-  totalItems: number;
-  totalPages: number;
-  currentPage: number;
-}*/
+interface RevertDialogState {
+  open: boolean;
+  targetStatus: PayrollStatus | null;
+  currentStatus: PayrollStatus | null;
+  runId: string | null;
+}
+
+// Add new interface for status actions
+interface StatusAction {
+  label: string;
+  targetStatus: PayrollStatus;
+  icon: React.ElementType;
+  color: string;
+  requireReason?: boolean;
+}
+
+// Define available actions based on current status
+const getAvailableActions = (status: PayrollStatus): StatusAction[] => {
+  const actions: Record<PayrollStatus, StatusAction[]> = {
+    DRAFT: [
+      {
+        label: "Submit for Review",
+        targetStatus: "UNDER_REVIEW",
+        icon: CheckCircle,
+        color: "text-amber-600",
+      },
+    ],
+    UNDER_REVIEW: [
+      {
+        label: "Approve",
+        targetStatus: "APPROVED",
+        icon: CheckCircle,
+        color: "text-emerald-600",
+      },
+      {
+        label: "Reject",
+        targetStatus: "REJECTED",
+        icon: X,
+        color: "text-red-600",
+        requireReason: true,
+      },
+      {
+        label: "Revert to Draft",
+        targetStatus: "DRAFT",
+        icon: RefreshCw,
+        color: "text-slate-600",
+        requireReason: true,
+      },
+    ],
+    APPROVED: [
+      {
+        label: "Lock Payroll",
+        targetStatus: "LOCKED",
+        icon: Lock,
+        color: "text-blue-600",
+      },
+      {
+        label: "Revert to Draft",
+        targetStatus: "DRAFT",
+        icon: RefreshCw,
+        color: "text-slate-600",
+        requireReason: true,
+      },
+      {
+        label: "Revert to Review",
+        targetStatus: "UNDER_REVIEW",
+        icon: RefreshCw,
+        color: "text-amber-600",
+        requireReason: true,
+      },
+    ],
+    LOCKED: [
+      {
+        label: "Mark as Paid",
+        targetStatus: "PAID",
+        icon: DollarSign,
+        color: "text-green-600",
+      },
+      {
+        label: "Unlock",
+        targetStatus: "APPROVED",
+        icon: Unlock,
+        color: "text-orange-600",
+        requireReason: true,
+      },
+    ],
+    PAID: [
+      {
+        label: "View Payslips",
+        targetStatus: "PAID",
+        icon: Download,
+        color: "text-slate-600",
+      },
+    ],
+    REJECTED: [
+      {
+        label: "Revert to Draft",
+        targetStatus: "DRAFT",
+        icon: RefreshCw,
+        color: "text-slate-600",
+        requireReason: true,
+      },
+    ],
+    CANCELLED: [],
+  };
+
+  return actions[status] || [];
+};
+
+// Add revert dialog component
+const RevertDialog = ({
+  open,
+  onOpenChange,
+  onConfirm,
+  currentStatus,
+  targetStatus,
+  loading,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (reason: string) => void;
+  currentStatus: string | null;
+  targetStatus: string | null;
+  loading: boolean;
+}) => {
+  const [reason, setReason] = useState("");
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Revert Payroll Status</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to revert from {currentStatus} to{" "}
+            {targetStatus}? This action will be recorded in audit logs.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="reason">Reason for revert (required)</Label>
+            <Textarea
+              id="reason"
+              placeholder="Explain why you're reverting this payroll..."
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="min-h-25"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => onConfirm(reason)}
+            disabled={!reason.trim() || loading}
+            className="bg-amber-600 hover:bg-amber-700"
+          >
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Confirm Revert
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 // Constants
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -95,7 +269,10 @@ const STATUS_OPTIONS: { value: PayrollStatus | "all"; label: string }[] = [
   { value: "DRAFT", label: "Draft" },
   { value: "UNDER_REVIEW", label: "Under Review" },
   { value: "APPROVED", label: "Approved" },
+  { value: "LOCKED", label: "Locked" },
   { value: "PAID", label: "Paid" },
+  { value: "REJECTED", label: "Rejected" },
+  { value: "CANCELLED", label: "Cancelled" },
 ];
 
 // Utility functions
@@ -128,10 +305,25 @@ const getStatusBadgeVariant = (status: PayrollStatus) => {
       text: "text-emerald-700",
       border: "border-emerald-200",
     },
+    LOCKED: {
+      bg: "bg-purple-50",
+      text: "text-purple-700",
+      border: "border-purple-200",
+    },
     PAID: {
       bg: "bg-blue-50",
       text: "text-blue-700",
       border: "border-blue-200",
+    },
+    REJECTED: {
+      bg: "bg-red-50",
+      text: "text-red-700",
+      border: "border-red-200",
+    },
+    CANCELLED: {
+      bg: "bg-gray-50",
+      text: "text-gray-700",
+      border: "border-gray-200",
     },
   };
   return variants[status] || variants.DRAFT;
@@ -185,6 +377,7 @@ export default function PayrollHistory() {
   // State
   const [payrolls, setPayrolls] = useState<PayrollRun[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [filters, setFilters] = useState<PayrollFilters>({
     status: "all",
     year: "all",
@@ -198,13 +391,13 @@ export default function PayrollHistory() {
   });
   const [searchInput, setSearchInput] = useState("");
   const [isFiltering, setIsFiltering] = useState(false);
-
-  // Memoized values
-  /*
-  const availableYears = useMemo(() => {
-    // This will be populated from API response metadata
-    return [];
-  }, []); */
+  const [revertDialog, setRevertDialog] = useState<RevertDialogState>({
+    open: false,
+    targetStatus: null,
+    currentStatus: null,
+    runId: null,
+  });
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   // API calls
   const fetchPayrolls = useCallback(async () => {
@@ -212,7 +405,7 @@ export default function PayrollHistory() {
 
     setLoading(true);
     setIsFiltering(true);
-    
+
     try {
       const params = new URLSearchParams({
         page: pagination.currentPage.toString(),
@@ -234,23 +427,28 @@ export default function PayrollHistory() {
       }
 
       const data = await response.json();
-      
+
       // Handle both array response and paginated response
       let payrollData: PayrollRun[] = [];
       let totalItems = 0;
       let totalPages = 1;
+      let years: number[] = [];
 
       if (Array.isArray(data)) {
         payrollData = data;
         totalItems = data.length;
         totalPages = Math.ceil(data.length / pagination.pageSize);
+        years = [...new Set(data.map((run) => run.payroll_year))];
       } else {
         payrollData = data.data || [];
         totalItems = data.totalItems || payrollData.length;
-        totalPages = data.totalPages || Math.ceil(totalItems / pagination.pageSize);
+        totalPages =
+          data.totalPages || Math.ceil(totalItems / pagination.pageSize);
+        years = data.availableYears || [];
       }
 
       setPayrolls(payrollData);
+      setAvailableYears(years);
       setPagination((prev) => ({
         ...prev,
         totalPages,
@@ -285,8 +483,10 @@ export default function PayrollHistory() {
   const handleStatusUpdate = async (
     runId: string,
     newStatus: PayrollStatus,
+    reason?: string,
   ) => {
     if (!companyId || !token) return;
+    setActionLoading(true);
 
     try {
       const response = await fetch(
@@ -297,22 +497,91 @@ export default function PayrollHistory() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ status: newStatus }),
+          body: JSON.stringify({
+            status: newStatus,
+            reason, // Include reason for audit
+          }),
         },
       );
 
       if (!response.ok) {
-        throw new Error("Update failed");
+        const error = await response.json();
+        throw new Error(error.message || "Update failed");
       }
 
       toast.success(
-        `Payroll status updated to ${newStatus.toLowerCase().replace("_", " ")}`,
+        `Payroll ${newStatus.toLowerCase().replace("_", " ")} successfully`,
       );
+
+      // Log the action
+      console.log("Audit:", {
+        runId,
+        newStatus,
+        reason,
+        timestamp: new Date(),
+      });
+
       fetchPayrolls();
+      setRevertDialog({ open: false, targetStatus: null, currentStatus: null, runId: null });
     } catch (error) {
       console.error("Failed to update status:", error);
-      toast.error("Failed to update payroll status. Please try again.");
+      toast.error(error instanceof Error ? error.message : "Failed to update payroll status");
+    } finally {
+      setActionLoading(false);
     }
+  };
+
+  const handleSyncRun = async (e: React.MouseEvent, runId: string) => {
+    e.stopPropagation();
+    
+    const run = payrolls.find(r => r.id === runId);
+    if (!run) return;
+    
+    // Check if sync is allowed
+    const blockedStatuses = ["APPROVED", "LOCKED", "PAID"];
+    if (blockedStatuses.includes(run.status)) {
+      toast.error(`Cannot resync payroll with status: ${run.status}`);
+      return;
+    }
+    
+    try {
+      setActionLoading(true);
+      const response = await fetch(
+        `${API_BASE_URL}/company/${companyId}/payroll/sync`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            month: run.payroll_month,
+            year: run.payroll_year,
+          }),
+        },
+      );
+      
+      if (!response.ok) {
+        throw new Error("Failed to resync payroll");
+      }
+      
+      toast.success("Payroll resynchronized successfully");
+      fetchPayrolls();
+    } catch (error) {
+      console.error("Sync error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to resync payroll");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRevertConfirm = async (reason: string) => {
+    if (!revertDialog.runId || !revertDialog.targetStatus) return;
+    await handleStatusUpdate(
+      revertDialog.runId,
+      revertDialog.targetStatus,
+      reason
+    );
   };
 
   // Event handlers
@@ -365,15 +634,6 @@ export default function PayrollHistory() {
     navigate(`/company/${companyId}/payroll/${payrollId}/review-status`);
   };
 
-  const handleStatusAction = async (
-    e: React.MouseEvent,
-    runId: string,
-    newStatus: PayrollStatus,
-  ) => {
-    e.stopPropagation();
-    await handleStatusUpdate(runId, newStatus);
-  };
-
   const handleRunNewPayroll = () => {
     navigate(`/company/${companyId}/payroll/run`);
   };
@@ -388,11 +648,23 @@ export default function PayrollHistory() {
   const startItem = (pagination.currentPage - 1) * pagination.pageSize + 1;
   const endItem = Math.min(
     pagination.currentPage * pagination.pageSize,
-    pagination.totalItems
+    pagination.totalItems,
   );
 
   return (
     <div className="space-y-6">
+      {/* Revert Dialog */}
+      <RevertDialog
+        open={revertDialog.open}
+        onOpenChange={(open) => 
+          setRevertDialog({ ...revertDialog, open })
+        }
+        onConfirm={handleRevertConfirm}
+        currentStatus={revertDialog.currentStatus}
+        targetStatus={revertDialog.targetStatus}
+        loading={actionLoading}
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-2">
@@ -476,7 +748,7 @@ export default function PayrollHistory() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Years</SelectItem>
-                  {[2024, 2023, 2022].map((year) => (
+                  {availableYears.map((year) => (
                     <SelectItem key={year} value={year.toString()}>
                       {year}
                     </SelectItem>
@@ -510,7 +782,7 @@ export default function PayrollHistory() {
             </div>
           )}
         </div>
-        
+
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-500">Show</span>
           <Select
@@ -521,8 +793,12 @@ export default function PayrollHistory() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {PAGE_SIZE_OPTIONS.map(size => (
-                <SelectItem key={size} value={size.toString()} className="text-xs">
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <SelectItem
+                  key={size}
+                  value={size.toString()}
+                  className="text-xs"
+                >
                   {size}
                 </SelectItem>
               ))}
@@ -640,56 +916,56 @@ export default function PayrollHistory() {
                               View Details
                             </DropdownMenuItem>
 
+                            {run.status !== "PAID" && (
+                              <DropdownMenuItem
+                                onClick={(e) => handleSyncRun(e, run.id)}
+                                className="cursor-pointer"
+                                disabled={[
+                                  "APPROVED",
+                                  "LOCKED",
+                                  "PAID",
+                                ].includes(run.status)}
+                              >
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Resync Payroll
+                                {["APPROVED", "LOCKED", "PAID"].includes(
+                                  run.status,
+                                ) && (
+                                  <span className="ml-auto text-xs text-red-500">
+                                    Locked
+                                  </span>
+                                )}
+                              </DropdownMenuItem>
+                            )}
+
                             <DropdownMenuSeparator />
 
-                            {run.status === "DRAFT" && (
+                            {/* Dynamic status actions */}
+                            {getAvailableActions(run.status).map((action) => (
                               <DropdownMenuItem
-                                onClick={(e) =>
-                                  handleStatusAction(e, run.id, "UNDER_REVIEW")
-                                }
-                                className="cursor-pointer text-amber-600 focus:text-amber-600"
-                              >
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Submit for Review
-                              </DropdownMenuItem>
-                            )}
-
-                            {run.status === "UNDER_REVIEW" && (
-                              <DropdownMenuItem
-                                onClick={(e) =>
-                                  handleStatusAction(e, run.id, "APPROVED")
-                                }
-                                className="cursor-pointer text-emerald-600 focus:text-emerald-600"
-                              >
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Approve Payroll
-                              </DropdownMenuItem>
-                            )}
-
-                            {run.status === "APPROVED" && (
-                              <DropdownMenuItem
-                                onClick={(e) =>
-                                  handleStatusAction(e, run.id, "PAID")
-                                }
-                                className="cursor-pointer text-blue-600 focus:text-blue-600"
-                              >
-                                <DollarSign className="mr-2 h-4 w-4" />
-                                Mark as Paid
-                              </DropdownMenuItem>
-                            )}
-
-                            {run.status === "PAID" && (
-                              <DropdownMenuItem
+                                key={action.targetStatus}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  toast.info("Download feature coming soon");
+                                  if (action.requireReason) {
+                                    setRevertDialog({
+                                      open: true,
+                                      targetStatus: action.targetStatus,
+                                      currentStatus: run.status,
+                                      runId: run.id,
+                                    });
+                                  } else {
+                                    handleStatusUpdate(
+                                      run.id,
+                                      action.targetStatus,
+                                    );
+                                  }
                                 }}
-                                className="cursor-pointer"
+                                className={`cursor-pointer ${action.color}`}
                               >
-                                <Download className="mr-2 h-4 w-4" />
-                                Download Payslips
+                                <action.icon className="mr-2 h-4 w-4" />
+                                {action.label}
                               </DropdownMenuItem>
-                            )}
+                            ))}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -709,7 +985,8 @@ export default function PayrollHistory() {
             <p className="text-sm text-slate-600 order-2 sm:order-1">
               Showing <span className="font-medium">{startItem}</span> to{" "}
               <span className="font-medium">{endItem}</span> of{" "}
-              <span className="font-medium">{pagination.totalItems}</span> results
+              <span className="font-medium">{pagination.totalItems}</span>{" "}
+              results
             </p>
 
             <div className="flex items-center gap-1 order-1 sm:order-2">
@@ -740,16 +1017,21 @@ export default function PayrollHistory() {
               {/* Page numbers */}
               <div className="flex items-center gap-1 mx-2">
                 {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-                  .filter(page => {
+                  .filter((page) => {
                     const current = pagination.currentPage;
-                    return page === 1 || 
-                           page === pagination.totalPages || 
-                           Math.abs(page - current) <= 1;
+                    return (
+                      page === 1 ||
+                      page === pagination.totalPages ||
+                      Math.abs(page - current) <= 1
+                    );
                   })
                   .map((page, index, array) => {
                     if (index > 0 && array[index - 1] !== page - 1) {
                       return (
-                        <span key={`ellipsis-${page}`} className="px-2 text-xs text-slate-400">
+                        <span
+                          key={`ellipsis-${page}`}
+                          className="px-2 text-xs text-slate-400"
+                        >
                           ...
                         </span>
                       );
@@ -757,14 +1039,18 @@ export default function PayrollHistory() {
                     return (
                       <Button
                         key={page}
-                        variant={pagination.currentPage === page ? "default" : "outline"}
+                        variant={
+                          pagination.currentPage === page
+                            ? "default"
+                            : "outline"
+                        }
                         size="icon"
                         onClick={() => handlePageChange(page)}
                         className={cn(
                           "h-8 w-8 p-0 text-xs font-medium",
                           pagination.currentPage === page
                             ? "bg-[#1F3A8A] hover:bg-[#162a63] text-white border-[#1F3A8A]"
-                            : "border-slate-200 hover:bg-slate-100 text-slate-700"
+                            : "border-slate-200 hover:bg-slate-100 text-slate-700",
                         )}
                       >
                         {page}

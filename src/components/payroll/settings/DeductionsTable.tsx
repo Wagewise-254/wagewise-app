@@ -227,7 +227,7 @@ export function OtherDeductionsTable({ companyId }: Props) {
       header: "",
       cell: ({ row }) => {
         const item = row.original;
-        const isLocked = item.code === "MORTGAGE_INTEREST" || item.code === "PRMF" || item.code === "PENSION";
+        const isLocked = item.code === "NOT-HERE";
         
         return (
           <div className="flex items-center gap-1 justify-end">
@@ -649,7 +649,7 @@ function DeductionDialog({ open, onOpenChange, initialData, onSave }: DialogProp
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isLocked && !initialData}
+            disabled={!selectedCode}
             className="bg-[#1F3A8A] hover:bg-[#162a63] px-6 rounded-md h-10 text-sm font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {initialData ? "Update" : "Save"} Deduction

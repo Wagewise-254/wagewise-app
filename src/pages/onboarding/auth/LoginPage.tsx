@@ -1,12 +1,12 @@
 // src/pages/onboarding/auth/LoginPage.tsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/stores/authStore";
-import { showToast } from "@/utils/ToastUtils";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
+import { useAuthStore } from "@/stores/authStore";
 import {
   Card,
   CardContent,
@@ -14,6 +14,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+/*
+const toProperCase = (str: string) => {
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}; */
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -28,19 +32,18 @@ const LoginPage = () => {
     setLoading(true);
     try {
       await login(email, password);
-       const state = useAuthStore.getState();
+      const state = useAuthStore.getState();
       if (state.workspaces.length > 0) {
-        showToast("success", "Login successful! Welcome back.");
+        toast.success("Login successful");
       } else {
-        showToast("info", "Logged in, but no workspace found.");
+        toast.info("Logged in, but no workspace found.");
       }
-      
-      navigate("/dashboard"); // Redirect to a new dashboard route
+      navigate("/dashboard");
     } catch (error: unknown) {
       if (error instanceof Error) {
-        showToast("error", "Error", error.message);
+        toast.error(error.message);
       } else {
-        showToast("error", "An error occurred during login.");
+        toast.error("An error occurred during login.");
       }
     } finally {
       setLoading(false);
@@ -65,13 +68,13 @@ const LoginPage = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="rounded-sm shadow-none border border-slate-200 mt-1" 
+                className="rounded-sm shadow-none border border-slate-200"
                 placeholder="m@example.com"
               />
             </div>
-            <div >
+            <div>
               <Label htmlFor="password">Password</Label>
-              <div className="relative mt-1">
+              <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
@@ -89,9 +92,17 @@ const LoginPage = () => {
                 </button>
               </div>
             </div>
+            <div className="text-right text-sm mt-2">
+            <Link
+              to="/forgot-password"
+              className="text-[#1F3A8A] hover:text-blue-600 hover:underline focus:outline-none"
+            >
+              Forgot Password?
+            </Link>
+          </div>
             <Button
               type="submit"
-              className="w-full cursor-pointer bg-[#7F5EFD] hover:bg-[#6b47d1] rounded-sm shadow-none"
+              className="w-full cursor-pointer bg-[#1F3A8A] hover:bg-[#1F3A7D] rounded-sm shadow-none"
               disabled={loading}
             >
               {loading ? (

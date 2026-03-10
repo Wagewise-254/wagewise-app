@@ -40,9 +40,9 @@ export default function PayrollPreparationOverview() {
             headers: {
               Authorization: `Bearer ${session?.access_token}`,
             },
-          }
+          },
         );
-        
+
         // Handle both response formats
         if (response.data.data && Array.isArray(response.data.data)) {
           setData(response.data.data);
@@ -62,18 +62,18 @@ export default function PayrollPreparationOverview() {
 
   const getInitials = (fullName: string) => {
     return fullName
-      .split(' ')
-      .map(word => word[0])
-      .join('')
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'decimal',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+    return new Intl.NumberFormat("en-US", {
+      style: "decimal",
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2, 
     }).format(value);
   };
 
@@ -81,13 +81,16 @@ export default function PayrollPreparationOverview() {
   const summaryStats = {
     totalGross: data.reduce((sum, item) => sum + (item.grossPay || 0), 0),
     totalNet: data.reduce((sum, item) => sum + (item.netPay || 0), 0),
-    totalDeductions: data.reduce((sum, item) => sum + (item.totalDeductions || 0), 0),
+    totalDeductions: data.reduce(
+      (sum, item) => sum + (item.totalDeductions || 0),
+      0,
+    ),
     employeeCount: data.length,
   };
 
   const columns: ColumnDef<PayrollReportData>[] = [
-    { 
-      accessorKey: "fullName", 
+    {
+      accessorKey: "fullName",
       header: "Employee",
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
@@ -97,32 +100,39 @@ export default function PayrollPreparationOverview() {
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
-            <span className="font-medium text-slate-900">{row.original.fullName}</span>
-            <span className="text-xs text-muted-foreground">{row.original.jobTitle}</span>
+            <span className="font-medium text-slate-900">
+              {row.original.fullName}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {row.original.jobTitle}
+            </span>
           </div>
         </div>
-      )
+      ),
     },
-    { 
-      accessorKey: "department", 
+    {
+      accessorKey: "department",
       header: "Department",
       cell: ({ row }) => (
-        <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
+        <Badge
+          variant="outline"
+          className="bg-slate-50 text-slate-700 border-slate-200"
+        >
           {row.original.department || "Unassigned"}
         </Badge>
-      )
+      ),
     },
-    { 
-      accessorKey: "basicSalary", 
+    {
+      accessorKey: "basicSalary",
       header: "Basic",
       cell: ({ row }) => (
         <div className="font-medium text-slate-700">
           {formatCurrency(row.original.basicSalary)}
         </div>
-      )
+      ),
     },
-    { 
-      accessorKey: "taxedBenefits", 
+    {
+      accessorKey: "taxedBenefits",
       header: "Taxed",
       cell: ({ row }) => (
         <div>
@@ -130,10 +140,10 @@ export default function PayrollPreparationOverview() {
             +{formatCurrency(row.original.taxedBenefits || 0)}
           </span>
         </div>
-      )
+      ),
     },
-    { 
-      accessorKey: "nonTaxedBenefits", 
+    {
+      accessorKey: "nonTaxedBenefits",
       header: "Non-Taxed",
       cell: ({ row }) => (
         <div>
@@ -141,19 +151,19 @@ export default function PayrollPreparationOverview() {
             +{formatCurrency(row.original.nonTaxedBenefits || 0)}
           </span>
         </div>
-      )
+      ),
     },
-    { 
-      accessorKey: "grossPay", 
+    {
+      accessorKey: "grossPay",
       header: "Gross",
       cell: ({ row }) => (
         <div className="font-semibold text-slate-900">
           {formatCurrency(row.original.grossPay)}
         </div>
-      )
+      ),
     },
-    { 
-      accessorKey: "totalDeductions", 
+    {
+      accessorKey: "totalDeductions",
       header: "Deductions",
       cell: ({ row }) => (
         <div>
@@ -161,10 +171,10 @@ export default function PayrollPreparationOverview() {
             -{formatCurrency(row.original.totalDeductions)}
           </span>
         </div>
-      )
+      ),
     },
-    { 
-      accessorKey: "netPay", 
+    {
+      accessorKey: "netPay",
       header: "Net Pay",
       cell: ({ row }) => (
         <div>
@@ -172,7 +182,7 @@ export default function PayrollPreparationOverview() {
             {formatCurrency(row.original.netPay)}
           </span>
         </div>
-      )
+      ),
     },
   ];
 
@@ -184,34 +194,42 @@ export default function PayrollPreparationOverview() {
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
               <span className="text-xs text-slate-500">Gross:</span>
-              <span className="text-sm font-semibold text-slate-900">KES {formatCurrency(summaryStats.totalGross)}</span>
+              <span className="text-sm font-semibold text-slate-900">
+                KES {formatCurrency(summaryStats.totalGross)}
+              </span>
             </div>
-            
+
             <div className="flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
               <span className="text-xs text-emerald-600">Net:</span>
-              <span className="text-sm font-semibold text-emerald-700">KES {formatCurrency(summaryStats.totalNet)}</span>
+              <span className="text-sm font-semibold text-emerald-700">
+                KES {formatCurrency(summaryStats.totalNet)}
+              </span>
             </div>
-            
+
             <div className="flex items-center gap-2 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-100">
               <span className="text-xs text-rose-600">Deductions:</span>
-              <span className="text-sm font-semibold text-rose-700">KES {formatCurrency(summaryStats.totalDeductions)}</span>
+              <span className="text-sm font-semibold text-rose-700">
+                KES {formatCurrency(summaryStats.totalDeductions)}
+              </span>
             </div>
-            
+
             <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100">
               <span className="text-xs text-indigo-600">Employees:</span>
-              <span className="text-sm font-semibold text-indigo-700">{summaryStats.employeeCount}</span>
+              <span className="text-sm font-semibold text-indigo-700">
+                {summaryStats.employeeCount}
+              </span>
             </div>
 
             <div className="ml-auto">
-              <PayrollCompareDialog 
-                currentRunId={payrollRunId!} 
+              <PayrollCompareDialog
+                currentRunId={payrollRunId!}
                 companyId={companyId!}
               />
             </div>
           </div>
         </CardContent>
       </Card>
-      
+
       <PayrollReportTable columns={columns} data={data} loading={loading} />
     </div>
   );

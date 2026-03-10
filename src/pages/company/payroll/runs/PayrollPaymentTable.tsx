@@ -18,6 +18,8 @@ interface BankDetail {
 }
 
 interface PayrollReportData {
+  id: string;
+  employeeId: string;
   fullName: string;
   paymentMethod: string;
   jobTitle: string;
@@ -25,6 +27,20 @@ interface PayrollReportData {
   bankDetails: BankDetail;
   netPay: number;
   reviewStatus: string;
+}
+
+// Define the type for the API response
+interface ApiResponseItem {
+  id?: string;
+  employeeId?: string;
+  fullName: string;
+  paymentMethod: string;
+  jobTitle: string;
+  companyAccountNumber: string;
+  bankDetails: BankDetail;
+  netPay: number;
+  reviewStatus: string;
+ [key: string]: unknown; // This allows other properties while keeping type safety
 }
 
 const toProperCase = (str: string) => {
@@ -42,7 +58,7 @@ export default function PayrollPaymentTable() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(
+        const response = await axios.get<ApiResponseItem[]>(
           `${API_BASE_URL}/company/${companyId}/payroll/runs/${payrollRunId}/prepare`,
           {
             headers: {
@@ -51,8 +67,15 @@ export default function PayrollPaymentTable() {
           },
         );
 
+        // Map the response to include required ID fields
+        const mappedData = response.data.map((item: ApiResponseItem) => ({
+          ...item,
+          id: item.id || `row-${Math.random()}`, // Use actual ID from API or generate fallback
+          employeeId: item.employeeId || item.id || `emp-${Math.random()}`, // Use employeeId if available
+        }));
+
         // FILTER LOGIC: 
-        const approvedPayments = response.data.filter(
+        const approvedPayments = mappedData.filter(
           (item: PayrollReportData) => item.reviewStatus === "APPROVED"
         );
         setData(approvedPayments);
@@ -106,7 +129,7 @@ export default function PayrollPaymentTable() {
       header: "Employee Acc No.",
       cell: ({ row }) => (
         <span className="text-slate-700 font-medium">
-          {row.original.bankDetails.accountNumber || "-"}
+          {row.original.bankDetails?.accountNumber || "-"}
         </span>
       ),
     },
@@ -115,7 +138,7 @@ export default function PayrollPaymentTable() {
       header: "Employee Acc Name",
       cell: ({ row }) => (
         <span className="text-slate-700 font-medium">
-          {row.original.bankDetails.accountName || "-"}
+          {row.original.bankDetails?.accountName || "-"}
         </span>
       ),
     },
@@ -124,7 +147,7 @@ export default function PayrollPaymentTable() {
       header: "Bank Name",
       cell: ({ row }) => (
         <span className="text-slate-700 font-medium">
-          {row.original.bankDetails.bankName || "-"}
+          {row.original.bankDetails?.bankName || "-"}
         </span>
       ),
     },
@@ -133,7 +156,7 @@ export default function PayrollPaymentTable() {
       header: "Branch Name",
       cell: ({ row }) => (
         <span className="text-slate-700 font-medium">
-          {row.original.bankDetails.branchName || "-"}
+          {row.original.bankDetails?.branchName || "-"}
         </span>
       ),
     },
@@ -150,7 +173,11 @@ export default function PayrollPaymentTable() {
 
   return (
     <div className="p-1">
-      <PayrollReportTable columns={columns} data={data} loading={loading} />
+      <PayrollReportTable 
+        columns={columns} 
+        data={data} 
+        loading={loading} 
+      />
     </div>
   );
 }
