@@ -20,7 +20,6 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-//import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -42,7 +41,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-//import { cn } from "@/lib/utils";
 
 import StatutoryReports from "@/components/company/reports/StatutoryReports";
 import PaymentsReports from "@/components/company/reports/PaymentsReports";
@@ -54,6 +52,16 @@ type PayrollRun = {
   payroll_month: string;
   payroll_year: number;
 };
+
+// Define the response type from the API
+/*
+type PayrollRunsResponse = {
+  data: PayrollRun[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  availableYears: number[];
+};*/
 
 const ReportOverview = () => {
   const { session } = useAuthStore();
@@ -75,22 +83,28 @@ const ReportOverview = () => {
 
     try {
       const res = await fetch(
-        `${API_BASE_URL}/company/${companyId}/payroll/runs?status=Completed`,
+        `${API_BASE_URL}/company/${companyId}/payroll/runs?status=DRAFT&limit=100`,
         {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
           },
         },
       );
-      const data = await res.json();
+      const responseData = await res.json();
+      
       if (!res.ok) {
-        throw new Error(data.error || "Failed to fetch payroll runs.");
+        throw new Error(responseData.error || "Failed to fetch payroll runs.");
       }
-      setPayrollRuns(data);
+
+      // Extract the data array from the response
+      // The API returns { data: [...], totalItems, totalPages, currentPage, availableYears }
+      const runsData = responseData.data || [];
+      
+      setPayrollRuns(runsData);
 
       // Auto-select first run if available
-      if (data.length > 0) {
-        setSelectedRun(data[0]);
+      if (runsData.length > 0) {
+        setSelectedRun(runsData[0]);
       }
     } catch (error: unknown) {
       console.error(error);
