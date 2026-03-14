@@ -115,10 +115,16 @@ const AppRouterWrapper = () => {
             <Route index element={<Navigate to="modules" replace />} />
             <Route path="modules" element={<ModuleDashboard />} />
             <Route element={<EmployeeLayout />}>
-             <Route index element={<EmployeeSection />} />
+              <Route index element={<EmployeeSection />} />
               <Route path="employees" element={<EmployeeSection />} />
-              <Route path="employees/non-active" element={<NonActiveEmployees />} />
-              <Route path="employees/terminated" element={<TerminatedEmployees />} />
+              <Route
+                path="employees/non-active"
+                element={<NonActiveEmployees />}
+              />
+              <Route
+                path="employees/terminated"
+                element={<TerminatedEmployees />}
+              />
             </Route>
             <Route path="employees/add-employee" element={<AddEmployees />} />
             {/* Employee details */}
@@ -163,14 +169,17 @@ const AppRouterWrapper = () => {
             <Route path="deductions/assign" element={<AssignDeductions />} />
             <Route path="payroll/setup" element={<PayrollSetup />} />
             {/**Report specific dashboards */}
-            
+
             <Route path="reports" element={<ReportLayout />}>
               <Route index element={<ReportOverview />} />
               <Route path="overview" element={<ReportOverview />} />
               <Route path="annual" element={<AnnualReports />} />
               <Route path="p9a" element={<P9AReports />} />
               <Route path="report-preview" element={<ReportPreviewPage />} />
-              <Route path="payroll-run/:payrollRunId" element={<PayrollRunReports />} />
+              <Route
+                path="payroll-run/:payrollRunId"
+                element={<PayrollRunReports />}
+              />
             </Route>
             {/**Report specific dashboards */}
             <Route path="settings" element={<SettingsLayout />}>

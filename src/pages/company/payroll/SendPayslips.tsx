@@ -150,23 +150,29 @@ export default function SendPayslip() {
     }
 
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/company/${companyId}/payroll/runs?status=Completed`,
+       const res = await fetch(
+        `${API_BASE_URL}/company/${companyId}/payroll/runs?status=DRAFT&limit=100`,
         {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
           },
         },
       );
-      const data = await res.json();
+      const responseData = await res.json();
+      
       if (!res.ok) {
-        throw new Error(data.error || "Failed to fetch payroll runs.");
+        throw new Error(responseData.error || "Failed to fetch payroll runs.");
       }
-      setPayrollRuns(data);
+
+      // Extract the data array from the response
+      // The API returns { data: [...], totalItems, totalPages, currentPage, availableYears }
+      const runsData = responseData.data || [];
+      
+      setPayrollRuns(runsData);
 
       // Auto-select first run if available
-      if (data.length > 0 && !selectedRun) {
-        setSelectedRun(data[0]);
+      if (runsData.length > 0) {
+        setSelectedRun(runsData[0]);
       }
     } catch (error: unknown) {
       console.error(error);
@@ -174,7 +180,7 @@ export default function SendPayslip() {
     } finally {
       setLoading(false);
     }
-  }, [companyId, session, selectedRun]);
+  }, [companyId, session]);
 
   // Fetch payroll data when selected run changes
   const fetchPayrollData = useCallback(async () => {

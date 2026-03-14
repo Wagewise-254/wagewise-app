@@ -84,11 +84,6 @@ export const CompanyCard = ({ company }: CompanyCardProps) => {
                     </DropdownMenuItem>
                   </Link>
                 )}
-                 <Link to={`/company/${company.id}/payroll/setup`}>
-                  <DropdownMenuItem className="cursor-pointer">
-                    Payroll setup
-                  </DropdownMenuItem>
-                </Link>
               </DropdownMenuContent>) : (
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem className="cursor-pointer">

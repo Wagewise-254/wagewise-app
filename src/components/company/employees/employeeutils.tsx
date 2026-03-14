@@ -23,6 +23,12 @@ import {
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
+/*
+interface FloatingFieldContextType {
+  isFocused: boolean;
+  setIsFocused: (focused: boolean) => void;
+  hasValue: boolean;
+}*/
 
 interface FloatingFieldProps {
   label: string;
@@ -31,6 +37,7 @@ interface FloatingFieldProps {
   type?: React.HTMLInputTypeAttribute;
   required?: boolean;
   error?: string;
+  disabled?: boolean;
 }
 
 export interface SearchableSelectOption {
@@ -215,29 +222,57 @@ export const FloatingField: React.FC<FloatingFieldProps> = ({
   type = "text",
   required = false,
   error,
+   disabled = false,
 }) => {
+
+  const [isFocused, setIsFocused] = useState(false);
+  
+  const hasValue = value !== "" && value !== null && value !== undefined;
+  const isDateField = type === "date";
+  
+  // For date fields, we want the label to always float up
+  // because the input always shows something (mm/dd/yyyy)
+  const shouldFloat = hasValue || isFocused || isDateField;
   return (
     <div className="relative mb-6">
-      <div
+       <div
         className={cn(
           "relative border-b-2 transition-colors",
           error
             ? "border-rose-500"
-            : "border-slate-200 focus-within:border-blue-600",
+            : isFocused
+              ? "border-blue-600"
+              : "border-slate-200",
+          disabled && "opacity-50 cursor-not-allowed"
         )}
       >
         <Input
-          type={type}
+         type={type}
           value={value}
           onChange={onChange}
-          placeholder=" "
-          className="peer h-10 px-0 bg-transparent border-none shadow-none focus-visible:ring-0"
-        />
-        <Label
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          disabled={disabled}
           className={cn(
-            "absolute left-0 top-2 text-slate-400 transition-all cursor-text",
-            "peer-focus:-top-3 peer-focus:text-xs peer-focus:text-blue-600",
-            value && "-top-3 text-xs text-slate-500",
+            "peer h-10 px-0 bg-transparent border-none shadow-none focus-visible:ring-0",
+            // Custom styling for date inputs
+            isDateField && [
+              // Hide the placeholder text when empty and not focused
+              !hasValue && !isFocused && "text-transparent",
+              // Style the date picker icon
+              "[&::-webkit-calendar-picker-indicator]:opacity-50",
+              "[&::-webkit-calendar-picker-indicator]:hover:opacity-100",
+              "[&::-webkit-calendar-picker-indicator]:cursor-pointer",
+            ],
+          )}
+        />
+       <Label
+          className={cn(
+            "absolute left-0 transition-all cursor-text pointer-events-none",
+            shouldFloat ? "-top-3 text-xs" : "top-2 text-slate-400",
+            isFocused && "text-blue-600",
+            !isFocused && hasValue && "text-slate-500",
+            disabled && "opacity-50",
           )}
         >
           {label} {required && <span className="text-rose-500">*</span>}

@@ -30,6 +30,7 @@ import {
   Mail,
   ChevronDown
 } from "lucide-react";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 const CompanyTopBar: React.FC = () => {
   const { user, logout } = useAuthStore();
@@ -126,6 +127,9 @@ const CompanyTopBar: React.FC = () => {
               </span>
             </div>
 
+            {/* Notification Bell */}
+            <NotificationBell />
+            
             {/* Feedback dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -149,7 +153,7 @@ const CompanyTopBar: React.FC = () => {
                     className="flex items-center gap-2"
                   >
                     <Mail className="h-4 w-4" />
-                    <span>wagedesk@gmail.com</span>
+                    <span>wagewise.dev@gmail.com</span>
                   </a>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -175,7 +179,7 @@ const CompanyTopBar: React.FC = () => {
                     className="flex items-center gap-2"
                   >
                     <Mail className="h-4 w-4" />
-                    <span>wagedesk@gmail.com</span>
+                    <span>wagewise.dev@gmail.com</span>
                   </a>
                 </DropdownMenuItem>
               </DropdownMenuContent>

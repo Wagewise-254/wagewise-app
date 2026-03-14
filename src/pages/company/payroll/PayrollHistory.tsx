@@ -1,6 +1,6 @@
 // src/pages/company/payroll/PayrollHistory.tsx
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ChevronLeft,
@@ -70,9 +70,17 @@ import { useAuthStore } from "@/stores/authStore";
 import { API_BASE_URL } from "@/config";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ReviewProgress } from "@/components/payroll/runs/ReviewProgress";
 
 // Types - Update to include all possible statuses
-type PayrollStatus = "DRAFT" | "UNDER_REVIEW" | "APPROVED" | "LOCKED" | "PAID" | "REJECTED" | "CANCELLED";
+type PayrollStatus =
+  | "DRAFT"
+  | "UNDER_REVIEW"
+  | "APPROVED"
+  | "LOCKED"
+  | "PAID"
+  | "REJECTED"
+  | "CANCELLED";
 
 interface PayrollRun {
   id: string;
@@ -84,6 +92,15 @@ interface PayrollRun {
   status: PayrollStatus;
   created_at: string;
   updated_at: string;
+  review_stats?: {
+    total_employees: number;
+    approved: number;
+    pending: number;
+    rejected: number;
+    completion_percentage: number;
+    all_approved?: boolean;
+    any_rejected?: boolean;
+  };
 }
 
 interface PayrollFilters {
@@ -373,11 +390,14 @@ export default function PayrollHistory() {
   const { companyId } = useParams<{ companyId: string }>();
   const session = useAuthStore((state) => state.session);
   const token = session?.access_token;
+  // Add a ref to track if we've already fetched reviews
+  const hasFetchedReviews = useRef(false);
 
   // State
   const [payrolls, setPayrolls] = useState<PayrollRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false)
   const [filters, setFilters] = useState<PayrollFilters>({
     status: "all",
     year: "all",
@@ -454,6 +474,9 @@ export default function PayrollHistory() {
         totalPages,
         totalItems,
       }));
+
+      // Reset the review fetch flag when new payroll data comes in
+      hasFetchedReviews.current = false;
     } catch (error) {
       console.error("Failed to fetch payrolls:", error);
       toast.error("Failed to load payroll history. Please try again.");
@@ -463,6 +486,119 @@ export default function PayrollHistory() {
       setIsFiltering(false);
     }
   }, [companyId, token, pagination.currentPage, pagination.pageSize, filters]);
+
+
+ // Update the fetchReviewSummaries function
+  const fetchReviewSummaries = useCallback(async (runIds: string[], forceRefresh = false) => {
+    // Skip if no runIds
+    if (!companyId || !token || runIds.length === 0) return;
+    
+    // Skip if we've already fetched reviews and this isn't a force refresh
+    if (hasFetchedReviews.current && !forceRefresh) {
+      console.log('Skipping review fetch - already fetched');
+      return;
+    }
+
+    setReviewLoading(true);
+  
+  // Define the expected response type
+  interface ReviewSummariesResponse {
+    summaries: {
+      [key: string]: {
+        total_employees: number;
+        approved: number;
+        pending: number;
+        rejected: number;
+        completion_percentage: number;
+        all_approved?: boolean;
+        any_rejected?: boolean;
+      };
+    };
+  }
+  
+  const BATCH_SIZE = 5;
+  const batches = [];
+  
+  for (let i = 0; i < runIds.length; i += BATCH_SIZE) {
+    batches.push(runIds.slice(i, i + BATCH_SIZE));
+  }
+  
+  try {
+    const allSummaries: ReviewSummariesResponse['summaries'] = {};
+    
+    for (const batch of batches) {
+      const response = await fetch(
+        `${API_BASE_URL}/company/${companyId}/payroll/review-summaries`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ runIds: batch }),
+        }
+      );
+      
+      if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.warn(`Failed to fetch batch: ${errorData.error || 'Unknown error'}`);
+          continue; // Continue with other batches instead of throwing
+        }
+        
+        const data = await response.json() as ReviewSummariesResponse;
+        Object.assign(allSummaries, data.summaries);
+      }
+    
+    // Update payrolls with review stats
+    setPayrolls(prev => prev.map(run => ({
+      ...run,
+      review_stats: allSummaries[run.id] || {
+        total_employees: 0,
+        approved: 0,
+        pending: 0,
+        rejected: 0,
+        completion_percentage: 0,
+        all_approved: false,
+        any_rejected: false
+      }
+    })));
+
+    // Mark as fetched
+      hasFetchedReviews.current = true;
+
+ } catch (error) {
+      console.error('Error fetching review summaries:', error);
+      toast.error('Failed to load review progress. You can click refresh to try again.');
+    } finally {
+      setReviewLoading(false);
+    }
+  }, [companyId, token]);
+
+  // Manual refresh function
+  const handleRefreshReviews = useCallback(() => {
+    if (payrolls.length > 0) {
+      hasFetchedReviews.current = false; // Reset the flag
+      fetchReviewSummaries(payrolls.map((r) => r.id), true); // Force refresh
+    }
+  }, [payrolls, fetchReviewSummaries]);
+
+   // Create a stable reference for run IDs
+  const runIds = useMemo(() => {
+    return payrolls.map((r) => r.id);
+  }, [payrolls]);
+
+  // Call it ONCE after fetching payrolls, with proper dependencies
+  useEffect(() => {
+    // Only fetch if we have payrolls and haven't fetched before
+    if (payrolls.length > 0 && !hasFetchedReviews.current) {
+      // Add a small delay to prevent race conditions
+      const timer = setTimeout(() => {
+        fetchReviewSummaries(runIds);
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [runIds, fetchReviewSummaries, payrolls.length]); // Remove payrolls from dependencies
 
   useEffect(() => {
     fetchPayrolls();
@@ -521,11 +657,24 @@ export default function PayrollHistory() {
         timestamp: new Date(),
       });
 
-      fetchPayrolls();
-      setRevertDialog({ open: false, targetStatus: null, currentStatus: null, runId: null });
+       // Refresh data after status update
+      await fetchPayrolls();
+      // Reset review flag so reviews will be fetched again
+      hasFetchedReviews.current = false;
+
+      setRevertDialog({
+        open: false,
+        targetStatus: null,
+        currentStatus: null,
+        runId: null,
+      });
     } catch (error) {
       console.error("Failed to update status:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to update payroll status");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update payroll status",
+      );
     } finally {
       setActionLoading(false);
     }
@@ -533,17 +682,17 @@ export default function PayrollHistory() {
 
   const handleSyncRun = async (e: React.MouseEvent, runId: string) => {
     e.stopPropagation();
-    
-    const run = payrolls.find(r => r.id === runId);
+
+    const run = payrolls.find((r) => r.id === runId);
     if (!run) return;
-    
+
     // Check if sync is allowed
     const blockedStatuses = ["APPROVED", "LOCKED", "PAID"];
     if (blockedStatuses.includes(run.status)) {
       toast.error(`Cannot resync payroll with status: ${run.status}`);
       return;
     }
-    
+
     try {
       setActionLoading(true);
       const response = await fetch(
@@ -560,16 +709,20 @@ export default function PayrollHistory() {
           }),
         },
       );
-      
+
       if (!response.ok) {
         throw new Error("Failed to resync payroll");
       }
-      
+
       toast.success("Payroll resynchronized successfully");
-      fetchPayrolls();
+     await fetchPayrolls();
+      // Reset review flag so reviews will be fetched again
+      hasFetchedReviews.current = false;
     } catch (error) {
       console.error("Sync error:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to resync payroll");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to resync payroll",
+      );
     } finally {
       setActionLoading(false);
     }
@@ -580,7 +733,7 @@ export default function PayrollHistory() {
     await handleStatusUpdate(
       revertDialog.runId,
       revertDialog.targetStatus,
-      reason
+      reason,
     );
   };
 
@@ -656,9 +809,7 @@ export default function PayrollHistory() {
       {/* Revert Dialog */}
       <RevertDialog
         open={revertDialog.open}
-        onOpenChange={(open) => 
-          setRevertDialog({ ...revertDialog, open })
-        }
+        onOpenChange={(open) => setRevertDialog({ ...revertDialog, open })}
         onConfirm={handleRevertConfirm}
         currentStatus={revertDialog.currentStatus}
         targetStatus={revertDialog.targetStatus}
@@ -692,13 +843,30 @@ export default function PayrollHistory() {
             </p>
           </div>
         </div>
-        <Button
-          onClick={handleRunNewPayroll}
-          className="bg-[#1F3A8A] hover:bg-[#162a63] cursor-pointer rounded-md h-10 px-4 text-sm font-medium transition-all hover:-translate-y-0.5 w-full sm:w-auto"
-        >
-          <DollarSign className="mr-2 h-4 w-4" />
-          Run New Payroll
-        </Button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Add Refresh Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefreshReviews}
+            disabled={reviewLoading || payrolls.length === 0}
+            className="h-10 px-3 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          >
+            {reviewLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Refresh Reviews
+          </Button>
+          <Button
+            onClick={handleRunNewPayroll}
+            className="bg-[#1F3A8A] hover:bg-[#162a63] cursor-pointer rounded-md h-10 px-4 text-sm font-medium transition-all hover:-translate-y-0.5"
+          >
+            <DollarSign className="mr-2 h-4 w-4" />
+            Run New Payroll
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -829,6 +997,10 @@ export default function PayrollHistory() {
                 <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Status
                 </TableHead>
+                {/* New Review Status Column */}
+                <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-40">
+                  Review Progress
+                </TableHead>
                 <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-center pr-6">
                   Actions
                 </TableHead>
@@ -885,6 +1057,19 @@ export default function PayrollHistory() {
                         >
                           {run.status.replace("_", " ")}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <ReviewProgress
+                          stats={
+                            run.review_stats || {
+                              total_employees: 0,
+                              approved: 0,
+                              pending: 0,
+                              rejected: 0,
+                              completion_percentage: 0,
+                            }
+                          }
+                        />
                       </TableCell>
                       <TableCell
                         className="text-center pr-6"

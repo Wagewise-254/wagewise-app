@@ -61,7 +61,10 @@ export function PayrollReportTable<TData extends SelectableRow, TValue>({
   const [globalFilter, setGlobalFilter] = useState("");
   const [internalRowSelection, setInternalRowSelection] = useState<RowSelectionState>({});
   const [pageSize, setPageSize] = useState(pageSizeOptions[0]);
-
+   const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: pageSizeOptions[0],
+  });
   const hasRowSelection = rowSelection !== undefined && onRowSelectionChange !== undefined;
   const currentRowSelection = hasRowSelection ? rowSelection : internalRowSelection;
   const handleRowSelectionChange = hasRowSelection ? onRowSelectionChange : setInternalRowSelection;
@@ -77,19 +80,27 @@ export function PayrollReportTable<TData extends SelectableRow, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     enableRowSelection: hasRowSelection,
     onRowSelectionChange: handleRowSelectionChange,
+     onPaginationChange: setPagination,
     getRowId: (row: TData) => row.id || row.reviewId || row.employeeId || crypto.randomUUID(),
     ...options,
     state: {
       sorting,
       globalFilter,
       rowSelection: currentRowSelection,
-      pagination: {
-        pageIndex: 0,
-        pageSize,
-      },
+      pagination,
       ...options.state,
     },
   });
+
+  // Update pageSize when the select changes
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setPagination(prev => ({
+      ...prev,
+      pageSize: newPageSize,
+      pageIndex: 0, // Reset to first page when changing page size
+    }));
+  };
 
   // Get all filtered row IDs for "select all across pages"
   const allFilteredRowIds = table.getFilteredRowModel().rows.map(row => row.id);
@@ -147,9 +158,9 @@ export function PayrollReportTable<TData extends SelectableRow, TValue>({
           {/* Page size selector */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500">Show</span>
-            <Select
+             <Select
               value={pageSize.toString()}
-              onValueChange={(value) => setPageSize(Number(value))}
+              onValueChange={(value) => handlePageSizeChange(Number(value))}
             >
               <SelectTrigger className="h-8 w-16 text-xs border-slate-200 bg-slate-50/50 rounded-sm shadow-none">
                 <SelectValue />
