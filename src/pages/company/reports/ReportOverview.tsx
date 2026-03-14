@@ -83,7 +83,7 @@ const ReportOverview = () => {
 
     try {
       const res = await fetch(
-        `${API_BASE_URL}/company/${companyId}/payroll/runs?status=DRAFT&limit=100`,
+        `${API_BASE_URL}/company/${companyId}/payroll/runs?status=all&limit=100`,
         {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
