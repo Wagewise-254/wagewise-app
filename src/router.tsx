@@ -57,6 +57,7 @@ import NotFound from "./pages/NotFound.tsx";
 import ForgotPasswordPage from "./pages/onboarding/resetPassword/ForgotPasswordPage.tsx";
 import VerifyCodePage from "./pages/onboarding/resetPassword/VerifyCodePage.tsx";
 import ResetPasswordPage from "./pages/onboarding/resetPassword/ResetPasswordPage.tsx";
+import NotificationsPage from "./pages/company/notifications/NotificationsPage";
 
 const ProtectedRoute = () => {
   const session = useAuthStore((state) => state.session);
@@ -114,6 +115,7 @@ const AppRouterWrapper = () => {
           <Route path="/company/:companyId" element={<ModuleLayout />}>
             <Route index element={<Navigate to="modules" replace />} />
             <Route path="modules" element={<ModuleDashboard />} />
+            <Route path="notifications" element={<NotificationsPage />} />
             <Route element={<EmployeeLayout />}>
               <Route index element={<EmployeeSection />} />
               <Route path="employees" element={<EmployeeSection />} />

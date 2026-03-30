@@ -4,7 +4,7 @@
   "description": "An application for simplifiying payroll processes.",
   "author": "Wage",
   "license": "MIT",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
