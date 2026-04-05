@@ -3,7 +3,7 @@ import OfflineBanner from "@/components/common/offlinebanner";
 import { useParams, Link } from "react-router-dom";
 import { useAuthStore, Company } from "@/stores/authStore";
 import { Card } from "@/components/ui/card";
-import CompanyInactiveBanner from "@/components/common/companyInactiveBanner";
+import CompanyInactiveBanner from "@/components/common/CompanyInactiveBanner";
 import { Users, Wallet, BarChart3, Settings, ArrowUpRight } from "lucide-react";
 const ModuleDashboard = () => {
   const { activeWorkspace } = useAuthStore();
