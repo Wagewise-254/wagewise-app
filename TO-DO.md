@@ -1,0 +1,21 @@
+##v3.3.0-alpha.1
+-[ ] Add the Main sidebar
+-[ ] Add Company switch in the dropdown and create company
+-[ ] Add period check and employee preview with manual override and resync
+-[ ] Add a global seacrh function for Employee, reports and payrolls
+-[ ] Improve the payroll flow
+-[ ] Improve the payroll approval page
+-[ ] Add bulk payslip send in the payslip section with tabs of who has received
+-[ ] Improve the employee section table with icons
+-[ ] Add  Export employee excel
+-[ ] Add filters and sorting 
+-[ ] Improve the editing section
+-[ ] Implemet assigning allowance and deduction to the selected employee
+-[ ] Improve the payroll history
+-[ ] Move the reviewers to settings
+-[ ] Improve the allowance and deduction defining and assigning section
+-[ ] Improve the tables like employees
+-[ ] Improve the import and add an export function for all/ded
+-[ ] Add filtering and sorting
+-[ ] Improve the Account setting section
+ 

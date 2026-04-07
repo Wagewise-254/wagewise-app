@@ -1,4 +1,4 @@
-import CompanyTopBar from '@/components/company/layout/companyTopBar';
+import CompanyTopBar from '@/components/company/layout/CompanyTopBar';
 import { Outlet } from 'react-router-dom';
 import OfflineBanner from '@/components/common/offlinebanner';
 

@@ -16,6 +16,7 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 
 let mainWindow: BrowserWindow | null;
+const isBeta = app.getVersion().includes('beta') || app.getVersion().includes('alpha');
 
 const createMainWindow = () => {
   mainWindow = new BrowserWindow({
@@ -32,8 +33,6 @@ const createMainWindow = () => {
   });
 
     mainWindow.maximize();
-  // Hide menu bar completely
-  //mainWindow.setMenu(null); 
 
   // Test active push message to Renderer-process.
   mainWindow.webContents.on('did-finish-load', () => {
@@ -67,6 +66,7 @@ const setupAutoUpdater = () => {
   autoUpdater.logger = log;
 
   autoUpdater.autoDownload = false;
+   autoUpdater.allowPrerelease = isBeta;
 
   autoUpdater.on('update-available', (info) => {
     console.log('⬆️ Update available:', info.version);
