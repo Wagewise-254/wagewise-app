@@ -21,6 +21,9 @@ const isBeta = app.getVersion().includes('beta') || app.getVersion().includes('a
 const createMainWindow = () => {
   mainWindow = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, '/icons/favicon.ico'),
+    //titleBarStyle: 'hidden',
+
+     autoHideMenuBar: true,
     width: 1200,
     height: 800,
     show: false, // Prevent flashing on startup

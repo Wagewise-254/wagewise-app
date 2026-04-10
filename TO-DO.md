@@ -1,6 +1,6 @@
 ##v3.3.0-alpha.1
 -[ ] Add the Main sidebar
--[ ] Add Company switch in the dropdown and create company
+-[x] Add Company switch in the dropdown and create company
 -[ ] Add period check and employee preview with manual override and resync
 -[ ] Add a global seacrh function for Employee, reports and payrolls
 -[ ] Improve the payroll flow
