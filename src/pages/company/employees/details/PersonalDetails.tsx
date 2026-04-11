@@ -6,7 +6,9 @@ import {
   Fingerprint,
   Calendar,
   Heart,
-  Globe,
+  Building2,
+  BadgeCheck,
+  DollarSign,
 } from "lucide-react";
 import { SectionDetailsHeader } from "@/components/company/employees/employeeutils";
 import { useOutletContext } from "react-router-dom";
@@ -42,127 +44,7 @@ export default function PersonalDetails() {
 
   return (
     <div className="space-y-12">
-      <div className="flex justify-between items-start">
-        <div className="space-y-10 flex-1">
-          {/* Section 1: Identity */}
-          <section>
-            <SectionDetailsHeader title="Identity" icon={User} />
-            <div className="grid grid-cols-3 gap-8">
-              <DetailItem
-                label="Full Name"
-                value={`${employee.first_name} ${employee.middle_name || ""} ${employee.last_name}`.trim()}
-              />
-              <DetailItem label="Gender" value={employee.gender || "—"} />
-              <DetailItem
-                label="Date of Birth"
-                value={formatDate(employee.date_of_birth)}
-              />
-              <DetailItem
-                label="Marital Status"
-                value={employee.marital_status || "—"}
-              />
-              <DetailItem
-                label="Citizenship"
-                value={employee.citizenship || "—"}
-              />
-              <DetailItem
-                label="Blood Group"
-                value={employee.blood_group || "—"}
-              />
-            </div>
-          </section>
-
-          {/* Section 2: Contact */}
-          <section>
-            <SectionDetailsHeader title="Contact Information" icon={Contact} />
-            <div className="grid grid-cols-3 gap-8">
-              <DetailItem label="Phone Number" value={employee.phone || "—"} />
-              <DetailItem label="Email" value={employee.email || "—"} />
-            </div>
-          </section>
-
-          {/* Section 3: Statutory IDs */}
-          <section>
-            <SectionDetailsHeader
-              title="Statutory Identifiers"
-              icon={Fingerprint}
-            />
-            <div className="grid grid-cols-3 gap-8">
-              <DetailItem
-                label="National ID / Passport"
-                value={employee.id_number || "—"}
-                hint={employee.id_type || ""}
-              />
-              <DetailItem label="KRA PIN" value={employee.krapin || "—"} />
-              <DetailItem
-                label="NSSF Number"
-                value={employee.nssf_number || "—"}
-              />
-              <DetailItem
-                label="SHIF Number"
-                value={employee.shif_number || "—"}
-              />
-            </div>
-          </section>
-
-          {/* Section 4: Employment Details */}
-          <section>
-            <SectionDetailsHeader title="Employment Details" icon={Calendar} />
-            <div className="grid grid-cols-3 gap-8">
-              <DetailItem
-                label="Hire Date"
-                value={formatDate(employee.hire_date)}
-              />
-              <DetailItem label="Job Type" value={employee.job_type || "—"} />
-              <DetailItem
-                label="Employee Type"
-                value={employee.employee_type || "—"}
-              />
-            </div>
-          </section>
-
-          {/* Section 5: Disability Status */}
-          <section>
-            <SectionDetailsHeader title="Disability Status" icon={Heart} />
-            <div className="grid grid-cols-3 gap-8">
-              <DetailItem
-                label="Has Disability"
-                value={employee.has_disability ? "Yes" : "No"}
-              />
-            </div>
-          </section>
-
-          {/* Section 6: Salary Information */}
-          <section>
-            <SectionDetailsHeader title="Salary Information" icon={Globe} />
-            <div className="grid grid-cols-3 gap-8">
-              <DetailItem
-                label="Basic Salary"
-                value={
-                  employee.salary
-                    ? `KES ${employee.salary.toLocaleString()}`
-                    : "—"
-                }
-              />
-              <DetailItem
-                label="Pays PAYE"
-                value={employee.pays_paye ? "Yes" : "No"}
-              />
-              <DetailItem
-                label="Pays NSSF"
-                value={employee.pays_nssf ? "Yes" : "No"}
-              />
-              <DetailItem
-                label="Pays SHIF"
-                value={employee.pays_shif ? "Yes" : "No"}
-              />
-              <DetailItem
-                label="Pays Housing Levy"
-                value={employee.pays_housing_levy ? "Yes" : "No"}
-              />
-            </div>
-          </section>
-        </div>
+      <div className="flex justify-end">
         <Button
           onClick={() => setIsEditDialogOpen(true)}
           className="flex bg-transparent items-center cursor-pointer gap-2 px-3 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-600 rounded-md hover:bg-indigo-50 transition-all shadow-none"
@@ -177,14 +59,172 @@ export default function PersonalDetails() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="lucide lucide-pencil"
           >
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
             <path d="m15 5 4 4" />
           </svg>
-          Edit
+          Edit All
         </Button>
       </div>
+
+      <div className="space-y-10">
+        {/* Section 1: Identity */}
+        <section>
+          <SectionDetailsHeader title="Identity" icon={User} />
+          <div className="grid grid-cols-3 gap-8">
+            <DetailItem
+              label="Full Name"
+              value={`${employee.first_name} ${employee.middle_name || ""} ${employee.last_name}`.trim()}
+            />
+            <DetailItem label="Gender" value={employee.gender || "—"} />
+            <DetailItem
+              label="Date of Birth"
+              value={formatDate(employee.date_of_birth)}
+            />
+            <DetailItem
+              label="Marital Status"
+              value={employee.marital_status || "—"}
+            />
+            <DetailItem
+              label="Citizenship"
+              value={employee.citizenship || "—"}
+            />
+            <DetailItem
+              label="Blood Group"
+              value={employee.blood_group || "—"}
+            />
+          </div>
+        </section>
+
+        {/* Section 2: Contact */}
+        <section>
+          <SectionDetailsHeader title="Contact Information" icon={Contact} />
+          <div className="grid grid-cols-3 gap-8">
+            <DetailItem label="Phone Number" value={employee.phone || "—"} />
+            <DetailItem label="Email" value={employee.email || "—"} />
+          </div>
+        </section>
+
+        {/* Section 3: Statutory IDs */}
+        <section>
+          <SectionDetailsHeader
+            title="Statutory Identifiers"
+            icon={Fingerprint}
+          />
+          <div className="grid grid-cols-3 gap-8">
+            <DetailItem
+              label="National ID / Passport"
+              value={employee.id_number || "—"}
+              hint={employee.id_type || ""}
+            />
+            <DetailItem label="KRA PIN" value={employee.krapin || "—"} />
+            <DetailItem
+              label="NSSF Number"
+              value={employee.nssf_number || "—"}
+            />
+            <DetailItem
+              label="SHIF Number"
+              value={employee.shif_number || "—"}
+            />
+          </div>
+        </section>
+
+        {/* Section 4: Employment Organization */}
+        <section>
+          <SectionDetailsHeader
+            title="Employment Organization"
+            icon={Building2}
+          />
+          <div className="grid grid-cols-3 gap-8">
+            <DetailItem
+              label="Department"
+              value={employee.departments?.name || "—"}
+            />
+            <DetailItem
+              label="Sub Department"
+              value={employee.sub_departments?.name || "—"}
+            />
+            <DetailItem
+              label="Job Title"
+              value={employee.job_titles?.title || "—"}
+            />
+            <DetailItem label="Job Type" value={employee.job_type || "—"} />
+            <DetailItem
+              label="Employee Type"
+              value={employee.employee_type || "—"}
+            />
+            <DetailItem label="Reports To" value={employee.reports_to || "—"} />
+          </div>
+        </section>
+
+        {/* Section 5: Employment Timeline */}
+        <section>
+          <SectionDetailsHeader title="Employment Timeline" icon={Calendar} />
+          <div className="grid grid-cols-3 gap-8">
+            <DetailItem
+              label="Hire Date"
+              value={formatDate(employee.hire_date)}
+            />
+            <DetailItem
+              label="Status Effective Date"
+              value={formatDate(employee.employee_status_effective_date)}
+            />
+          </div>
+        </section>
+
+        {/* Section 8: Salary Information */}
+        <section>
+          <SectionDetailsHeader title="Salary Information" icon={DollarSign} />
+          <div className="grid grid-cols-3 gap-8">
+            <DetailItem
+              label="Basic Salary"
+              value={`KSh ${employee.salary?.toLocaleString() || "—"}`}
+            />
+          </div>
+        </section>
+
+        {/* Section 6: Statutory Deductions Setup */}
+        <section>
+          <SectionDetailsHeader
+            title="Statutory Deductions"
+            icon={BadgeCheck}
+          />
+          <div className="grid grid-cols-3 gap-8">
+            <DetailItem
+              label="Pays PAYE"
+              value={employee.pays_paye ? "Yes" : "No"}
+            />
+            <DetailItem
+              label="Pays NSSF"
+              value={employee.pays_nssf ? "Yes" : "No"}
+            />
+            <DetailItem
+              label="Pays SHIF"
+              value={employee.pays_shif ? "Yes" : "No"}
+            />
+            <DetailItem
+              label="Pays Housing Levy"
+              value={employee.pays_housing_levy ? "Yes" : "No"}
+            />
+            <DetailItem
+              label="Pays HELB"
+              value={employee.pays_helb ? "Yes" : "No"}
+            />
+          </div>
+        </section>
+
+        {/* Section 7: Disability Status */}
+        <section>
+          <SectionDetailsHeader title="Disability Status" icon={Heart} />
+          <div className="grid grid-cols-3 gap-8">
+            <DetailItem
+              label="Has Disability"
+              value={employee.has_disability ? "Yes" : "No"}
+            />
+          </div>
+        </section>
+      </div>
+
       <EditPersonalDetailsDialog
         employee={employee}
         isOpen={isEditDialogOpen}

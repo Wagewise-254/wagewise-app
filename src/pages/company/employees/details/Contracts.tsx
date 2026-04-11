@@ -13,7 +13,7 @@ interface OutletContext {
 }
 
 export default function ContractDetails() {
-   const { employee, refetch } = useOutletContext<OutletContext>();
+  const { employee, refetch } = useOutletContext<OutletContext>();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const formatDate = (dateString: string | null) => {
@@ -46,16 +46,20 @@ export default function ContractDetails() {
         <p className="text-slate-500 text-sm mb-6">
           This employee doesn't have any contracts.
         </p>
+        <Button
+          onClick={() => setIsEditDialogOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          Add Contract
+        </Button>
       </div>
     );
   }
 
-  const StatusIcon =
-    activeContract.contract_status === "ACTIVE" ? CheckCircle : XCircle;
-  const statusColor =
-    activeContract.contract_status === "ACTIVE"
-      ? "text-green-600 bg-green-50"
-      : "text-red-600 bg-red-50";
+  const StatusIcon = activeContract.contract_status === "ACTIVE" ? CheckCircle : XCircle;
+  const statusColor = activeContract.contract_status === "ACTIVE"
+    ? "text-green-600 bg-green-50"
+    : "text-red-600 bg-red-50";
 
   return (
     <section className="space-y-8">
@@ -75,12 +79,11 @@ export default function ContractDetails() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="lucide lucide-pencil"
           >
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
             <path d="m15 5 4 4" />
           </svg>
-          Edit
+          Edit Contract
         </Button>
       </div>
 
@@ -92,14 +95,12 @@ export default function ContractDetails() {
               <h3 className="text-xl font-bold text-slate-900">
                 {activeContract.contract_type}
               </h3>
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor} flex items-center gap-1`}
-              >
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor} flex items-center gap-1`}>
                 <StatusIcon className="w-3 h-3" />
                 {activeContract.contract_status}
               </span>
             </div>
-            <p className="text-slate-500">Contract ID: {activeContract.id}</p>
+            <p className="text-slate-500 text-sm">Contract ID: {activeContract.id.slice(0, 8)}...</p>
           </div>
 
           {employee.employee_contracts.length > 1 && (
@@ -129,15 +130,7 @@ export default function ContractDetails() {
               </div>
             </div>
 
-            <DetailItem
-              label="Contract Type"
-              value={activeContract.contract_type}
-            />
-            <DetailItem
-              label="Contract Status"
-              value={activeContract.contract_status}
-              badge={true}
-            />
+            <ContractDetailItem label="Contract Type" value={activeContract.contract_type} />
           </div>
 
           <div className="space-y-6">
@@ -146,17 +139,14 @@ export default function ContractDetails() {
                 <Clock className="w-5 h-5 text-indigo-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-400">
-                  Probation Ends
-                </p>
+                <p className="text-sm font-medium text-slate-400">Probation Ends</p>
                 <p className="text-lg font-semibold text-slate-900">
-                  {formatDate(activeContract.probation_end_date) ||
-                    "No probation"}
+                  {formatDate(activeContract.probation_end_date) || "No probation"}
                 </p>
               </div>
             </div>
 
-            <DetailItem
+            <ContractDetailItem
               label="End Date"
               value={formatDate(activeContract.end_date) || "Indefinite"}
             />
@@ -166,47 +156,34 @@ export default function ContractDetails() {
                 <p className="text-sm text-slate-500">
                   {new Date(activeContract.end_date) > new Date()
                     ? `Expires in ${Math.ceil((new Date(activeContract.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days`
-                    : "Expired"}
+                    : "Contract has expired"}
                 </p>
               </div>
             )}
           </div>
         </div>
       </div>
+
       <EditContractDetailsDialog
         employee={employee}
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
-         onRefresh={refetch}
+        onRefresh={refetch}
       />
     </section>
   );
 }
 
-// Helper component for crisp data display
-function DetailItem({
-  label,
-  value,
-  badge = false,
-}: {
-  label: string;
-  value: string;
-  badge?: boolean;
-}) {
+// Helper component for contract details
+function ContractDetailItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="group">
       <p className="text-[11px] uppercase tracking-wider font-bold text-slate-400 mb-2 group-hover:text-indigo-500 transition-colors">
         {label}
       </p>
-      {badge ? (
-        <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-50 text-indigo-700">
-          {value}
-        </span>
-      ) : (
-        <p className="text-base font-medium text-slate-800 bg-white px-4 py-3 rounded-lg border border-slate-100">
-          {value}
-        </p>
-      )}
+      <p className="text-base font-medium text-slate-800 bg-white px-4 py-3 rounded-lg border border-slate-100">
+        {value}
+      </p>
     </div>
   );
 }

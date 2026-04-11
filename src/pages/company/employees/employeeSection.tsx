@@ -12,13 +12,70 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
+import { useAuthStore } from "@/stores/authStore";
+import { API_BASE_URL } from "@/config";
+import { toast } from "sonner";
 
 export default function EmployeeSection() {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
+  const { session } = useAuthStore();
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!companyId || !session?.access_token) {
+      toast.error("Unable to export. Please try again.");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/company/${companyId}/employees/export`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to export employees");
+      }
+
+      // Get the filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = `employees_${new Date().toISOString().split("T")[0]}.xlsx`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, "");
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Employees exported successfully");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to export employees");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -80,12 +137,20 @@ export default function EmployeeSection() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0 opacity-60 cursor-pointer"
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  className="h-8 w-8 p-0  cursor-pointer"
                 >
-                  <Download className="h-4 w-4 text-slate-500" />
+                   {isExporting ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-500 border-t-transparent" />
+                  ) : (
+                    <Download className="h-4 w-4 text-slate-500" />
+                  )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Export employees (Coming soon)</TooltipContent>
+              <TooltipContent side="bottom">
+                {isExporting ? "Exporting..." : "Export employees"}
+              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
