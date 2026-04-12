@@ -13,6 +13,7 @@ import {
   DollarSign,
   X,
   Filter,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -68,6 +69,7 @@ interface Employee {
   id: string;
   employee_number: string;
   first_name: string;
+  middle_name?: string;
   last_name: string;
   email: string;
   department?: string;
@@ -106,8 +108,12 @@ export default function PayrollEligibilityPage() {
 
   const month = searchParams.get("month") || format(new Date(), "MMMM");
   const year = parseInt(searchParams.get("year") || format(new Date(), "yyyy"));
+  const editModeParam = searchParams.get("editMode");
+  const isEditModeParam = editModeParam === "true";
 
   // State
+  const [editMode, setEditMode] = useState(isEditModeParam);
+  const [isUnconfirming, setIsUnconfirming] = useState(false);
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [overrides, setOverrides] = useState<Map<string, Override>>(new Map());
@@ -119,6 +125,7 @@ export default function PayrollEligibilityPage() {
   const [activeTab, setActiveTab] = useState<TabType>("eligible");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [departments, setDepartments] = useState<string[]>([]);
+  const [runStatus, setRunStatus] = useState<string>("");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -137,17 +144,20 @@ export default function PayrollEligibilityPage() {
   const [payrollRunId, setPayrollRunId] = useState<string | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
 
-  // Fetch data
+  // Fetch data - use different endpoint based on edit mode
   const fetchEligibility = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/company/${companyId}/payroll/eligibility?month=${month}&year=${year}`,
-        {
-          headers: { Authorization: `Bearer ${session?.access_token}` },
-        },
-      );
+      // Use the edit endpoint if in edit mode, otherwise regular endpoint
+      const endpoint = editMode
+        ? `${API_BASE_URL}/company/${companyId}/payroll/eligibility/edit?month=${month}&year=${year}&editMode=true`
+        : `${API_BASE_URL}/company/${companyId}/payroll/eligibility?month=${month}&year=${year}`;
+
+      const response = await fetch(endpoint, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -164,9 +174,16 @@ export default function PayrollEligibilityPage() {
 
         if (data.existing_run) {
           setPayrollRunId(data.existing_run.id);
-          if (data.existing_run.is_confirmed) {
+          setRunStatus(data.existing_run.status || "");
+
+          // Only show confirmed if NOT in edit mode and actually confirmed
+          if (!editMode && data.existing_run.is_confirmed) {
             setIsConfirmed(true);
+          } else {
+            setIsConfirmed(false);
           }
+
+          setCanEdit(data.existing_run.can_edit || editMode);
         }
 
         const overrideMap = new Map();
@@ -186,11 +203,57 @@ export default function PayrollEligibilityPage() {
     } finally {
       setLoading(false);
     }
-  }, [companyId, month, year, session?.access_token]);
+  }, [companyId, month, year, session?.access_token, editMode]);
 
   useEffect(() => {
     fetchEligibility();
   }, [fetchEligibility]);
+
+  // Add function to unconfirm and enable editing
+  const handleEnableEditing = async () => {
+    if (!payrollRunId) return;
+
+    // Check if run status allows editing
+    if (["APPROVED", "LOCKED", "PAID"].includes(runStatus)) {
+      toast.error(`Cannot edit payroll with status: ${runStatus}`);
+      return;
+    }
+
+    setIsUnconfirming(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/company/${companyId}/payroll/eligibility/unconfirm`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({
+            payrollRunId,
+            reason: "Manual edit requested by user",
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to enable editing");
+      }
+
+      toast.success(
+        "Editing mode enabled. You can now modify employee eligibility.",
+      );
+      setEditMode(true);
+      setIsConfirmed(false);
+      await fetchEligibility(); // Refresh data
+    } catch (error: unknown) {
+      console.error("Error enabling edit:", error);
+      toast.error((error as Error).message || "Failed to enable editing mode");
+    } finally {
+      setIsUnconfirming(false);
+    }
+  };
 
   // Helper functions
   const getEffectiveEligibility = useCallback(
@@ -313,12 +376,20 @@ export default function PayrollEligibilityPage() {
 
   // Override handlers
   const handleSingleOverride = (employee: Employee) => {
+    if (!editMode && !canEdit) {
+      toast.error("Editing is disabled. Please enable edit mode first.");
+      return;
+    }
     setSelectedEmployeeForOverride(employee);
     setOverrideReason("");
     setIsOverrideDialogOpen(true);
   };
 
   const handleBulkOverride = (type: "include" | "exclude") => {
+    if (!editMode && !canEdit) {
+      toast.error("Editing is disabled. Please enable edit mode first.");
+      return;
+    }
     if (selectedEmployees.size === 0) {
       toast.error("Please select employees first");
       return;
@@ -404,7 +475,12 @@ export default function PayrollEligibilityPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.access_token}`,
           },
-          body: JSON.stringify({ month, year, overrides: overrideArray }),
+          body: JSON.stringify({
+            month,
+            year,
+            overrides: overrideArray,
+            forceUpdate: editMode, // Add this flag
+          }),
         },
       );
 
@@ -416,6 +492,17 @@ export default function PayrollEligibilityPage() {
       const saveData = await saveResponse.json();
       const runId = saveData.payroll_run_id;
 
+      // If we're in edit mode, we DON'T want to reconfirm eligibility
+      // Just navigate to process payroll
+      if (editMode) {
+        toast.success("Changes saved successfully!");
+        navigate(
+          `/company/${companyId}/payroll/process/${runId}?month=${month}&year=${year}`,
+        );
+        return;
+      }
+
+      // Only confirm if NOT in edit mode
       const confirmResponse = await fetch(
         `${API_BASE_URL}/company/${companyId}/payroll/eligibility/confirm`,
         {
@@ -530,6 +617,7 @@ export default function PayrollEligibilityPage() {
     return items;
   };
 
+  // Show loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -538,7 +626,8 @@ export default function PayrollEligibilityPage() {
     );
   }
 
-  if (isConfirmed) {
+  // Show confirmed state only when NOT in edit mode AND isConfirmed is true
+  if (isConfirmed && !editMode) {
     return (
       <Card className="rounded-sm border-slate-200 bg-white">
         <CardContent className="p-12 text-center">
@@ -573,6 +662,10 @@ export default function PayrollEligibilityPage() {
     );
   }
 
+  // Show warning if run status is locked
+  const isRunLocked = ["APPROVED", "LOCKED", "PAID"].includes(runStatus);
+  const canEditRun = (editMode || canEdit) && !isRunLocked;
+
   const selectedCount = selectedEmployees.size;
 
   return (
@@ -582,12 +675,50 @@ export default function PayrollEligibilityPage() {
         <div>
           <h1 className="text-xl font-semibold text-slate-900">
             Payroll Eligibility
+            {editMode && (
+              <Badge
+                variant="outline"
+                className="ml-2 text-amber-600 border-amber-300 bg-amber-50"
+              >
+                Edit Mode
+              </Badge>
+            )}
+            {isRunLocked && (
+              <Badge
+                variant="outline"
+                className="ml-2 text-red-600 border-red-300 bg-red-50"
+              >
+                Locked
+              </Badge>
+            )}
           </h1>
           <p className="text-sm text-slate-500">
             {month} {year}
+            {runStatus && ` • Status: ${runStatus}`}
           </p>
         </div>
         <div className="flex gap-2">
+          {isConfirmed && !editMode && !isRunLocked && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEnableEditing}
+              disabled={isUnconfirming}
+              className="text-amber-600 border-amber-300 hover:bg-amber-50"
+            >
+              {isUnconfirming && (
+                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+              )}
+              <Edit2 className="mr-2 h-3 w-3" />
+              Enable Editing
+            </Button>
+          )}
+          {isRunLocked && (
+            <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-md">
+              <ShieldAlert className="h-3.5 w-3.5" />
+              <span>Payroll is {runStatus.toLowerCase()}</span>
+            </div>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -595,15 +726,19 @@ export default function PayrollEligibilityPage() {
           >
             Cancel
           </Button>
-          <Button
-            size="sm"
-            onClick={handleConfirm}
-            disabled={isSubmitting}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            {isSubmitting && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-            Confirm & Process
-          </Button>
+          {canEditRun && (
+            <Button
+              size="sm"
+              onClick={handleConfirm}
+              disabled={isSubmitting}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+              )}
+              {editMode ? "Save Changes & Process" : "Confirm & Process"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -664,14 +799,16 @@ export default function PayrollEligibilityPage() {
                     {overrides.size} employee(s) have been manually overridden
                   </span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleResetAllOverrides}
-                  className="text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100"
-                >
-                  Reset all
-                </Button>
+                {canEditRun && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetAllOverrides}
+                    className="text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                  >
+                    Reset all
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -680,7 +817,7 @@ export default function PayrollEligibilityPage() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               {/* Bulk Actions */}
-              {selectedCount > 0 && (
+              {selectedCount > 0 && canEditRun && (
                 <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-1">
                   <span className="text-xs text-slate-500">
                     {selectedCount} selected
@@ -803,14 +940,16 @@ export default function PayrollEligibilityPage() {
               <TableHeader>
                 <TableRow className="bg-slate-50/50 border-b border-slate-200">
                   <TableHead className="w-10">
-                    <Checkbox
-                      checked={
-                        selectedCount === paginatedEmployees.length &&
-                        paginatedEmployees.length > 0
-                      }
-                      onCheckedChange={handleSelectAll}
-                      className="shadow-none border-slate-400 rounded-sm"
-                    />
+                    {canEditRun && (
+                      <Checkbox
+                        checked={
+                          selectedCount === paginatedEmployees.length &&
+                          paginatedEmployees.length > 0
+                        }
+                        onCheckedChange={handleSelectAll}
+                        className="shadow-none border-slate-400 rounded-sm"
+                      />
+                    )}
                   </TableHead>
                   <TableHead className="text-xs font-medium text-slate-600">
                     Employee
@@ -847,18 +986,21 @@ export default function PayrollEligibilityPage() {
                       )}
                     >
                       <TableCell>
-                        <Checkbox
-                          checked={selectedEmployees.has(employee.id)}
-                          onCheckedChange={() =>
-                            handleSelectEmployee(employee.id)
-                          }
-                          className="shadow-none border-slate-400 rounded-sm"
-                        />
+                        {canEditRun && (
+                          <Checkbox
+                            checked={selectedEmployees.has(employee.id)}
+                            onCheckedChange={() =>
+                              handleSelectEmployee(employee.id)
+                            }
+                            className="shadow-none border-slate-400 rounded-sm"
+                          />
+                        )}
                       </TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium text-sm text-slate-900">
-                            {employee.first_name} {employee.last_name}
+                            {employee.first_name} {employee.middle_name}{" "}
+                            {employee.last_name}
                           </div>
                           <div className="text-xs text-slate-400">
                             {employee.employee_number}
@@ -915,25 +1057,31 @@ export default function PayrollEligibilityPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSingleOverride(employee)}
-                            className="h-7 w-7 p-0"
-                            title="Override eligibility"
-                          >
-                            <Edit2 className="h-3.5 w-3.5 text-slate-400" />
-                          </Button>
-                          {overridden && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRevertToOriginal(employee)}
-                              className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                              title="Remove override"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </Button>
+                          {canEditRun && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSingleOverride(employee)}
+                                className="h-7 w-7 p-0"
+                                title="Override eligibility"
+                              >
+                                <Edit2 className="h-3.5 w-3.5 text-slate-400" />
+                              </Button>
+                              {overridden && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleRevertToOriginal(employee)
+                                  }
+                                  className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  title="Remove override"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </>
                           )}
                         </div>
                       </TableCell>

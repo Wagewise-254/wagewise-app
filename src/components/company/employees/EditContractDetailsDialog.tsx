@@ -1,30 +1,47 @@
 // components/company/employees/EditContractDetailsDialog.tsx
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FloatingField, FloatingSearchableSelect, SectionHeader } from "@/components/company/employees/employeeutils";
+import {
+  FloatingField,
+  FloatingSearchableSelect,
+  SectionHeader,
+} from "@/components/company/employees/employeeutils";
 import { API_BASE_URL } from "@/config";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { EditDialogProps } from "@/types/employees";
 
-export default function EditContractDetailsDialog({ employee, isOpen, onClose, onRefresh }: EditDialogProps) {
+export default function EditContractDetailsDialog({
+  employee,
+  isOpen,
+  onClose,
+  onRefresh,
+}: EditDialogProps) {
   const [loading, setLoading] = useState(false);
   const session = useAuthStore.getState().session;
-  
-  const activeContract = employee.employee_contracts?.find(c => c.contract_status === 'ACTIVE') || employee.employee_contracts?.[0];
-  
+
+  const activeContract =
+    employee.employee_contracts?.find((c) => c.contract_status === "ACTIVE") ||
+    employee.employee_contracts?.[0];
+
   const [formData, setFormData] = useState({
     contract_type: activeContract?.contract_type || "Permanent and Pensionable",
-    start_date: activeContract?.start_date || new Date().toISOString().split("T")[0],
+    start_date:
+      activeContract?.start_date || new Date().toISOString().split("T")[0],
     end_date: activeContract?.end_date || "",
     probation_end_date: activeContract?.probation_end_date || "",
     contract_status: activeContract?.contract_status || "ACTIVE",
   });
 
   const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async () => {
@@ -35,6 +52,15 @@ export default function EditContractDetailsDialog({ employee, isOpen, onClose, o
 
     setLoading(true);
     try {
+      // Convert empty strings to null for date fields
+      const payload = {
+        contract_type: formData.contract_type,
+        start_date: formData.start_date,
+        end_date: formData.end_date || null,
+        probation_end_date: formData.probation_end_date || null,
+        contract_status: formData.contract_status,
+      };
+
       const response = await fetch(
         `${API_BASE_URL}/company/${employee.company_id}/employees/${employee.id}/contracts/${activeContract.id}`,
         {
@@ -43,8 +69,8 @@ export default function EditContractDetailsDialog({ employee, isOpen, onClose, o
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.access_token}`,
           },
-          body: JSON.stringify(formData),
-        }
+         body: JSON.stringify(payload),
+        },
       );
 
       if (!response.ok) {
@@ -56,7 +82,9 @@ export default function EditContractDetailsDialog({ employee, isOpen, onClose, o
       onRefresh();
       onClose();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update contract");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update contract",
+      );
     } finally {
       setLoading(false);
     }
@@ -70,10 +98,11 @@ export default function EditContractDetailsDialog({ employee, isOpen, onClose, o
             Edit Contract Details
           </DialogTitle>
           <p className="text-slate-500 text-sm">
-            Update the employment contract for {employee.first_name} {employee.last_name}
+            Update the employment contract for {employee.first_name}{" "}
+            {employee.last_name}
           </p>
         </DialogHeader>
-        
+
         <div className="py-6 space-y-6">
           <section>
             <SectionHeader title="Contract Information" />
@@ -118,7 +147,9 @@ export default function EditContractDetailsDialog({ employee, isOpen, onClose, o
                 label="Probation End Date"
                 type="date"
                 value={formData.probation_end_date}
-                onChange={(e) => handleChange("probation_end_date", e.target.value)}
+                onChange={(e) =>
+                  handleChange("probation_end_date", e.target.value)
+                }
               />
             </div>
           </section>
@@ -128,12 +159,16 @@ export default function EditContractDetailsDialog({ employee, isOpen, onClose, o
           <Button variant="outline" onClick={onClose} className="shadow-none">
             Cancel
           </Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             disabled={loading}
             className="bg-blue-600 hover:bg-blue-700 text-white px-8 shadow-none"
           >
-            {loading ? <Loader2 className="animate-spin h-4 w-4" /> : "Save Changes"}
+            {loading ? (
+              <Loader2 className="animate-spin h-4 w-4" />
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </div>
       </DialogContent>

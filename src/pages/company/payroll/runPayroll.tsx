@@ -19,6 +19,7 @@ import {
   Construction,
   Ban,
   ShieldAlert,
+  Edit2,
 } from "lucide-react";
 import { format, getYear } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -89,7 +90,8 @@ export default function RunPayroll() {
 
   const [isOpen, setIsOpen] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(true);
-  const [existingRunForPeriod, setExistingRunForPeriod] = useState<PayrollRun | null>(null);
+  const [existingRunForPeriod, setExistingRunForPeriod] =
+    useState<PayrollRun | null>(null);
   const [checkingExistingRun, setCheckingExistingRun] = useState(false);
   const [errorDetails, setErrorDetails] = useState<{
     show: boolean;
@@ -170,34 +172,31 @@ export default function RunPayroll() {
     }
   }, [companyId, session?.access_token]);
 
-  const fetchRunsWithFilters = useCallback(
-    async () => {
-      if (!companyId || !session?.access_token) return;
+  const fetchRunsWithFilters = useCallback(async () => {
+    if (!companyId || !session?.access_token) return;
 
-      try {
-        const url = `${API_BASE_URL}/company/${companyId}/payroll/runs?limit=5`;
-        const response = await fetch(url, {
-          headers: { Authorization: `Bearer ${session?.access_token}` },
-        });
+    try {
+      const url = `${API_BASE_URL}/company/${companyId}/payroll/runs?limit=5`;
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          let runs: PayrollRun[] = [];
+      if (response.ok) {
+        const data = await response.json();
+        let runs: PayrollRun[] = [];
 
-          if (Array.isArray(data)) {
-            runs = data;
-          } else if (data.data && Array.isArray(data.data)) {
-            runs = data.data;
-          }
-
-          setExistingRuns(runs);
+        if (Array.isArray(data)) {
+          runs = data;
+        } else if (data.data && Array.isArray(data.data)) {
+          runs = data.data;
         }
-      } catch (e) {
-        console.error("Runs fetch error:", e);
+
+        setExistingRuns(runs);
       }
-    },
-    [companyId, session?.access_token],
-  );
+    } catch (e) {
+      console.error("Runs fetch error:", e);
+    }
+  }, [companyId, session?.access_token]);
 
   const fetchExistingRuns = useCallback(() => {
     fetchRunsWithFilters();
@@ -258,7 +257,7 @@ export default function RunPayroll() {
                   <DialogTrigger asChild>
                     <Button
                       size="lg"
-                      className="w-full bg-[#1F3A8A] hover:bg-[#162a63] rounded-sm shadow-none group cursor-pointer"
+                      className="w-full bg-[#7F5EFD] hover:bg-[#6b4de0] rounded-sm shadow-none group cursor-pointer"
                     >
                       <TrendingUp className="mr-2 h-5 w-5" />
                       Prepare Monthly Cycle
@@ -270,8 +269,8 @@ export default function RunPayroll() {
                     <DialogHeader>
                       <DialogTitle>Process Monthly Payroll</DialogTitle>
                       <DialogDescription>
-                        Select the period to generate or update monthly
-                        payroll figures.
+                        Select the period to generate or update monthly payroll
+                        figures.
                       </DialogDescription>
                     </DialogHeader>
 
@@ -336,11 +335,29 @@ export default function RunPayroll() {
                           setIsOpen(false);
                         }}
                         disabled={checkingExistingRun}
-                        className="bg-[#1F3A8A] hover:bg-[#162a63]"
+                        className="bg-[#7F5EFD] hover:bg-[#6b4de0] text-white"
                       >
                         Review Employee Eligibility
                         <ChevronRight className="ml-2 h-4 w-4" />
                       </Button>
+                      {existingRunForPeriod &&
+                        !["APPROVED", "LOCKED", "PAID"].includes(
+                          existingRunForPeriod.status,
+                        ) && (
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              navigate(
+                                `/company/${companyId}/payroll/eligibility?month=${selectedMonth}&year=${parseInt(selectedYear)}&editMode=true`,
+                              );
+                              setIsOpen(false);
+                            }}
+                            className="mt-2"
+                          >
+                            <Edit2 className="mr-2 h-4 w-4" />
+                            Edit Existing Run
+                          </Button>
+                        )}
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>

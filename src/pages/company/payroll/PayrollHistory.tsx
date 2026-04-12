@@ -1,6 +1,6 @@
 // src/pages/company/payroll/PayrollHistory.tsx
 
-import { useState, useEffect, useCallback, useMemo, useRef} from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ChevronLeft,
@@ -21,6 +21,7 @@ import {
   Lock,
   RefreshCw,
   Unlock,
+  Edit2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -391,7 +392,7 @@ export default function PayrollHistory() {
   const [payrolls, setPayrolls] = useState<PayrollRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [reviewLoading, setReviewLoading] = useState(false)
+  const [reviewLoading, setReviewLoading] = useState(false);
   const [filters, setFilters] = useState<PayrollFilters>({
     status: "all",
     year: "all",
@@ -481,102 +482,112 @@ export default function PayrollHistory() {
     }
   }, [companyId, token, pagination.currentPage, pagination.pageSize, filters]);
 
+  // Update the fetchReviewSummaries function
+  const fetchReviewSummaries = useCallback(
+    async (runIds: string[], forceRefresh = false) => {
+      // Skip if no runIds
+      if (!companyId || !token || runIds.length === 0) return;
 
- // Update the fetchReviewSummaries function
-  const fetchReviewSummaries = useCallback(async (runIds: string[], forceRefresh = false) => {
-    // Skip if no runIds
-    if (!companyId || !token || runIds.length === 0) return;
-    
-    // Skip if we've already fetched reviews and this isn't a force refresh
-    if (hasFetchedReviews.current && !forceRefresh) {
-      console.log('Skipping review fetch - already fetched');
-      return;
-    }
-
-    setReviewLoading(true);
-  
-  // Define the expected response type
-  interface ReviewSummariesResponse {
-    summaries: {
-      [key: string]: {
-        total_employees: number;
-        approved: number;
-        pending: number;
-        rejected: number;
-        completion_percentage: number;
-        all_approved?: boolean;
-        any_rejected?: boolean;
-      };
-    };
-  }
-  
-  const BATCH_SIZE = 5;
-  const batches = [];
-  
-  for (let i = 0; i < runIds.length; i += BATCH_SIZE) {
-    batches.push(runIds.slice(i, i + BATCH_SIZE));
-  }
-  
-  try {
-    const allSummaries: ReviewSummariesResponse['summaries'] = {};
-    
-    for (const batch of batches) {
-      const response = await fetch(
-        `${API_BASE_URL}/company/${companyId}/payroll/review-summaries`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ runIds: batch }),
-        }
-      );
-      
-      if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.warn(`Failed to fetch batch: ${errorData.error || 'Unknown error'}`);
-          continue; // Continue with other batches instead of throwing
-        }
-        
-        const data = await response.json() as ReviewSummariesResponse;
-        Object.assign(allSummaries, data.summaries);
+      // Skip if we've already fetched reviews and this isn't a force refresh
+      if (hasFetchedReviews.current && !forceRefresh) {
+        console.log("Skipping review fetch - already fetched");
+        return;
       }
-    
-    // Update payrolls with review stats
-    setPayrolls(prev => prev.map(run => ({
-      ...run,
-      review_stats: allSummaries[run.id] || {
-        total_employees: 0,
-        approved: 0,
-        pending: 0,
-        rejected: 0,
-        completion_percentage: 0,
-        all_approved: false,
-        any_rejected: false
+
+      setReviewLoading(true);
+
+      // Define the expected response type
+      interface ReviewSummariesResponse {
+        summaries: {
+          [key: string]: {
+            total_employees: number;
+            approved: number;
+            pending: number;
+            rejected: number;
+            completion_percentage: number;
+            all_approved?: boolean;
+            any_rejected?: boolean;
+          };
+        };
       }
-    })));
 
-    // Mark as fetched
-      hasFetchedReviews.current = true;
+      const BATCH_SIZE = 5;
+      const batches = [];
 
- } catch (error) {
-      console.error('Error fetching review summaries:', error);
-      toast.error('Failed to load review progress. You can click refresh to try again.');
-    } finally {
-      setReviewLoading(false);
-    }
-  }, [companyId, token]);
+      for (let i = 0; i < runIds.length; i += BATCH_SIZE) {
+        batches.push(runIds.slice(i, i + BATCH_SIZE));
+      }
+
+      try {
+        const allSummaries: ReviewSummariesResponse["summaries"] = {};
+
+        for (const batch of batches) {
+          const response = await fetch(
+            `${API_BASE_URL}/company/${companyId}/payroll/review-summaries`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ runIds: batch }),
+            },
+          );
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.warn(
+              `Failed to fetch batch: ${errorData.error || "Unknown error"}`,
+            );
+            continue; // Continue with other batches instead of throwing
+          }
+
+          const data = (await response.json()) as ReviewSummariesResponse;
+          Object.assign(allSummaries, data.summaries);
+        }
+
+        // Update payrolls with review stats
+        setPayrolls((prev) =>
+          prev.map((run) => ({
+            ...run,
+            review_stats: allSummaries[run.id] || {
+              total_employees: 0,
+              approved: 0,
+              pending: 0,
+              rejected: 0,
+              completion_percentage: 0,
+              all_approved: false,
+              any_rejected: false,
+            },
+          })),
+        );
+
+        // Mark as fetched
+        hasFetchedReviews.current = true;
+      } catch (error) {
+        console.error("Error fetching review summaries:", error);
+        toast.error(
+          "Failed to load review progress. You can click refresh to try again.",
+        );
+      } finally {
+        setReviewLoading(false);
+      }
+    },
+    [companyId, token],
+  );
 
   // Manual refresh function
   const handleRefreshReviews = useCallback(() => {
     if (payrolls.length > 0) {
       hasFetchedReviews.current = false; // Reset the flag
-      fetchReviewSummaries(payrolls.map((r) => r.id), true); // Force refresh
+      fetchReviewSummaries(
+        payrolls.map((r) => r.id),
+        true,
+      ); // Force refresh
     }
   }, [payrolls, fetchReviewSummaries]);
 
-   // Create a stable reference for run IDs
+  // Create a stable reference for run IDs
   const runIds = useMemo(() => {
     return payrolls.map((r) => r.id);
   }, [payrolls]);
@@ -589,7 +600,7 @@ export default function PayrollHistory() {
       const timer = setTimeout(() => {
         fetchReviewSummaries(runIds);
       }, 100);
-      
+
       return () => clearTimeout(timer);
     }
   }, [runIds, fetchReviewSummaries, payrolls.length]); // Remove payrolls from dependencies
@@ -651,7 +662,7 @@ export default function PayrollHistory() {
         timestamp: new Date(),
       });
 
-       // Refresh data after status update
+      // Refresh data after status update
       await fetchPayrolls();
       // Reset review flag so reviews will be fetched again
       hasFetchedReviews.current = false;
@@ -709,7 +720,7 @@ export default function PayrollHistory() {
       }
 
       toast.success("Payroll resynchronized successfully");
-     await fetchPayrolls();
+      await fetchPayrolls();
       // Reset review flag so reviews will be fetched again
       hasFetchedReviews.current = false;
     } catch (error) {
@@ -1078,6 +1089,29 @@ export default function PayrollHistory() {
                             >
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(
+                                  `/company/${companyId}/payroll/eligibility?month=${run.payroll_month}&year=${run.payroll_year}&editMode=true`,
+                                );
+                              }}
+                              className="cursor-pointer"
+                              disabled={["APPROVED", "LOCKED", "PAID"].includes(
+                                run.status,
+                              )}
+                            >
+                              <Edit2 className="mr-2 h-4 w-4" />
+                              Edit Eligibility
+                              {["APPROVED", "LOCKED", "PAID"].includes(
+                                run.status,
+                              ) && (
+                                <span className="ml-auto text-xs text-red-500">
+                                  Locked
+                                </span>
+                              )}
                             </DropdownMenuItem>
 
                             {run.status !== "PAID" && (

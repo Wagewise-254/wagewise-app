@@ -16,7 +16,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import OfflineBanner from '@/components/common/offlinebanner';
+import OfflineBanner from '@/components/common/OfflineBanner';
 
 export default function AccountSettings() {
   const navigate = useNavigate();
