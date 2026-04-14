@@ -1,25 +1,37 @@
-// src/pages/company/payroll/settings/assignDeductions.tsx
+// src/pages/company/payroll/deductions/assignDeductions.tsx
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "@/config";
 import { useAuthStore } from "@/stores/authStore";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, FileUp } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
+  Loader2,
+  Search,
+  Plus,
+  Download,
+  CloudUpload,
+  RefreshCw,
+  Calendar,
+  History,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import DeductionAssignTable from "@/components/company/deductions/DeductionAssignTable";
 import { AssignedDeduction } from "@/types/deduction";
@@ -32,17 +44,23 @@ import AddDeductionDialog, {
 } from "@/components/company/deductions/AddDeductionDialog";
 import EditDeductionDialog from "@/components/company/deductions/EditDeductionDialog";
 import DeleteDeductionDialog from "@/components/company/deductions/DeleteDeductionDialog";
-import ImportDeductionDialog from "@/components/company/deductions/ImportDeductionDialog";
+import ImportDeductionPreviewDialog from "@/components/company/deductions/ImportDeductionPreviewDialog";
 import BulkDeleteDeductionDialog from "@/components/company/deductions/BulkDeleteDeductionDialog";
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+const getCurrentMonth = () => MONTHS[new Date().getMonth()];
+const getCurrentYear = () => new Date().getFullYear();
 
 export default function AssignDeductions() {
   const { companyId } = useParams();
-  const navigate = useNavigate();
   const { session } = useAuthStore();
+  const navigate = useNavigate();
 
-  const [assignedDeductions, setAssignedDeductions] = useState<
-    AssignedDeduction[]
-  >([]);
+  const [deductions, setDeductions] = useState<AssignedDeduction[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [deductionTypes, setDeductionTypes] = useState<DeductionType[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -51,82 +69,195 @@ export default function AssignDeductions() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const [globalFilter, setGlobalFilter] = useState("");
+
+  // Month/Year filters
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const [selectedYear, setSelectedYear] = useState(getCurrentYear());
+  const [selectedTypeId, setSelectedTypeId] = useState<string>("all");
+  
+  // Cache reference
+  const dataCache = useRef<Map<string, AssignedDeduction[]>>(new Map());
+  const cacheKey = `${selectedMonth}|${selectedYear}|${selectedTypeId}`;
 
   // Dialog state
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [selectedDeduction, setSelectedDeduction] =
-    useState<AssignedDeduction | null>(null);
+  const [isImportPreviewOpen, setIsImportPreviewOpen] = useState(false);
+  const [selectedDeduction, setSelectedDeduction] = useState<AssignedDeduction | null>(null);
   const [deductionsToDelete, setDeductionsToDelete] = useState<string[]>([]);
 
-  const fetchData = useCallback(async () => {
+  // Fetch reference data (employees, departments, etc.)
+  const fetchReferenceData = useCallback(async () => {
     if (!companyId || !session) return;
-
-    setLoading(true);
-    setError(null);
 
     try {
       const headers = { Authorization: `Bearer ${session?.access_token}` };
 
       const [
-        deductionsResponse,
         employeesResponse,
-        deductionTypesResponse,
         departmentsResponse,
         subDepartmentsResponse,
         jobTitlesResponse,
       ] = await Promise.all([
-        fetch(`${API_BASE_URL}/company/${companyId}/deductions`, { headers }),
         fetch(`${API_BASE_URL}/company/${companyId}/employees`, { headers }),
-        fetch(`${API_BASE_URL}/company/${companyId}/deduction-types`, {
-          headers,
-        }),
         fetch(`${API_BASE_URL}/company/${companyId}/departments`, { headers }),
-        fetch(`${API_BASE_URL}/company/${companyId}/sub-departments`, {
-          headers,
-        }),
+        fetch(`${API_BASE_URL}/company/${companyId}/sub-departments`, { headers }),
         fetch(`${API_BASE_URL}/company/${companyId}/job-titles`, { headers }),
       ]);
 
-      if (!deductionsResponse.ok) throw new Error("Failed to fetch deductions");
-      if (!employeesResponse.ok) throw new Error("Failed to fetch employees");
-      if (!deductionTypesResponse.ok)
-        throw new Error("Failed to fetch deduction types");
-      if (!departmentsResponse.ok)
-        throw new Error("Failed to fetch departments");
+      if (employeesResponse.ok) {
+        const employeesData = await employeesResponse.json();
+        setEmployees(employeesData);
+      }
 
-      const deductionsData = await deductionsResponse.json();
-      const employeesData = await employeesResponse.json();
-      const deductionTypesData = await deductionTypesResponse.json();
-      const departmentsData = await departmentsResponse.json();
-      const subDepartmentsData = await subDepartmentsResponse.json();
-      const jobTitlesData = await jobTitlesResponse.json();
+      if (departmentsResponse.ok) {
+        const departmentsData = await departmentsResponse.json();
+        setDepartments(departmentsData);
+      }
 
-      setAssignedDeductions(deductionsData);
-      setEmployees(employeesData);
-      setDeductionTypes(deductionTypesData);
-      setDepartments(departmentsData);
-      setSubDepartments(subDepartmentsData);
-      setJobTitles(jobTitlesData);
+      if (subDepartmentsResponse.ok) {
+        const subDepartmentsData = await subDepartmentsResponse.json();
+        setSubDepartments(subDepartmentsData);
+      }
+
+      if (jobTitlesResponse.ok) {
+        const jobTitlesData = await jobTitlesResponse.json();
+        setJobTitles(jobTitlesData);
+      }
     } catch (err) {
-      console.error(err);
-      setError("Failed to load data. Please try again.");
-      toast.error("Failed to load deduction data.");
-    } finally {
-      setLoading(false);
+      console.error("Failed to fetch reference data", err);
     }
   }, [companyId, session]);
 
+  const fetchDeductionTypes = useCallback(async () => {
+    if (!companyId || !session) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/company/${companyId}/deduction-types`, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDeductionTypes(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch deduction types", err);
+    }
+  }, [companyId, session]);
+
+  const fetchData = useCallback(async (forceRefresh = false) => {
+    if (!companyId || !session) return;
+
+    // Check cache
+    if (!forceRefresh && dataCache.current.has(cacheKey)) {
+      setDeductions(dataCache.current.get(cacheKey) || []);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      let url = `${API_BASE_URL}/company/${companyId}/deductions/monthly?month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}`;
+      if (selectedTypeId !== "all") {
+        url += `&deduction_type_id=${selectedTypeId}`;
+      }
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch deductions");
+      }
+
+      const data = await response.json();
+      setDeductions(data);
+      dataCache.current.set(cacheKey, data);
+    } catch (err) {
+      console.error("Error fetching deductions:", err);
+      setError(err instanceof Error ? err.message : "Failed to load deductions");
+      toast.error("Failed to load deductions. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [companyId, session, selectedMonth, selectedYear, selectedTypeId, cacheKey]);
+
+  // Initial data fetch
   useEffect(() => {
-    fetchData();
+    fetchReferenceData();
+    fetchDeductionTypes();
+  }, [fetchReferenceData, fetchDeductionTypes]);
+
+  useEffect(() => {
+    fetchData(false);
   }, [fetchData]);
 
+  const handleRefresh = () => {
+    dataCache.current.clear();
+    fetchData(true);
+    toast.info("Data refreshed");
+  };
+
+  const handleMonthChange = (delta: number) => {
+    const monthIndex = MONTHS.indexOf(selectedMonth);
+    let newYear = selectedYear;
+    let newMonthIndex = monthIndex + delta;
+    
+    if (newMonthIndex < 0) {
+      newMonthIndex = 11;
+      newYear--;
+    } else if (newMonthIndex > 11) {
+      newMonthIndex = 0;
+      newYear++;
+    }
+    
+    setSelectedMonth(MONTHS[newMonthIndex]);
+    setSelectedYear(newYear);
+  };
+
+  const handleExport = async () => {
+    if (!companyId || !session) return;
+    
+    try {
+      let url = `${API_BASE_URL}/company/${companyId}/deductions/export?month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}`;
+      if (selectedTypeId !== "all") {
+        url += `&deduction_type_id=${selectedTypeId}`;
+      }
+      
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      
+      if (!response.ok) throw new Error("Export failed");
+      
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = `Deductions_${selectedMonth}_${selectedYear}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      toast.success("Export started");
+    } catch (err) {
+      console.error("Export error:", err);
+      toast.error("Failed to export data");
+    }
+  };
+
   const handleAddSuccess = () => {
-    fetchData();
+    dataCache.current.clear();
+    fetchData(true);
     setIsAddDialogOpen(false);
+    toast.success("Deduction assigned successfully");
   };
 
   const handleEdit = (deduction: AssignedDeduction) => {
@@ -139,103 +270,231 @@ export default function AssignDeductions() {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleBulkDeleteClick = (deductionIds: string[]) => {
+  const handleBulkDelete = (deductionIds: string[]) => {
     setDeductionsToDelete(deductionIds);
     setIsBulkDeleteDialogOpen(true);
   };
 
-  const handleCloseEditDialog = () => {
-    setIsEditDialogOpen(false);
-    setSelectedDeduction(null);
-  };
-
-  const handleCloseDeleteDialog = () => {
-    setIsDeleteDialogOpen(false);
-    setSelectedDeduction(null);
-  };
-
   const handleUpdateSuccess = () => {
-    fetchData();
-    handleCloseEditDialog();
-    handleCloseDeleteDialog();
+    dataCache.current.clear();
+    fetchData(true);
+    setIsEditDialogOpen(false);
+    setIsDeleteDialogOpen(false);
   };
 
-  const handleImportSuccess = () => {
-    setIsImportDialogOpen(false);
-    fetchData();
+  const handleBulkDeleteSuccess = () => {
+    dataCache.current.clear();
+    fetchData(true);
+    setIsBulkDeleteDialogOpen(false);
+    setDeductionsToDelete([]);
   };
+
+  const handleImportClick = () => {
+    setIsImportPreviewOpen(true);
+  };
+
+  // Sync external search with table filter
+  useEffect(() => {
+    setGlobalFilter(searchValue);
+  }, [searchValue]);
 
   return (
-    <div className="p-2 space-y-4">
-      <Card className="rounded-sm border border-slate-200 shadow-none">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div className="flex flex-col">
-            <div className="flex gap-4">
+    <div className="h-full flex flex-col p-6">
+      {/* Header with Month Navigation */}
+      <div className="shrink-0 flex items-center justify-between gap-4 pb-4 border-b border-slate-200">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleMonthChange(-1)}
+                  className="h-8 w-8 p-0 cursor-pointer"
+                >
+                  <ChevronLeft className="h-4 w-4 text-slate-500" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Previous month</TooltipContent>
+            </Tooltip>
+            
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
+              <Calendar className="h-4 w-4 text-slate-500" />
+              <span className="text-sm font-medium text-slate-700">
+                {selectedMonth} {selectedYear}
+              </span>
+            </div>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleMonthChange(1)}
+                  className="h-8 w-8 p-0 cursor-pointer"
+                >
+                  <ChevronRight className="h-4 w-4 text-slate-500" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Next month</TooltipContent>
+            </Tooltip>
+          </div>
+          
+          {/* Deduction Type Filter */}
+          <Select value={selectedTypeId} onValueChange={setSelectedTypeId}>
+            <SelectTrigger className="h-8 w-48 text-sm border-slate-200">
+              <SelectValue placeholder="All deduction types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All deduction types</SelectItem>
+              {deductionTypes.map((type) => (
+                <SelectItem key={type.id} value={type.id}>
+                  {type.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-1">
+          {/* Search with toggle */}
+          <div className="relative">
+            {showSearch ? (
+              <div className="relative animate-in slide-in-from-left-2 fade-in duration-200">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Input
+                  placeholder="Search by employee, deduction type..."
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  onBlur={() => {
+                    if (!searchValue) setShowSearch(false);
+                  }}
+                  className="pl-8 h-8 w-64 text-sm bg-white border-slate-200 rounded-md focus-visible:ring-1 focus-visible:ring-[#7F5EFD]"
+                  autoFocus
+                />
+              </div>
+            ) : (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 cursor-pointer"
-                    onClick={() =>
-                      navigate(
-                        `/company/${companyId}/payroll/deductions/overview`,
-                      )
-                    }
+                    size="sm"
+                    onClick={() => setShowSearch(true)}
+                    className="h-8 w-8 p-0 cursor-pointer"
                   >
-                    <ArrowLeft className="h-4 w-4" />
+                    <Search className="h-4 w-4 text-slate-500" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>Back to Deductions Settings</p>
-                </TooltipContent>
+                <TooltipContent side="bottom">Search</TooltipContent>
               </Tooltip>
-              <div>
-                <CardTitle className="text-2xl font-bold">
-                  Assigned Deductions
-                </CardTitle>
-                <CardDescription className="text-sm text-gray-500">
-                  View and manage deductions assigned to employees, departments,
-                  or job titles.
-                </CardDescription>
-              </div>
-            </div>
+            )}
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsImportDialogOpen(true)}
-              className="flex items-center gap-2 cursor-pointer rounded-sm shadow-none border border-slate-300"
-            >
-              <FileUp className="h-4 w-4" /> Bulk Import
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setIsAddDialogOpen(true)}
-              className="bg-[#1F3A8A] cursor-pointer rounded-sm shadow-none text-white hover:bg-[#6a4ad3]"
-            >
-              Assign Deduction
+
+          {/* Refresh Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={loading}
+                className="h-8 w-8 p-0 cursor-pointer"
+              >
+                <RefreshCw className={`h-4 w-4 text-slate-500 ${loading ? "animate-spin" : ""}`} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Refresh data</TooltipContent>
+          </Tooltip>
+
+          {/* Export Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleExport}
+                className="h-8 w-8 p-0 cursor-pointer"
+              >
+                <Download className="h-4 w-4 text-slate-500" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Export to Excel</TooltipContent>
+          </Tooltip>
+
+          {/* Import Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleImportClick}
+                className="h-8 w-8 p-0 cursor-pointer"
+              >
+                <CloudUpload className="h-4 w-4 text-slate-500" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Bulk import</TooltipContent>
+          </Tooltip>
+
+          {/* History Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(`/company/${companyId}/payroll/deductions/history`)}
+                className="h-8 w-8 p-0 cursor-pointer"
+              >
+                <History className="h-4 w-4 text-slate-500" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">View history</TooltipContent>
+          </Tooltip>
+
+          {/* Add Button */}
+          <Button
+            onClick={() => setIsAddDialogOpen(true)}
+            size="sm"
+            className="ml-2 h-8 text-xs rounded-sm cursor-pointer bg-[#7F5EFD] hover:bg-[#6a4ad3] shadow-none"
+          >
+            <Plus className="mr-1.5 h-3.5 w-3.5" /> Assign
+          </Button>
+        </div>
+      </div>
+
+      {/* Counter */}
+      <div className="shrink-0 py-2">
+        <p className="text-xs text-slate-400">
+          {deductions.length} deduction{deductions.length !== 1 ? 's' : ''} for {selectedMonth} {selectedYear}
+        </p>
+      </div>
+
+      {/* Table Section */}
+      <div className="flex-1 overflow-hidden mt-2">
+        {loading ? (
+          <div className="flex flex-col justify-center items-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+            <p className="text-slate-500 mt-2">Loading deductions...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-full text-red-500">
+            <AlertCircle className="h-10 w-10 mb-2" />
+            <p>{error}</p>
+            <Button variant="outline" size="sm" onClick={handleRefresh} className="mt-4">
+              Try Again
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center items-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-            </div>
-          ) : error ? (
-            <div className="text-center text-red-500 py-10">{error}</div>
-          ) : (
-            <DeductionAssignTable
-              data={assignedDeductions}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onBulkDeleteClick={handleBulkDeleteClick}
-            />
-          )}
-        </CardContent>
-      </Card>
+        ) : (
+          <DeductionAssignTable
+            data={deductions}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onBulkDelete={handleBulkDelete}
+            globalSearchValue={globalFilter}
+            hideHeader={true}
+          />
+        )}
+      </div>
 
       {/* Dialogs */}
       {isAddDialogOpen && (
@@ -257,7 +516,7 @@ export default function AssignDeductions() {
           deduction={selectedDeduction}
           companyId={companyId!}
           isOpen={isEditDialogOpen}
-          onClose={handleCloseEditDialog}
+          onClose={() => setIsEditDialogOpen(false)}
           onUpdated={handleUpdateSuccess}
         />
       )}
@@ -267,7 +526,7 @@ export default function AssignDeductions() {
           deduction={selectedDeduction}
           companyId={companyId!}
           isOpen={isDeleteDialogOpen}
-          onClose={handleCloseDeleteDialog}
+          onClose={() => setIsDeleteDialogOpen(false)}
           onDeleted={handleUpdateSuccess}
         />
       )}
@@ -281,15 +540,21 @@ export default function AssignDeductions() {
             setIsBulkDeleteDialogOpen(false);
             setDeductionsToDelete([]);
           }}
-          onDeleted={handleUpdateSuccess}
+          onDeleted={handleBulkDeleteSuccess}
         />
       )}
 
-      {isImportDialogOpen && (
-        <ImportDeductionDialog
-          isOpen={isImportDialogOpen}
-          onClose={() => setIsImportDialogOpen(false)}
-          onUpdated={handleImportSuccess}
+      {isImportPreviewOpen && (
+        <ImportDeductionPreviewDialog
+          companyId={companyId!}
+          isOpen={isImportPreviewOpen}
+          onClose={() => {
+            setIsImportPreviewOpen(false);
+          }}
+          onSuccess={() => {
+            dataCache.current.clear();
+            fetchData(true);
+          }}
         />
       )}
     </div>

@@ -10,6 +10,10 @@ export default function DeductionLayout() {
       href: `/company/${companyId}/payroll/deductions/overview`,
       exact: true,
     },
+        {
+      label: "Assign Deductions",
+      href: `/company/${companyId}/payroll/deductions/assign`,
+    },
      {
       label: "HELB",
       href: `/company/${companyId}/payroll/deductions/helb`,

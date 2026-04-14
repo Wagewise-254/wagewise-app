@@ -34,6 +34,8 @@ import BenefitSettings from "./pages/company/payroll/benefits/benefitSection.tsx
 import BenefitLayout from "./pages/company/payroll/benefits/benefitsLayout.tsx";
 import DeductionLayout from "./pages/company/payroll/deductions/deductionsLayout.tsx";
 import AssignBenefits from "./pages/company/payroll/benefits/assignBenefits.tsx";
+import AllowanceHistory from "./pages/company/payroll/benefits/AllowanceHistory.tsx";
+import DeductionHistory from "./pages/company/payroll/deductions/DeductionHistory.tsx";
 import AbsentDaysPage from "./pages/company/payroll/benefits/absentDays.tsx";
 import AssignDeductions from "./pages/company/payroll/deductions/assignDeductions.tsx";
 import PayrollWizard from "./components/payroll/runs/PayrollWizard.tsx";
@@ -132,28 +134,33 @@ const AppRouterWrapper = () => {
               <Route path="sub-departments" element={<SubDepartmentsPage />} />
             </Route>
 
-             {/**Payroll specific dashboards */}
+            {/**Payroll specific dashboards */}
             <Route path="payroll">
               <Route index element={<PayrollOverview />} />
               <Route path="run" element={<RunPayroll />} />
               <Route path="eligibility" element={<PayrollEligibilityPage />} />
-              <Route path="process/:payrollRunId" element={<PayrollProcessPage />} />
+              <Route
+                path="process/:payrollRunId"
+                element={<PayrollProcessPage />}
+              />
               <Route path="payslips" element={<SendPayslip />} />
               <Route path="history" element={<PayrollHistory />} />
               <Route path="benefits" element={<BenefitLayout />}>
                 <Route index element={<Navigate to="overview" replace />} />
                 <Route path="overview" element={<BenefitSettings />} />
+                <Route path="assign" element={<AssignBenefits />} />
                 <Route path="absent-days" element={<AbsentDaysPage />} />
               </Route>
               <Route path="deductions" element={<DeductionLayout />}>
                 <Route index element={<Navigate to="overview" replace />} />
                 <Route path="overview" element={<DeductionSettings />} />
+                <Route path="assign" element={<AssignDeductions />} />
                 <Route path="helb" element={<HELBSection />} />
               </Route>
             </Route>
 
-             {/**Report specific dashboards */}
-             <Route path="reports">
+            {/**Report specific dashboards */}
+            <Route path="reports">
               <Route index element={<ReportOverview />} />
               <Route path="overview" element={<ReportOverview />} />
               <Route path="annual" element={<AnnualReports />} />
@@ -165,10 +172,13 @@ const AppRouterWrapper = () => {
               />
             </Route>
 
-              {/**Settings specific dashboards */}
-               <Route path="settings" element={<SettingsLayout />}>
+            {/**Settings specific dashboards */}
+            <Route path="settings" element={<SettingsLayout />}>
               <Route index element={<CompanySettingsOverviewPage />} />
-              <Route path="overview" element={<CompanySettingsOverviewPage />} />
+              <Route
+                path="overview"
+                element={<CompanySettingsOverviewPage />}
+              />
               <Route path="profiles" element={<ProfileSettings />} />
               <Route path="reviewers" element={<Reviewers />} />
               <Route path="logs" element={<AuditLogs />} />
@@ -195,13 +205,20 @@ const AppRouterWrapper = () => {
               <Route path="history" element={<EmployeeHistoryPage />} />
             </Route>
 
-              {/* payroll */}
-              <Route path="payroll/:payrollRunId">
+            {/* payroll */}
+            <Route path="payroll/:payrollRunId">
               <Route path="wizard" element={<PayrollWizard />} />
               <Route path="review-status" element={<PayrollReviewStatus />} />
+              
             </Route>
-            <Route path="benefits/assign" element={<AssignBenefits />} />
-            <Route path="deductions/assign" element={<AssignDeductions />} />
+            <Route
+                path="payroll/benefits/history"
+                element={<AllowanceHistory />}
+              />
+              <Route
+                path="payroll/deductions/history"
+                element={<DeductionHistory />}
+              />
             <Route path="payroll/setup" element={<PayrollSetup />} />
           </Route>
 

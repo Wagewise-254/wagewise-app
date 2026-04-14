@@ -116,7 +116,7 @@ export default function HELBSection() {
 
   if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center py-20">
+      <div className="flex flex-col  justify-center items-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-[#7F5EFD] mb-4" />
         <p className="text-slate-500">Loading HELB records...</p>
       </div>

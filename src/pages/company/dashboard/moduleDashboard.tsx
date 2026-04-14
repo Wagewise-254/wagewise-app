@@ -13,8 +13,6 @@ import {
   UserPlus,
   CreditCard,
   FileText,
-  Building2,
-  Settings,
   TrendingUp,
   TrendingDown,
   Calendar,
@@ -26,7 +24,8 @@ import {
   UserCheck,
   Activity,
   UserCog,
-  Briefcase
+  Briefcase,
+  Mail
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -250,7 +249,7 @@ const ModuleDashboard = () => {
 
   const getIconComponent = (iconName: string) => {
     const icons: Record<string, React.ElementType> = {
-      UserPlus, CreditCard, FileText, Building2, Settings, Users, UserCog, Briefcase
+      UserPlus, CreditCard, FileText, TrendingUp,DollarSign, Users, UserCog, Briefcase, Mail, 
     };
     const Icon = icons[iconName] || Users;
     return <Icon className="h-5 w-5" />;
@@ -318,7 +317,7 @@ const ModuleDashboard = () => {
               <button
                 key={action.id}
                 onClick={() => navigate(action.url)}
-                className="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-slate-200 hover:border-[#7F5EFD] hover:shadow-md transition-all group"
+                className="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-slate-200 hover:border-[#7F5EFD] hover:shadow-md transition-all group cursor-pointer"
               >
                 <div className="h-10 w-10 rounded-full bg-[#7F5EFD]/10 flex items-center justify-center text-[#7F5EFD] group-hover:bg-[#7F5EFD] group-hover:text-white transition-colors">
                   {getIconComponent(action.icon)}

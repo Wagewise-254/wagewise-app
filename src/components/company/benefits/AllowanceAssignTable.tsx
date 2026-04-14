@@ -1,5 +1,3 @@
-// src/components/company/payroll/allowances/AllowanceAssignTable.tsx
-
 import * as React from "react";
 import {
   ColumnDef,
@@ -38,7 +36,6 @@ import {
   Briefcase,
   Calendar,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Pagination,
@@ -56,7 +53,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Allowance,
   getFormattedEndDate,
@@ -64,6 +61,7 @@ import {
   HousingMetadata,
   CarMetadata,
 } from "@/types/allowance";
+import { cn } from "@/lib/utils";
 
 // Helper function to get recipient display as string (for filtering/search)
 const getRecipientDisplayString = (allowance: Allowance): string => {
@@ -91,7 +89,7 @@ const getRecipientDisplayElement = (allowance: Allowance) => {
     case "INDIVIDUAL":
       return allowance.employees ? (
         <div className="flex flex-col">
-          <span>
+          <span className="text-sm font-medium text-slate-800">
             {allowance.employees.first_name} {allowance.employees.middle_name}{" "}
             {allowance.employees.last_name}
           </span>
@@ -103,70 +101,36 @@ const getRecipientDisplayElement = (allowance: Allowance) => {
         "Unknown Employee"
       );
     case "COMPANY":
-      return "All Employees";
+      return <span className="text-sm font-medium text-slate-800">All Employees</span>;
     case "DEPARTMENT":
-      return allowance.departments?.name || "Unknown Department";
+      return <span className="text-sm font-medium text-slate-800">{allowance.departments?.name || "Unknown Department"}</span>;
     case "SUB_DEPARTMENT":
-      return allowance.sub_departments?.name || "Unknown Sub-department";
+      return <span className="text-sm font-medium text-slate-800">{allowance.sub_departments?.name || "Unknown Sub-department"}</span>;
     case "JOB_TITLE":
-      return allowance.job_titles?.title || "Unknown Job Title";
+      return <span className="text-sm font-medium text-slate-800">{allowance.job_titles?.title || "Unknown Job Title"}</span>;
     default:
       return "N/A";
   }
 };
 
-// Add this helper function to generate page numbers with ellipsis
-const getPageNumbers = (
-  currentPage: number,
-  totalPages: number,
-): (number | string)[] => {
-  const delta = 2; // Number of pages to show on each side of current page
-  const range: number[] = [];
-  const rangeWithDots: (number | string)[] = [];
-  let l: number | undefined;
-
-  for (let i = 1; i <= totalPages; i++) {
-    if (
-      i === 1 ||
-      i === totalPages ||
-      (i >= currentPage - delta && i <= currentPage + delta)
-    ) {
-      range.push(i);
-    }
-  }
-
-  range.forEach((i) => {
-    if (l) {
-      if (i - l === 2) {
-        rangeWithDots.push(l + 1);
-      } else if (i - l !== 1) {
-        rangeWithDots.push("...");
-      }
-    }
-    rangeWithDots.push(i);
-    l = i;
-  });
-
-  return rangeWithDots;
-};
 // Helper function to get recipient icon
 const getRecipientIcon = (applies_to: string) => {
   switch (applies_to) {
     case "INDIVIDUAL":
       return null;
     case "COMPANY":
-      return <Building className="h-3 w-3 mr-1" />;
+      return <Building className="h-3 w-3 mr-1 text-slate-400" />;
     case "DEPARTMENT":
     case "SUB_DEPARTMENT":
-      return <Users className="h-3 w-3 mr-1" />;
+      return <Users className="h-3 w-3 mr-1 text-slate-400" />;
     case "JOB_TITLE":
-      return <Briefcase className="h-3 w-3 mr-1" />;
+      return <Briefcase className="h-3 w-3 mr-1 text-slate-400" />;
     default:
       return null;
   }
 };
 
-// Custom sorting function for start date (month/year)
+// Custom sorting function for start date
 const dateSort: SortingFn<Allowance> = (rowA, rowB) => {
   const aYear = rowA.original.start_year;
   const bYear = rowB.original.start_year;
@@ -198,52 +162,30 @@ interface Props {
   onEdit: (allowance: Allowance) => void;
   onDelete: (allowance: Allowance) => void;
   onBulkDelete: (allowanceIds: string[]) => void;
+  globalSearchValue?: string;
+  hideHeader?: boolean;
+   readOnly?: boolean;
 }
-
-const BulkDeleteButton = ({
-  table,
-  onBulkDeleteClick,
-}: {
-  table: ReturnType<typeof useReactTable<Allowance>>;
-  onBulkDeleteClick: (allowanceIds: string[]) => void;
-}) => {
-  const selectedRowCount = Object.keys(table.getState().rowSelection).length;
-
-  if (selectedRowCount === 0) {
-    return null;
-  }
-
-  const handleBulkDelete = () => {
-    const selectedIds = table
-      .getSelectedRowModel()
-      .rows.map((row) => row.original.id);
-    onBulkDeleteClick(selectedIds);
-  };
-
-  return (
-    <Button
-      variant="destructive"
-      className="flex items-center space-x-2 ml-4 text-white"
-      onClick={handleBulkDelete}
-    >
-      <Trash2 className="h-4 w-4" />
-      <span>Delete ({selectedRowCount})</span>
-    </Button>
-  );
-};
 
 const AllowanceAssignTable: React.FC<Props> = ({
   data,
   onEdit,
   onDelete,
   onBulkDelete,
+  globalSearchValue = "",
+    readOnly = false,
 }) => {
-  const [globalFilter, setGlobalFilter] = useState("");
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
-    pageSize: 20,
+    pageSize: 10,
   });
+  const [globalFilter, setGlobalFilter] = useState("");
+
+  // Sync external search
+  useEffect(() => {
+    setGlobalFilter(globalSearchValue);
+  }, [globalSearchValue]);
 
   const columns: ColumnDef<Allowance>[] = [
     {
@@ -256,6 +198,7 @@ const AllowanceAssignTable: React.FC<Props> = ({
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
+          className="shadow-none cursor-pointer data-[state=checked]:bg-[#1F3A8A] data-[state=checked]:border-[#1F3A8A]"
         />
       ),
       cell: ({ row }) => (
@@ -263,10 +206,12 @@ const AllowanceAssignTable: React.FC<Props> = ({
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"
+          className="shadow-none cursor-pointer data-[state=checked]:bg-[#1F3A8A] data-[state=checked]:border-[#1F3A8A]"
+          onClick={(e) => e.stopPropagation()}
         />
       ),
       enableSorting: false,
-      enableHiding: false,
+      size: 40,
     },
     {
       accessorKey: "allowance_types.name",
@@ -275,9 +220,9 @@ const AllowanceAssignTable: React.FC<Props> = ({
         const allowanceType = row.original.allowance_types;
         return (
           <div>
-            <div>{allowanceType.name}</div>
+            <span className="text-sm font-medium text-slate-800">{allowanceType.name}</span>
             {!allowanceType.is_cash && (
-              <Badge variant="outline" className="mt-1 text-xs">
+              <Badge variant="outline" className="ml-2 text-xs">
                 Non-Cash
               </Badge>
             )}
@@ -288,7 +233,7 @@ const AllowanceAssignTable: React.FC<Props> = ({
     {
       id: "recipient",
       header: "Recipient",
-      accessorFn: (row) => getRecipientDisplayString(row), // For filtering/sorting
+      accessorFn: (row) => getRecipientDisplayString(row),
       cell: ({ row }) => {
         const allowance = row.original;
         const icon = getRecipientIcon(allowance.applies_to);
@@ -316,7 +261,7 @@ const AllowanceAssignTable: React.FC<Props> = ({
       cell: ({ row }) => {
         const allowance = row.original;
         return (
-          <span className="font-medium">
+          <span className="font-medium text-slate-700">
             {allowance.value.toLocaleString()}
             {allowance.calculation_type === "PERCENTAGE" ? "%" : ""}
           </span>
@@ -327,7 +272,7 @@ const AllowanceAssignTable: React.FC<Props> = ({
       accessorKey: "calculation_type",
       header: "Type",
       cell: ({ row }) => (
-        <Badge variant="outline">
+        <Badge variant="outline" className="text-xs">
           {row.original.calculation_type === "FIXED" ? "Fixed" : "Percentage"}
         </Badge>
       ),
@@ -337,9 +282,9 @@ const AllowanceAssignTable: React.FC<Props> = ({
       header: "Recurring",
       cell: ({ row }) =>
         row.original.is_recurring ? (
-          <Check className="h-4 w-4 text-green-500" />
+          <Check className="h-4 w-4 text-emerald-500" />
         ) : (
-          <X className="h-4 w-4 text-red-500" />
+          <X className="h-4 w-4 text-slate-400" />
         ),
     },
     {
@@ -349,7 +294,7 @@ const AllowanceAssignTable: React.FC<Props> = ({
       cell: ({ row }) => {
         const allowance = row.original;
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 text-sm text-slate-600">
             <Calendar className="h-3 w-3 text-slate-400" />
             <span>{getFormattedStartDate(allowance)}</span>
           </div>
@@ -368,9 +313,9 @@ const AllowanceAssignTable: React.FC<Props> = ({
         const allowance = row.original;
         const endDate = getFormattedEndDate(allowance);
         return endDate === "Ongoing" ? (
-          <span className="text-muted-foreground">Ongoing</span>
+          <span className="text-sm text-slate-400">Ongoing</span>
         ) : (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 text-sm text-slate-600">
             <Calendar className="h-3 w-3 text-slate-400" />
             <span>{endDate}</span>
           </div>
@@ -413,29 +358,35 @@ const AllowanceAssignTable: React.FC<Props> = ({
         return null;
       },
     },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(row.original)}>
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDelete(row.original)}>
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
   ];
+
+  // Only add actions column if not readOnly
+  if (!readOnly) {
+    columns.push({
+      id: "actions",
+      header: () => <div className="text-right">Actions</div>,
+      cell: ({ row }) => (
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-7 w-7 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-3.5 w-3.5 text-slate-400" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit(row.original)}>
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDelete(row.original)}>
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+    });
+  }
 
   const table = useReactTable({
     data,
@@ -458,22 +409,17 @@ const AllowanceAssignTable: React.FC<Props> = ({
       const allowance = row.original;
       const searchStr = filterValue.toLowerCase();
 
-      // Search by recipient name (using string version)
-      const recipientDisplay =
-        getRecipientDisplayString(allowance).toLowerCase();
+      const recipientDisplay = getRecipientDisplayString(allowance).toLowerCase();
       if (recipientDisplay.includes(searchStr)) return true;
 
-      // Search by allowance type
       if (allowance.allowance_types.name.toLowerCase().includes(searchStr))
         return true;
 
-      // Search by month/year
       if (allowance.start_month.toLowerCase().includes(searchStr)) return true;
       if (allowance.start_year.toString().includes(searchStr)) return true;
       if (allowance.end_month?.toLowerCase().includes(searchStr)) return true;
       if (allowance.end_year?.toString().includes(searchStr)) return true;
 
-      // Search by metadata
       if (allowance.allowance_types.code === "HOUSING") {
         const housingMetadata = allowance.metadata as HousingMetadata;
         if (housingMetadata.type?.toLowerCase().includes(searchStr))
@@ -490,25 +436,122 @@ const AllowanceAssignTable: React.FC<Props> = ({
     },
   });
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center py-4">
-        <Input
-          placeholder="Search by employee, allowance type, month, or details..."
-          value={globalFilter ?? ""}
-          onChange={(event) => setGlobalFilter(event.target.value)}
-          className="max-w-sm rounded-sm shadow-none"
-        />
-        <BulkDeleteButton table={table} onBulkDeleteClick={onBulkDelete} />
-      </div>
+  const selectedCount = Object.keys(rowSelection).length;
 
-      <div className="rounded-sm shadow-none px-2 border border-slate-300">
-        <Table>
-          <TableHeader>
+  const renderPaginationItems = () => {
+    const pageCount = table.getPageCount();
+    const currentPage = table.getState().pagination.pageIndex;
+    const items = [];
+
+    if (pageCount <= 5) {
+      for (let i = 0; i < pageCount; i++) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink
+              isActive={currentPage === i}
+              onClick={() => table.setPageIndex(i)}
+              className="cursor-pointer h-7 w-7"
+            >
+              {i + 1}
+            </PaginationLink>
+          </PaginationItem>,
+        );
+      }
+    } else {
+      items.push(
+        <PaginationItem key={0}>
+          <PaginationLink
+            isActive={currentPage === 0}
+            onClick={() => table.setPageIndex(0)}
+            className="cursor-pointer h-7 w-7"
+          >
+            1
+          </PaginationLink>
+        </PaginationItem>,
+      );
+
+      if (currentPage > 2) {
+        items.push(<PaginationEllipsis key="ellipsis-1" />);
+      }
+
+      const start = Math.max(1, currentPage - 1);
+      const end = Math.min(pageCount - 2, currentPage + 1);
+
+      for (let i = start; i <= end; i++) {
+        if (i > 0 && i < pageCount - 1) {
+          items.push(
+            <PaginationItem key={i}>
+              <PaginationLink
+                isActive={currentPage === i}
+                onClick={() => table.setPageIndex(i)}
+                className="cursor-pointer h-7 w-7"
+              >
+                {i + 1}
+              </PaginationLink>
+            </PaginationItem>,
+          );
+        }
+      }
+
+      if (currentPage < pageCount - 3) {
+        items.push(<PaginationEllipsis key="ellipsis-2" />);
+      }
+
+      items.push(
+        <PaginationItem key={pageCount - 1}>
+          <PaginationLink
+            isActive={currentPage === pageCount - 1}
+            onClick={() => table.setPageIndex(pageCount - 1)}
+            className="cursor-pointer h-7 w-7"
+          >
+            {pageCount}
+          </PaginationLink>
+        </PaginationItem>,
+      );
+    }
+
+    return items;
+  };
+
+  return (
+    <div className="h-full flex flex-col space-y-2">
+      {/* Bulk Actions Bar */}
+      {selectedCount > 0 && (
+        <div className="shrink-0 flex items-center justify-between animate-in fade-in slide-in-from-top-1">
+          <span className="text-xs font-medium text-slate-500">
+            {selectedCount} selected
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs border-rose-200 text-rose-600 hover:bg-rose-50"
+              onClick={() => {
+                const selectedIds = table
+                  .getSelectedRowModel()
+                  .rows.map((row) => row.original.id);
+                onBulkDelete(selectedIds);
+              }}
+            >
+              <Trash2 className="mr-1 h-3 w-3" />
+              Delete
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Table Container */}
+      <div className="flex-1 overflow-auto min-h-0 rounded-sm border border-slate-200">
+        <Table className="relative">
+          <TableHeader className="sticky top-0 bg-slate-50 z-10 shadow-sm">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead
+                    key={header.id}
+                    style={{ width: header.getSize() }}
+                    className="h-8 text-xs font-medium text-slate-500"
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -526,9 +569,10 @@ const AllowanceAssignTable: React.FC<Props> = ({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className="hover:bg-slate-50/80 transition-colors"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className="py-2">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),
@@ -541,9 +585,11 @@ const AllowanceAssignTable: React.FC<Props> = ({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
+                  className="h-32 text-center"
                 >
-                  No allowances found.
+                  <div className="flex flex-col items-center justify-center text-slate-400">
+                    <p className="text-sm">No allowances found</p>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -551,103 +597,60 @@ const AllowanceAssignTable: React.FC<Props> = ({
         </Table>
       </div>
 
-      <div className="flex items-center justify-between space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-
-        <div className="flex items-center space-x-4">
-          {/* Rows per page selector */}
+      {/* Pagination */}
+      {table.getPageCount() > 1 && (
+        <div className="shrink-0 flex items-center justify-between pt-1">
+          <p className="text-xs text-slate-400">
+            Showing {table.getRowModel().rows.length} of {data.length}
+          </p>
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-slate-600">Show</span>
             <Select
               value={`${table.getState().pagination.pageSize}`}
               onValueChange={(value) => {
                 table.setPageSize(Number(value));
               }}
             >
-              <SelectTrigger className="h-8 w-17.5">
-                <SelectValue
-                  placeholder={table.getState().pagination.pageSize}
-                />
+              <SelectTrigger className="h-7 w-16 text-xs">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[10, 20, 30, 50, 100].map((pageSize) => (
+                {[10, 20, 30, 50].map((pageSize) => (
                   <SelectItem key={pageSize} value={`${pageSize}`}>
                     {pageSize}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Shadcn Pagination */}
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    table.previousPage();
-                  }}
-                  className={
-                    !table.getCanPreviousPage()
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }
-                />
-              </PaginationItem>
-
-              {getPageNumbers(
-                table.getState().pagination.pageIndex + 1,
-                table.getPageCount(),
-              ).map((page, i) => (
-                <PaginationItem key={i}>
-                  {page === "..." ? (
-                    <PaginationEllipsis />
-                  ) : (
-                    <PaginationLink
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        table.setPageIndex(Number(page) - 1);
-                      }}
-                      isActive={
-                        table.getState().pagination.pageIndex + 1 === page
-                      }
-                    >
-                      {page}
-                    </PaginationLink>
-                  )}
+            <Pagination className="w-auto">
+              <PaginationContent className="gap-0.5">
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => table.previousPage()}
+                    className={cn(
+                      "h-7 w-7 p-0",
+                      !table.getCanPreviousPage() &&
+                        "pointer-events-none opacity-50",
+                    )}
+                  />
                 </PaginationItem>
-              ))}
 
-              <PaginationItem>
-                <PaginationNext
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    table.nextPage();
-                  }}
-                  className={
-                    !table.getCanNextPage()
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+                {renderPaginationItems()}
 
-          {/* Page indicator */}
-          <span className="text-sm text-slate-600">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()}
-          </span>
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => table.nextPage()}
+                    className={cn(
+                      "h-7 w-7 p-0",
+                      !table.getCanNextPage() &&
+                        "pointer-events-none opacity-50",
+                    )}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

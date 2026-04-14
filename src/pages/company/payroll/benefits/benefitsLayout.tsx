@@ -11,9 +11,12 @@ export default function BenefitLayout() {
       exact: true,
     },
     {
+      label: "Assign Benefits",
+      href: `/company/${companyId}/payroll/benefits/assign`,
+    },
+    {
       label: "Absent Days",
       href: `/company/${companyId}/payroll/benefits/absent-days`,
-      exact: true,
     },
   ];
 

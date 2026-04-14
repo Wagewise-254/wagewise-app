@@ -55,13 +55,13 @@ import {
   Briefcase,
   Calendar,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AssignedDeduction,
   getFormattedStartDate,
   getFormattedEndDate,
 } from "@/types/deduction";
+import { cn } from "@/lib/utils";
 
 // Helper function to get recipient display as string (for filtering/search)
 const getRecipientDisplayString = (deduction: AssignedDeduction): string => {
@@ -89,7 +89,7 @@ const getRecipientDisplayElement = (deduction: AssignedDeduction) => {
     case "INDIVIDUAL":
       return deduction.employees ? (
         <div className="flex flex-col">
-          <span>
+          <span className="text-sm font-medium text-slate-800">
             {deduction.employees.first_name} {deduction.employees.middle_name}{" "}
             {deduction.employees.last_name}
           </span>
@@ -101,51 +101,16 @@ const getRecipientDisplayElement = (deduction: AssignedDeduction) => {
         "Unknown Employee"
       );
     case "COMPANY":
-      return "All Employees";
+      return <span className="text-sm font-medium text-slate-800">All Employees</span>;
     case "DEPARTMENT":
-      return deduction.departments?.name || "Unknown Department";
+      return <span className="text-sm font-medium text-slate-800">{deduction.departments?.name || "Unknown Department"}</span>;
     case "SUB_DEPARTMENT":
-      return deduction.sub_departments?.name || "Unknown Sub-department";
+      return <span className="text-sm font-medium text-slate-800">{deduction.sub_departments?.name || "Unknown Sub-department"}</span>;
     case "JOB_TITLE":
-      return deduction.job_titles?.title || "Unknown Job Title";
+      return <span className="text-sm font-medium text-slate-800">{deduction.job_titles?.title || "Unknown Job Title"}</span>;
     default:
       return "N/A";
   }
-};
-
-// Add this helper function to generate page numbers with ellipsis
-const getPageNumbers = (
-  currentPage: number,
-  totalPages: number,
-): (number | string)[] => {
-  const delta = 2; // Number of pages to show on each side of current page
-  const range: number[] = [];
-  const rangeWithDots: (number | string)[] = [];
-  let l: number | undefined;
-
-  for (let i = 1; i <= totalPages; i++) {
-    if (
-      i === 1 ||
-      i === totalPages ||
-      (i >= currentPage - delta && i <= currentPage + delta)
-    ) {
-      range.push(i);
-    }
-  }
-
-  range.forEach((i) => {
-    if (l) {
-      if (i - l === 2) {
-        rangeWithDots.push(l + 1);
-      } else if (i - l !== 1) {
-        rangeWithDots.push("...");
-      }
-    }
-    rangeWithDots.push(i);
-    l = i;
-  });
-
-  return rangeWithDots;
 };
 
 // Helper function to get recipient icon
@@ -154,18 +119,18 @@ const getRecipientIcon = (applies_to: string) => {
     case "INDIVIDUAL":
       return null;
     case "COMPANY":
-      return <Building className="h-3 w-3 mr-1" />;
+      return <Building className="h-3 w-3 mr-1 text-slate-400" />;
     case "DEPARTMENT":
     case "SUB_DEPARTMENT":
-      return <Users className="h-3 w-3 mr-1" />;
+      return <Users className="h-3 w-3 mr-1 text-slate-400" />;
     case "JOB_TITLE":
-      return <Briefcase className="h-3 w-3 mr-1" />;
+      return <Briefcase className="h-3 w-3 mr-1 text-slate-400" />;
     default:
       return null;
   }
 };
 
-// Custom sorting function for start date (month/year)
+// Custom sorting function for start date
 const dateSort: SortingFn<AssignedDeduction> = (rowA, rowB) => {
   const aYear = rowA.original.start_year;
   const bYear = rowB.original.start_year;
@@ -196,53 +161,31 @@ interface Props {
   data: AssignedDeduction[];
   onEdit: (deduction: AssignedDeduction) => void;
   onDelete: (deduction: AssignedDeduction) => void;
-  onBulkDeleteClick: (deductionIds: string[]) => void;
+  onBulkDelete: (deductionIds: string[]) => void;
+  globalSearchValue?: string;
+  hideHeader?: boolean;
+  readOnly?: boolean;
 }
-
-const BulkDeleteButton = ({
-  table,
-  onBulkDeleteClick,
-}: {
-  table: ReturnType<typeof useReactTable<AssignedDeduction>>;
-  onBulkDeleteClick: (deductionIds: string[]) => void;
-}) => {
-  const selectedRowCount = Object.keys(table.getState().rowSelection).length;
-
-  if (selectedRowCount === 0) {
-    return null;
-  }
-
-  const handleBulkDelete = () => {
-    const selectedIds = table
-      .getSelectedRowModel()
-      .rows.map((row) => row.original.id);
-    onBulkDeleteClick(selectedIds);
-  };
-
-  return (
-    <Button
-      variant="destructive"
-      className="flex items-center space-x-2 ml-4 text-white"
-      onClick={handleBulkDelete}
-    >
-      <Trash2 className="h-4 w-4" />
-      <span>Delete ({selectedRowCount})</span>
-    </Button>
-  );
-};
 
 const DeductionAssignTable: React.FC<Props> = ({
   data,
   onEdit,
   onDelete,
-  onBulkDeleteClick,
+  onBulkDelete,
+  globalSearchValue = "",
+  readOnly = false,
 }) => {
-  const [globalFilter, setGlobalFilter] = useState("");
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
-    pageSize: 20,
+    pageSize: 10,
   });
+  const [globalFilter, setGlobalFilter] = useState("");
+
+  // Sync external search
+  useEffect(() => {
+    setGlobalFilter(globalSearchValue);
+  }, [globalSearchValue]);
 
   const columns: ColumnDef<AssignedDeduction>[] = [
     {
@@ -255,6 +198,7 @@ const DeductionAssignTable: React.FC<Props> = ({
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
+          className="shadow-none cursor-pointer data-[state=checked]:bg-[#1F3A8A] data-[state=checked]:border-[#1F3A8A]"
         />
       ),
       cell: ({ row }) => (
@@ -262,10 +206,12 @@ const DeductionAssignTable: React.FC<Props> = ({
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"
+          className="shadow-none cursor-pointer data-[state=checked]:bg-[#1F3A8A] data-[state=checked]:border-[#1F3A8A]"
+          onClick={(e) => e.stopPropagation()}
         />
       ),
       enableSorting: false,
-      enableHiding: false,
+      size: 40,
     },
     {
       accessorKey: "deduction_types.name",
@@ -273,15 +219,13 @@ const DeductionAssignTable: React.FC<Props> = ({
       cell: ({ row }) => {
         const deductionType = row.original.deduction_types;
         return (
-          <div>
-            <div className="flex items-center gap-2">
-              <span>{deductionType.name}</span>
-              {deductionType.is_pre_tax && (
-                <Badge variant="secondary" className="text-xs">
-                  Pre-tax
-                </Badge>
-              )}
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-800">{deductionType.name}</span>
+            {deductionType.is_pre_tax && (
+              <Badge variant="secondary" className="text-xs">
+                Pre-tax
+              </Badge>
+            )}
           </div>
         );
       },
@@ -289,7 +233,7 @@ const DeductionAssignTable: React.FC<Props> = ({
     {
       id: "recipient",
       header: "Recipient",
-      accessorFn: (row) => getRecipientDisplayString(row), // For filtering/sorting
+      accessorFn: (row) => getRecipientDisplayString(row),
       cell: ({ row }) => {
         const deduction = row.original;
         const icon = getRecipientIcon(deduction.applies_to);
@@ -317,7 +261,7 @@ const DeductionAssignTable: React.FC<Props> = ({
       cell: ({ row }) => {
         const deduction = row.original;
         return (
-          <span className="font-medium">
+          <span className="font-medium text-slate-700">
             {deduction.value.toLocaleString()}
             {deduction.calculation_type === "PERCENTAGE" ? "%" : ""}
           </span>
@@ -328,7 +272,7 @@ const DeductionAssignTable: React.FC<Props> = ({
       accessorKey: "calculation_type",
       header: "Type",
       cell: ({ row }) => (
-        <Badge variant="outline">
+        <Badge variant="outline" className="text-xs">
           {row.original.calculation_type === "FIXED" ? "Fixed" : "Percentage"}
         </Badge>
       ),
@@ -338,9 +282,9 @@ const DeductionAssignTable: React.FC<Props> = ({
       header: "Recurring",
       cell: ({ row }) =>
         row.original.is_recurring ? (
-          <Check className="h-4 w-4 text-green-500" />
+          <Check className="h-4 w-4 text-emerald-500" />
         ) : (
-          <X className="h-4 w-4 text-red-500" />
+          <X className="h-4 w-4 text-slate-400" />
         ),
     },
     {
@@ -350,7 +294,7 @@ const DeductionAssignTable: React.FC<Props> = ({
       cell: ({ row }) => {
         const deduction = row.original;
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 text-sm text-slate-600">
             <Calendar className="h-3 w-3 text-slate-400" />
             <span>{getFormattedStartDate(deduction)}</span>
           </div>
@@ -369,38 +313,44 @@ const DeductionAssignTable: React.FC<Props> = ({
         const deduction = row.original;
         const endDate = getFormattedEndDate(deduction);
         return endDate === "Ongoing" ? (
-          <span className="text-muted-foreground">Ongoing</span>
+          <span className="text-sm text-slate-400">Ongoing</span>
         ) : (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 text-sm text-slate-600">
             <Calendar className="h-3 w-3 text-slate-400" />
             <span>{endDate}</span>
           </div>
         );
       },
     },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(row.original)}>
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDelete(row.original)}>
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
   ];
+
+  if (!readOnly) {
+    columns.push({
+      id: "actions",
+      header: () => <div className="text-right">Actions</div>,
+      cell: ({ row }) => (
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-7 w-7 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-3.5 w-3.5 text-slate-400" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit(row.original)}>
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDelete(row.original)}>
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+    })
+  }
+
 
   const table = useReactTable({
     data,
@@ -428,8 +378,7 @@ const DeductionAssignTable: React.FC<Props> = ({
         return true;
 
       // Search by recipient
-      const recipientDisplay =
-        getRecipientDisplayString(deduction).toLowerCase();
+      const recipientDisplay = getRecipientDisplayString(deduction).toLowerCase();
       if (recipientDisplay.includes(searchStr)) return true;
 
       // Search by month/year
@@ -448,25 +397,122 @@ const DeductionAssignTable: React.FC<Props> = ({
     },
   });
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center py-4">
-        <Input
-          placeholder="Search by deduction type, recipient, or month..."
-          value={globalFilter ?? ""}
-          onChange={(event) => setGlobalFilter(event.target.value)}
-          className="max-w-sm rounded-sm shadow-none"
-        />
-        <BulkDeleteButton table={table} onBulkDeleteClick={onBulkDeleteClick} />
-      </div>
+  const selectedCount = Object.keys(rowSelection).length;
 
-      <div className="rounded-sm shadow-none px-2 border border-slate-300">
-        <Table>
-          <TableHeader>
+  const renderPaginationItems = () => {
+    const pageCount = table.getPageCount();
+    const currentPage = table.getState().pagination.pageIndex;
+    const items = [];
+
+    if (pageCount <= 5) {
+      for (let i = 0; i < pageCount; i++) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink
+              isActive={currentPage === i}
+              onClick={() => table.setPageIndex(i)}
+              className="cursor-pointer h-7 w-7"
+            >
+              {i + 1}
+            </PaginationLink>
+          </PaginationItem>,
+        );
+      }
+    } else {
+      items.push(
+        <PaginationItem key={0}>
+          <PaginationLink
+            isActive={currentPage === 0}
+            onClick={() => table.setPageIndex(0)}
+            className="cursor-pointer h-7 w-7"
+          >
+            1
+          </PaginationLink>
+        </PaginationItem>,
+      );
+
+      if (currentPage > 2) {
+        items.push(<PaginationEllipsis key="ellipsis-1" />);
+      }
+
+      const start = Math.max(1, currentPage - 1);
+      const end = Math.min(pageCount - 2, currentPage + 1);
+
+      for (let i = start; i <= end; i++) {
+        if (i > 0 && i < pageCount - 1) {
+          items.push(
+            <PaginationItem key={i}>
+              <PaginationLink
+                isActive={currentPage === i}
+                onClick={() => table.setPageIndex(i)}
+                className="cursor-pointer h-7 w-7"
+              >
+                {i + 1}
+              </PaginationLink>
+            </PaginationItem>,
+          );
+        }
+      }
+
+      if (currentPage < pageCount - 3) {
+        items.push(<PaginationEllipsis key="ellipsis-2" />);
+      }
+
+      items.push(
+        <PaginationItem key={pageCount - 1}>
+          <PaginationLink
+            isActive={currentPage === pageCount - 1}
+            onClick={() => table.setPageIndex(pageCount - 1)}
+            className="cursor-pointer h-7 w-7"
+          >
+            {pageCount}
+          </PaginationLink>
+        </PaginationItem>,
+      );
+    }
+
+    return items;
+  };
+
+  return (
+    <div className="h-full flex flex-col space-y-2">
+      {/* Bulk Actions Bar */}
+      {selectedCount > 0 && (
+        <div className="shrink-0 flex items-center justify-between animate-in fade-in slide-in-from-top-1">
+          <span className="text-xs font-medium text-slate-500">
+            {selectedCount} selected
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs border-rose-200 text-rose-600 hover:bg-rose-50"
+              onClick={() => {
+                const selectedIds = table
+                  .getSelectedRowModel()
+                  .rows.map((row) => row.original.id);
+                onBulkDelete(selectedIds);
+              }}
+            >
+              <Trash2 className="mr-1 h-3 w-3" />
+              Delete
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Table Container */}
+      <div className="flex-1 overflow-auto min-h-0 rounded-sm border border-slate-200 px-2 ">
+        <Table className="relative">
+          <TableHeader className="sticky top-0  z-10 shadow-sm">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead
+                    key={header.id}
+                    style={{ width: header.getSize() }}
+                    className="h-10 text-xs font-medium text-slate-500"
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -484,9 +530,10 @@ const DeductionAssignTable: React.FC<Props> = ({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className="hover:bg-slate-50/80 transition-colors"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className="py-2">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),
@@ -499,9 +546,11 @@ const DeductionAssignTable: React.FC<Props> = ({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
+                  className="h-32 text-center"
                 >
-                  No deductions found.
+                  <div className="flex flex-col items-center justify-center text-slate-400">
+                    <p className="text-sm">No deductions found</p>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -509,102 +558,60 @@ const DeductionAssignTable: React.FC<Props> = ({
         </Table>
       </div>
 
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-        <div className="flex items-center space-x-4">
-          {/* Rows per page selector */}
+      {/* Pagination */}
+      {table.getPageCount() > 1 && (
+        <div className="shrink-0 flex items-center justify-between pt-1">
+          <p className="text-xs text-slate-400">
+            Showing {table.getRowModel().rows.length} of {data.length}
+          </p>
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-slate-600">Show</span>
             <Select
               value={`${table.getState().pagination.pageSize}`}
               onValueChange={(value) => {
                 table.setPageSize(Number(value));
               }}
             >
-              <SelectTrigger className="h-8 w-17.5">
-                <SelectValue
-                  placeholder={table.getState().pagination.pageSize}
-                />
+              <SelectTrigger className="h-7 w-16 text-xs">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[10, 20, 30, 50, 100].map((pageSize) => (
+                {[10, 20, 30, 50].map((pageSize) => (
                   <SelectItem key={pageSize} value={`${pageSize}`}>
                     {pageSize}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Shadcn Pagination */}
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    table.previousPage();
-                  }}
-                  className={
-                    !table.getCanPreviousPage()
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }
-                />
-              </PaginationItem>
-
-              {getPageNumbers(
-                table.getState().pagination.pageIndex + 1,
-                table.getPageCount(),
-              ).map((page, i) => (
-                <PaginationItem key={i}>
-                  {page === "..." ? (
-                    <PaginationEllipsis />
-                  ) : (
-                    <PaginationLink
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        table.setPageIndex(Number(page) - 1);
-                      }}
-                      isActive={
-                        table.getState().pagination.pageIndex + 1 === page
-                      }
-                    >
-                      {page}
-                    </PaginationLink>
-                  )}
+            <Pagination className="w-auto">
+              <PaginationContent className="gap-0.5">
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => table.previousPage()}
+                    className={cn(
+                      "h-7 w-7 p-0",
+                      !table.getCanPreviousPage() &&
+                        "pointer-events-none opacity-50",
+                    )}
+                  />
                 </PaginationItem>
-              ))}
 
-              <PaginationItem>
-                <PaginationNext
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    table.nextPage();
-                  }}
-                  className={
-                    !table.getCanNextPage()
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+                {renderPaginationItems()}
 
-          {/* Page indicator */}
-          <span className="text-sm text-slate-600">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()}
-          </span>
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => table.nextPage()}
+                    className={cn(
+                      "h-7 w-7 p-0",
+                      !table.getCanNextPage() &&
+                        "pointer-events-none opacity-50",
+                    )}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

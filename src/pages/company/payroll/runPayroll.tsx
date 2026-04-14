@@ -327,19 +327,6 @@ export default function RunPayroll() {
                       >
                         Cancel
                       </Button>
-                      <Button
-                        onClick={() => {
-                          navigate(
-                            `/company/${companyId}/payroll/eligibility?month=${selectedMonth}&year=${parseInt(selectedYear)}`,
-                          );
-                          setIsOpen(false);
-                        }}
-                        disabled={checkingExistingRun}
-                        className="bg-[#7F5EFD] hover:bg-[#6b4de0] text-white"
-                      >
-                        Review Employee Eligibility
-                        <ChevronRight className="ml-2 h-4 w-4" />
-                      </Button>
                       {existingRunForPeriod &&
                         !["APPROVED", "LOCKED", "PAID"].includes(
                           existingRunForPeriod.status,
@@ -352,12 +339,25 @@ export default function RunPayroll() {
                               );
                               setIsOpen(false);
                             }}
-                            className="mt-2"
+                            className="ml-2 bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300"
                           >
                             <Edit2 className="mr-2 h-4 w-4" />
-                            Edit Existing Run
+                            Edit Eligibility
                           </Button>
                         )}
+                      <Button
+                        onClick={() => {
+                          navigate(
+                            `/company/${companyId}/payroll/eligibility?month=${selectedMonth}&year=${parseInt(selectedYear)}`,
+                          );
+                          setIsOpen(false);
+                        }}
+                        disabled={checkingExistingRun}
+                        className="bg-[#7F5EFD] hover:bg-[#6b4de0] text-white"
+                      >
+                        Continue
+                        <ChevronRight className="ml-2 h-4 w-4" />
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>

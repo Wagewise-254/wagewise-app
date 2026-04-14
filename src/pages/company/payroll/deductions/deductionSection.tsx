@@ -1,10 +1,7 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { useParams } from "react-router-dom";
 import { OtherDeductionsTable } from "@/components/payroll/settings/DeductionsTable";
-import { UserPlus } from "lucide-react";
 export default function DeductionSettings() {
   const { companyId } = useParams<{ companyId: string }>();
-  const navigate = useNavigate();
 
   return (
     <div className="space-y-4 p-4">
@@ -19,15 +16,6 @@ export default function DeductionSettings() {
             </p>
           </div>
         </div>
-
-        {/* Add this button */}
-        <Button
-          onClick={() => navigate(`/company/${companyId}/deductions/assign`)}
-          className="absolute top-16 bg-[#1F3A8A] max-w-50 hover:bg-[#162a63] text-white rounded-sm shadow-none cursor-pointer h-10 px-4 text-sm font-medium transition-all hover:-translate-y-0.5 flex items-center gap-2"
-        >
-          <UserPlus className="h-4 w-4" />
-          Assign Deductions
-        </Button>
       </div>
       <div>
         <OtherDeductionsTable companyId={companyId as string} />
