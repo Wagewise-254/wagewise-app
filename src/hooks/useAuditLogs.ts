@@ -1,10 +1,22 @@
-// hooks/useAuditLogs.ts
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from "@/config";
 import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
-import { AuditLog, AuditLogFilters } from '@/types/audit';
+
+export interface AuditLog {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  entity_name: string | null;
+  action: string;
+  performed_by: string | null;
+  created_at: string;
+  performer?: {
+    full_name: string;
+    email: string;
+  };
+}
 
 interface AuditLogsResponse {
   logs: AuditLog[];
@@ -16,15 +28,8 @@ interface AuditLogsResponse {
   };
 }
 
-interface AuditSummary {
-  total: number;
-  byAction: Record<string, number>;
-  byDay: Record<string, number>;
-}
-
 export const useAuditLogs = (companyId: string) => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [summary, setSummary] = useState<AuditSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -32,11 +37,8 @@ export const useAuditLogs = (companyId: string) => {
     total: 0,
     totalPages: 0
   });
-  const [filters, setFilters] = useState<AuditLogFilters>({
-    startDate: '',
-    endDate: '',
+  const [filters, setFilters] = useState({
     action: 'ALL',
-    entityType: 'ALL',
     search: ''
   });
 
@@ -51,10 +53,7 @@ export const useAuditLogs = (companyId: string) => {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: pagination.limit.toString(),
-        ...(filters.startDate && { startDate: filters.startDate }),
-        ...(filters.endDate && { endDate: filters.endDate }),
         ...(filters.action && filters.action !== 'ALL' && { action: filters.action }),
-        ...(filters.entityType && filters.entityType !== 'ALL' && { entityType: filters.entityType }),
         ...(filters.search && { search: filters.search })
       });
 
@@ -73,50 +72,17 @@ export const useAuditLogs = (companyId: string) => {
     }
   }, [companyId, token, filters, pagination.limit]);
 
-  const fetchSummary = useCallback(async () => {
-    if (!companyId || !token) return;
-
-    try {
-      const { data } = await axios.get<AuditSummary>(
-        `${API_BASE_URL}/company/${companyId}/audit-logs/summary`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setSummary(data);
-    } catch (error) {
-      console.error('Failed to fetch audit summary:', error);
-    }
-  }, [companyId, token]);
-
-  const fetchEntityTypes = useCallback(async () => {
-    if (!companyId || !token) return [];
-
-    try {
-      const { data } = await axios.get<string[]>(
-        `${API_BASE_URL}/company/${companyId}/audit-logs/entity-types`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      return data;
-    } catch (error) {
-      console.error('Failed to fetch entity types:', error);
-      return [];
-    }
-  }, [companyId, token]);
-
   useEffect(() => {
     fetchLogs(1);
-    fetchSummary();
-  }, [fetchLogs, fetchSummary]);
+  }, [fetchLogs]);
 
   return {
     logs,
-    summary,
     loading,
     pagination,
     filters,
     setFilters,
     fetchLogs,
-    fetchSummary,
-    fetchEntityTypes,
     refetch: () => fetchLogs(pagination.page)
   };
 };

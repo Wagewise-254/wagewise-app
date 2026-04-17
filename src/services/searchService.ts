@@ -4,9 +4,10 @@ import { API_BASE_URL } from "@/config";
 
 export interface SearchResult {
   id: string;
-  type: 'employee' | 'payroll' | 'report' | 'department' | 'jobTitle';
+  type: 'employee' | 'payroll' | 'report';
   title: string;
   subtitle: string;
+   extra?: string;
   badge: string;
   badgeColor: string;
   url: string;
@@ -27,8 +28,6 @@ export interface GlobalSearchResponse {
   employees: SearchResult[];
   payrollRuns: SearchResult[];
   reports: SearchResult[];
-  departments: SearchResult[];
-  jobTitles: SearchResult[];
 }
 
 // Get the API base URL from environment or use relative path
@@ -48,8 +47,6 @@ class SearchService {
       employees: [],
       payrollRuns: [],
       reports: [],
-      departments: [],
-      jobTitles: [],
     };
 
     // 1. Get the session from your Zustand store

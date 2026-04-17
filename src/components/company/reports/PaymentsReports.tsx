@@ -42,7 +42,7 @@ export default function PaymentsReports({
         </div>
         <Badge 
           variant="outline" 
-          className="border-[#1F3A8A]/30 text-[#1F3A8A] bg-[#1F3A8A]/5 rounded-md px-3 py-1 font-medium"
+          className="border-[#7F5EFD]/30 text-[#7F5EFD] bg-[#7F5EFD]/5 rounded-md px-3 py-1 font-medium"
         >
           {PAYMENT_REPORTS.length} Files
         </Badge>
@@ -56,11 +56,11 @@ export default function PaymentsReports({
           return (
             <div
               key={report.type}
-              className="group border rounded-sm shadow-none border-slate-300 bg-white hover:border-[#1F3A8A] transition-colors duration-200 p-5"
+              className="group border rounded-sm shadow-none border-slate-300 bg-white hover:border-[#7F5EFD] transition-colors duration-200 p-5"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="p-2 bg-gray-50 border border-gray-200">
-                  <Icon className="h-5 w-5 text-gray-600 group-hover:text-[#1F3A8A]" />
+                  <Icon className="h-5 w-5 text-gray-600 group-hover:text-[#7F5EFD]" />
                 </div>
                 <Badge variant="outline" className="text-xs bg-gray-50 border-gray-200">
                   {report.format}
@@ -87,7 +87,7 @@ export default function PaymentsReports({
                   size="sm"
                   onClick={() => onDownload(report.type)}
                   disabled={!selectedRun || isDownloading}
-                  className="flex-1 bg-[#1F3A8A] hover:bg-[#16306b] text-white rounded-sm shadow-none cursor-pointer h-9"
+                  className="flex-1 bg-[#7F5EFD] hover:bg-[#6a4ce0] text-white rounded-sm shadow-none cursor-pointer h-9"
                 >
                   {isDownloading ? (
                     <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />

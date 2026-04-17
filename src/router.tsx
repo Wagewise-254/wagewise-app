@@ -3,6 +3,9 @@ import { useAuthStore } from "@/stores/authStore";
 import { useEffect } from "react";
 import SplashScreen from "./pages/onboarding/SplashScreen.tsx";
 import LoginPage from "./pages/onboarding/auth/LoginPage.tsx";
+import ForgotPasswordPage from "./pages/onboarding/resetPassword/ForgotPasswordPage.tsx";
+import VerifyCodePage from "./pages/onboarding/resetPassword/VerifyCodePage.tsx";
+import ResetPasswordPage from "./pages/onboarding/resetPassword/ResetPasswordPage.tsx";
 import RootDashboard from "./pages/dashboard/RootDashboard.tsx";
 import DashboardLayout from "./pages/dashboard/DashboardLayout";
 import AccountSettings from "./pages/dashboard/AccountSettings.tsx";
@@ -97,6 +100,9 @@ const AppRouterWrapper = () => {
       <Routes>
         <Route path="/" element={<SplashScreen />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/verify-code" element={<VerifyCodePage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         <Route element={<ProtectedRoute />}>
           {/* Dashboard routes (outside company context) */}

@@ -23,15 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationPrevious,
-  PaginationLink,
-  PaginationNext,
-  PaginationEllipsis,
-} from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -43,6 +34,10 @@ import {
   //Edit,
   UserX,
   AlertCircle,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useState, useMemo } from "react";
@@ -50,6 +45,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "@/config";
 import { Employee } from "@/types/employees";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import ConfirmationDialog from "./confirmationDialog";
 import EmailComposeDialog from "@/components/common/EmailComposeDialog";
@@ -267,7 +269,7 @@ useEffect(() => {
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
-          className="shadow-none cursor-pointer data-[state=checked]:bg-[#1F3A8A] data-[state=checked]:border-[#1F3A8A]"
+          className="shadow-none border-[#7F5EFD] cursor-pointer data-[state=checked]:bg-[#7F5EFD] data-[state=checked]:border-[#7F5EFD]"
         />
       ),
       cell: ({ row }) => (
@@ -275,7 +277,7 @@ useEffect(() => {
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"
-          className="shadow-none cursor-pointer data-[state=checked]:bg-[#1F3A8A] data-[state=checked]:border-[#1F3A8A]"
+          className="shadow-none border-[#7F5EFD] cursor-pointer data-[state=checked]:bg-[#7F5EFD] data-[state=checked]:border-[#7F5EFD]"
           onClick={(e) => e.stopPropagation()}
         />
       ),
@@ -450,83 +452,6 @@ useEffect(() => {
     onGlobalFilterChange: setGlobalFilter,
   });
 
-  const renderPaginationItems = () => {
-    const pageCount = table.getPageCount();
-    const currentPage = table.getState().pagination.pageIndex;
-    const items = [];
-
-    if (pageCount <= 5) {
-      for (let i = 0; i < pageCount; i++) {
-        items.push(
-          <PaginationItem key={i}>
-            <PaginationLink
-              isActive={currentPage === i}
-              onClick={() => table.setPageIndex(i)}
-              className="cursor-pointer h-8 w-8"
-            >
-              {i + 1}
-            </PaginationLink>
-          </PaginationItem>,
-        );
-      }
-    } else {
-      // First page
-      items.push(
-        <PaginationItem key={0}>
-          <PaginationLink
-            isActive={currentPage === 0}
-            onClick={() => table.setPageIndex(0)}
-            className="cursor-pointer h-8 w-8"
-          >
-            1
-          </PaginationLink>
-        </PaginationItem>,
-      );
-
-      if (currentPage > 2) {
-        items.push(<PaginationEllipsis key="ellipsis-1" />);
-      }
-
-      const start = Math.max(1, currentPage - 1);
-      const end = Math.min(pageCount - 2, currentPage + 1);
-
-      for (let i = start; i <= end; i++) {
-        if (i > 0 && i < pageCount - 1) {
-          items.push(
-            <PaginationItem key={i}>
-              <PaginationLink
-                isActive={currentPage === i}
-                onClick={() => table.setPageIndex(i)}
-                className="cursor-pointer h-8 w-8"
-              >
-                {i + 1}
-              </PaginationLink>
-            </PaginationItem>,
-          );
-        }
-      }
-
-      if (currentPage < pageCount - 3) {
-        items.push(<PaginationEllipsis key="ellipsis-2" />);
-      }
-
-      // Last page
-      items.push(
-        <PaginationItem key={pageCount - 1}>
-          <PaginationLink
-            isActive={currentPage === pageCount - 1}
-            onClick={() => table.setPageIndex(pageCount - 1)}
-            className="cursor-pointer h-8 w-8"
-          >
-            {pageCount}
-          </PaginationLink>
-        </PaginationItem>,
-      );
-    }
-
-    return items;
-  };
-
  return (
   <div className="h-full flex flex-col space-y-2">
     {/* Bulk Actions Bar - Only show when items selected */}
@@ -575,7 +500,7 @@ useEffect(() => {
     )}
 
     {/* Table Container with overflow auto and sticky header */}
-    <div className="flex-1 overflow-auto min-h-0 rounded-sm border border-slate-200 px-2">
+    <div className="flex-1 overflow-auto min-h-0 rounded-sm border border-slate-200 px-1">
       <Table className="relative">
         <TableHeader className="sticky top-0 bg-slate-50 z-10 shadow-sm">
           {table.getHeaderGroups().map((headerGroup) => (
@@ -654,40 +579,75 @@ useEffect(() => {
       </Table>
     </div>
 
-    {/* Pagination - Compact */}
-    {table.getPageCount() > 1 && (
-      <div className="shrink-0 flex items-center justify-between pt-1">
-        <p className="text-xs text-slate-400">
-          Showing {table.getRowModel().rows.length} of {data.length}
-        </p>
-        <Pagination className="w-auto">
-          <PaginationContent className="gap-0.5">
-            <PaginationItem>
-              <PaginationPrevious
-                onClick={() => table.previousPage()}
-                className={cn(
-                  "h-7 w-7 p-0",
-                  !table.getCanPreviousPage() &&
-                    "pointer-events-none opacity-50",
-                )}
-              />
-            </PaginationItem>
-
-            {renderPaginationItems()}
-
-            <PaginationItem>
-              <PaginationNext
-                onClick={() => table.nextPage()}
-                className={cn(
-                  "h-7 w-7 p-0",
-                  !table.getCanNextPage() && "pointer-events-none opacity-50",
-                )}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+   {/* Pagination - Matching Payroll History style */}
+{table.getPageCount() > 1 && (
+  <div className="shrink-0 flex items-center justify-between pt-2">
+    <p className="text-xs text-slate-400">
+      Showing {table.getRowModel().rows.length} of {data.length} results
+    </p>
+    <div className="flex items-center space-x-2">
+      <Select
+        value={pagination.pageSize.toString()}
+        onValueChange={(value) => {
+          table.setPageSize(Number(value));
+          setPagination(prev => ({ ...prev, pageSize: Number(value), pageIndex: 0 }));
+        }}
+      >
+        <SelectTrigger className="h-7 w-16 text-xs border-slate-200 rounded-md">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {[10, 25, 50, 100].map((pageSize) => (
+            <SelectItem key={pageSize} value={pageSize.toString()}>
+              {pageSize}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <div className="flex items-center gap-0.5">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => table.setPageIndex(0)}
+          disabled={!table.getCanPreviousPage()}
+          className="h-7 w-7 p-0"
+        >
+          <ChevronsLeft className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+          className="h-7 w-7 p-0"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </Button>
+        <span className="text-xs text-slate-600 px-2">
+          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+          className="h-7 w-7 p-0"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+          disabled={!table.getCanNextPage()}
+          className="h-7 w-7 p-0"
+        >
+          <ChevronsRight className="h-3.5 w-3.5" />
+        </Button>
       </div>
-    )}
+    </div>
+  </div>
+)}
 
     {/* Dialogs remain the same */}
     <EmailComposeDialog

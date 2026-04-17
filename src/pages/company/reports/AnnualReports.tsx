@@ -125,7 +125,7 @@ const AnnualReports = () => {
             </div>
             <Badge
               variant="outline"
-              className="border-[#1F3A8A]/30 text-[#1F3A8A] bg-[#1F3A8A]/5 rounded-md px-3 py-1 font-medium"
+              className="border-[#7F5EFD]/30 text-[#7F5EFD] bg-[#7F5EFD]/5 rounded-md px-3 py-1 font-medium"
             >
               <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" />
               Excel Format
@@ -136,7 +136,7 @@ const AnnualReports = () => {
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-[#1F3A8A]" />
+              <Loader2 className="h-6 w-6 animate-spin text-[#7F5EFD]" />
               <span className="ml-2 text-gray-600">
                 Loading available years...
               </span>
@@ -153,18 +153,18 @@ const AnnualReports = () => {
                       key={year}
                       onClick={() => handleDownloadReport(year)}
                       disabled={downloadingYear === year}
-                      className="group relative flex flex-col items-center p-5 bg-white border border-gray-200 hover:border-[#1F3A8A] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#1F3A8A] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-200"
+                      className="group relative flex flex-col items-center p-5 bg-white border border-gray-200 hover:border-[#7F5EFD] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#7F5EFD] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-200"
                     >
                       {downloadingYear === year ? (
                         <>
-                          <Loader2 className="h-8 w-8 text-[#1F3A8A] mb-3 animate-spin" />
+                          <Loader2 className="h-8 w-8 text-[#7F5EFD] mb-3 animate-spin" />
                           <span className="text-sm font-medium text-gray-900">
                             Downloading...
                           </span>
                         </>
                       ) : (
                         <>
-                          <Calendar className="h-8 w-8 text-gray-400 group-hover:text-[#1F3A8A] mb-3" />
+                          <Calendar className="h-8 w-8 text-gray-400 group-hover:text-[#7F5EFD] mb-3" />
                           <span className="text-lg font-medium text-gray-900">
                             {year}
                           </span>

@@ -107,6 +107,7 @@ const AbsentDaysTable: React.FC<Props> = ({
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
+          className="shadow-none border-[#7F5EFD] cursor-pointer data-[state=checked]:bg-[#7F5EFD] data-[state=checked]:border-[#7F5EFD]"
         />
       ),
       cell: ({ row }) => (
@@ -114,6 +115,7 @@ const AbsentDaysTable: React.FC<Props> = ({
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"
+          className="shadow-none border-[#7F5EFD] cursor-pointer data-[state=checked]:bg-[#7F5EFD] data-[state=checked]:border-[#7F5EFD]"
         />
       ),
       enableSorting: false,

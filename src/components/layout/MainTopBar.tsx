@@ -1,5 +1,5 @@
 // src/components/layout/MainTopBar.tsx
-import  { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuthStore, Company } from "@/stores/authStore";
 import { toast } from "sonner";
@@ -87,7 +87,6 @@ export default function MainTopBar({ onSearch }: MainTopBarProps) {
     navigate("/login", { replace: true });
   };
 
-
   const switchCompany = (companyId: string) => {
     navigate(`/company/${companyId}/dashboard`);
     toast.success(
@@ -128,9 +127,9 @@ export default function MainTopBar({ onSearch }: MainTopBarProps) {
               className="relative w-full h-9 pl-9 pr-12 bg-slate-50 border border-slate-200 rounded-md text-left text-sm text-slate-400 hover:bg-slate-100 hover:border-slate-300 transition-all cursor-text flex items-center"
             >
               <Search className="absolute left-3 h-4 w-4 text-slate-400" />
-              <span>Search employees, payroll runs, reports...</span>
+              <span>Search...</span>
               <kbd className="absolute right-3 hidden sm:inline-flex text-xs text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200">
-                ⌘K
+                CTRL + K
               </kbd>
             </button>
           </div>
@@ -378,7 +377,7 @@ export default function MainTopBar({ onSearch }: MainTopBarProps) {
           </div>
         </div>
       </header>
-       <GlobalSearch 
+      <GlobalSearch
         isOpen={showGlobalSearch}
         onClose={() => setShowGlobalSearch(false)}
         onSearch={onSearch}

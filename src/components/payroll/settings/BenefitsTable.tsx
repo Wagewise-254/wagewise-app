@@ -259,7 +259,7 @@ export function AllowanceTable({ companyId }: Props) {
             setEditingItem(null);
             setOpenDialog(true);
           }}
-          className="bg-[#1F3A8A] hover:bg-[#162a63] cursor-pointer rounded-sm shadow-none h-10 px-4 text-sm font-medium transition-all hover:-translate-y-0.5"
+          className="bg-[#7F5EFD] hover:bg-[#6a4ce0] cursor-pointer rounded-sm shadow-none h-10 px-4 text-sm font-medium transition-all hover:-translate-y-0.5"
         >
           <Plus className="mr-2 h-4 w-4" />
           Add Allowance
@@ -289,9 +289,9 @@ export function AllowanceTable({ companyId }: Props) {
                 <TableCell colSpan={columns.length} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center gap-3">
                     <div className="relative">
-                      <Loader2 className="h-8 w-8 animate-spin text-[#1F3A8A]" />
+                      <Loader2 className="h-8 w-8 animate-spin text-[#7F5EFD]" />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="h-3 w-3 bg-[#1F3A8A]/20 rounded-full" />
+                        <div className="h-3 w-3 bg-[#7F5EFD]/20 rounded-full" />
                       </div>
                     </div>
                     <p className="text-sm font-medium text-slate-600">
@@ -638,7 +638,7 @@ function AllowanceDialog({ open, onOpenChange, initialData, onSave }: DialogProp
               checked={isTaxable}
               onCheckedChange={setIsTaxable}
               disabled={isCash || isLocked}
-              className="data-[state=checked]:bg-[#1F3A8A]"
+              className="data-[state=checked]:bg-[#7F5EFD]"
             />
           </div>
 
@@ -655,7 +655,7 @@ function AllowanceDialog({ open, onOpenChange, initialData, onSave }: DialogProp
             <Switch
               checked={hasMaximum}
               onCheckedChange={setHasMaximum}
-              className="data-[state=checked]:bg-[#1F3A8A]"
+              className="data-[state=checked]:bg-[#7F5EFD]"
             />
           </div>
 
@@ -683,7 +683,7 @@ function AllowanceDialog({ open, onOpenChange, initialData, onSave }: DialogProp
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-[#1F3A8A] hover:bg-[#162a63] px-6 rounded-md h-10 text-sm font-medium shadow-sm"
+            className="bg-[#7F5EFD] hover:bg-[#6a4ce0] px-6 rounded-md h-10 text-sm font-medium shadow-sm"
           >
             {initialData ? "Update" : "Save"} Allowance
           </Button>

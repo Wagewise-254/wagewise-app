@@ -7,13 +7,6 @@ import { useAuthStore } from "@/stores/authStore";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
-import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
@@ -21,6 +14,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Loader2,
   Mail,
@@ -32,6 +27,7 @@ import {
   XCircle,
   Clock,
   RefreshCw,
+  Search,
 } from "lucide-react";
 import {
   Command,
@@ -57,9 +53,9 @@ import {
 import {
   flexRender,
   getCoreRowModel,
+  getFilteredRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { cn } from "@/lib/utils";
 
 type PayrollRun = {
   id: string;
@@ -110,7 +106,10 @@ const EmployeeStatusBadge = ({ status }: { status: string }) => {
   };
 
   return (
-    <Badge variant="outline" className={`${getVariant(status)} font-medium flex items-center w-fit`}>
+    <Badge
+      variant="outline"
+      className={`${getVariant(status)} font-medium flex items-center w-fit px-2 py-0.5 text-xs rounded-full`}
+    >
       {getIcon(status)}
       {toProperCase(status)}
     </Badge>
@@ -129,6 +128,8 @@ export default function SendPayslip() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [open, setOpen] = useState(false);
   const [tableLoading, setTableLoading] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [globalFilter, setGlobalFilter] = useState("");
 
   // Calculate selected items based on the selection state
   const selectedItems = useMemo(() => {
@@ -147,7 +148,7 @@ export default function SendPayslip() {
     }
 
     try {
-       const res = await fetch(
+      const res = await fetch(
         `${API_BASE_URL}/company/${companyId}/payroll/runs?status=all&limit=100`,
         {
           headers: {
@@ -156,18 +157,14 @@ export default function SendPayslip() {
         },
       );
       const responseData = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(responseData.error || "Failed to fetch payroll runs.");
       }
 
-      // Extract the data array from the response
-      // The API returns { data: [...], totalItems, totalPages, currentPage, availableYears }
       const runsData = responseData.data || [];
-      
       setPayrollRuns(runsData);
 
-      // Auto-select first run if available
       if (runsData.length > 0) {
         setSelectedRun(runsData[0]);
       }
@@ -194,12 +191,12 @@ export default function SendPayslip() {
         },
       );
 
-      // FILTER LOGIC: Only show approved payments
       const approvedPayments = response.data.filter(
         (item: PayrollReportData) => item.reviewStatus === "APPROVED",
       );
       setData(approvedPayments);
-      setRowSelection({}); // Reset selection when data changes
+      setRowSelection({});
+      setGlobalFilter(""); // Reset search when data changes
     } catch (error) {
       console.error("Error fetching earnings data:", error);
       toast.error("Failed to load payroll data. Please try again.");
@@ -218,7 +215,6 @@ export default function SendPayslip() {
     }
   }, [selectedRun, fetchPayrollData]);
 
-  // Function to handle payslip preview
   const handlePreviewPdf = (payrollDetailId: string) => {
     if (!companyId || !session) {
       toast.error("Authentication token is missing. Please log in again.");
@@ -229,7 +225,6 @@ export default function SendPayslip() {
     window.open(pdfUrl, "_blank");
   };
 
-  // Function to handle single payslip email
   const handleEmailSinglePayslip = async (payrollDetailId: string) => {
     if (!companyId || !session) {
       toast.error("Authentication failed. Please log in again.");
@@ -267,7 +262,6 @@ export default function SendPayslip() {
     }
   };
 
-  // Function to handle bulk payslip email
   const handleEmailBulkPayslips = async (itemsToEmail: PayrollReportData[]) => {
     if (itemsToEmail.length === 0) {
       toast.error("No employees selected for email.");
@@ -282,7 +276,9 @@ export default function SendPayslip() {
     let successCount = 0;
     let failCount = 0;
 
-    const toastId = toast.loading(`Sending emails to ${itemsToEmail.length} employees...`);
+    const toastId = toast.loading(
+      `Sending emails to ${itemsToEmail.length} employees...`,
+    );
 
     try {
       for (const item of itemsToEmail) {
@@ -315,9 +311,13 @@ export default function SendPayslip() {
       }
 
       if (successCount > 0 && failCount === 0) {
-        toast.success(`Successfully sent all ${successCount} emails.`, { id: toastId });
+        toast.success(`Successfully sent all ${successCount} emails.`, {
+          id: toastId,
+        });
       } else if (successCount > 0) {
-        toast.warning(`Sent ${successCount} emails. Failed ${failCount}.`, { id: toastId });
+        toast.warning(`Sent ${successCount} emails. Failed ${failCount}.`, {
+          id: toastId,
+        });
       } else {
         toast.error("Failed to send any emails.", { id: toastId });
       }
@@ -346,6 +346,19 @@ export default function SendPayslip() {
     toast.success("Data refreshed successfully!");
   };
 
+  // Global filter function for search
+  const globalFilterFn = (row: { original: PayrollReportData }, _columnId: string, filterValue: string) => {
+    const search = filterValue.toLowerCase();
+    const item = row.original;
+
+    return (
+      item.fullName?.toLowerCase().includes(search) ||
+      item.department?.toLowerCase().includes(search) ||
+      item.email?.toLowerCase().includes(search) ||
+      item.jobTitle?.toLowerCase().includes(search)
+    );
+  };
+
   const columns: ColumnDef<PayrollReportData>[] = [
     {
       id: "select",
@@ -354,7 +367,7 @@ export default function SendPayslip() {
           checked={table.getIsAllPageRowsSelected()}
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
-          className="translate-y-0.5 shadow-none cursor-pointer"
+          className="shadow-none border-[#7F5EFD] cursor-pointer data-[state=checked]:bg-[#7F5EFD] data-[state=checked]:border-[#7F5EFD]"
         />
       ),
       cell: ({ row }) => (
@@ -362,27 +375,27 @@ export default function SendPayslip() {
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"
-          className="translate-y-0.5 shadow-none cursor-pointer"
+          className="shadow-none border-[#7F5EFD] cursor-pointer data-[state=checked]:bg-[#7F5EFD] data-[state=checked]:border-[#7F5EFD]"
         />
       ),
       enableSorting: false,
-      size: 50,
+      size: 40,
     },
     {
       accessorKey: "fullName",
       header: "Employee",
       cell: ({ row }) => (
-        <div className="flex items-center gap-3 min-w-50">
-          <Avatar className="h-8 w-8 bg-linear-to-br from-[#1F3A8A] to-[#2E4AB0] text-white">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8 bg-linear-to-br from-[#7F5EFD] to-[#5D40C6] text-white">
             <AvatarFallback className="text-xs font-bold bg-inherit text-white">
               {getInitials(row.original.fullName)}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
-            <span className="font-medium text-slate-900">
+            <span className="font-medium text-slate-900 text-sm">
               {row.original.fullName}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-slate-500">
               {row.original.jobTitle}
             </span>
           </div>
@@ -393,7 +406,7 @@ export default function SendPayslip() {
       accessorKey: "department",
       header: "Department",
       cell: ({ row }) => (
-        <span className="text-slate-600 font-medium">
+        <span className="text-sm text-slate-600">
           {row.original.department}
         </span>
       ),
@@ -402,11 +415,11 @@ export default function SendPayslip() {
       accessorKey: "email",
       header: "Email",
       cell: ({ row }) => (
-        <span className="text-slate-600">{row.original.email}</span>
+        <span className="text-sm text-slate-600">{row.original.email}</span>
       ),
     },
     {
-      accessorKey: "status",
+      accessorKey: "reviewStatus",
       header: "Status",
       cell: ({ row }) => (
         <EmployeeStatusBadge status={row.original.reviewStatus} />
@@ -414,35 +427,35 @@ export default function SendPayslip() {
     },
     {
       id: "actions",
-      header: "Actions",
+      header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => handlePreviewPdf(row.original.id)}
-                  className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                 >
-                  <Eye className="h-4 w-4" />
+                  <Eye className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Preview Payslip</p>
               </TooltipContent>
             </Tooltip>
-            
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => handleEmailSinglePayslip(row.original.id)}
-                  className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                  className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                 >
-                  <Mail className="h-4 w-4" />
+                  <Mail className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -460,105 +473,65 @@ export default function SendPayslip() {
     columns,
     state: {
       rowSelection,
+      globalFilter,
     },
     onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn,
     getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     enableRowSelection: true,
   });
 
+  const filteredDataLength = table.getFilteredRowModel().rows.length;
+
   if (loading) {
     return (
-      <Card className="rounded-sm h-[calc(100vh-2rem)] flex items-center justify-center border border-gray-200 shadow-none m-2">
-        <CardContent className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-[#1F3A8A]" />
-          <span className="ml-3 text-gray-600">Loading payroll runs...</span>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+      </div>
     );
   }
 
   return (
     <TooltipProvider>
-      <div className="m-2 space-y-4">
-        {/* Header Card */}
-        <Card className="rounded-sm border border-slate-300 shadow-none bg-linear-to-r from-white to-slate-50/50">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div>
-                  <CardTitle className="text-xl font-semibold text-gray-900">
-                    Payslip Management
-                  </CardTitle>
-                  <CardDescription className="text-gray-500 mt-1">
-                    Send payslips to employees for completed payroll runs
-                  </CardDescription>
-                </div>
-              </div>
-              
+      <Card className="rounded-sm shadow-none border-slate-200 overflow-hidden">
+        <CardContent className="p-0">
+          <div className="h-full flex flex-col p-6">
+            {/* Header with minimalist toolbar */}
+            <div className="shrink-0 flex items-center justify-between gap-4 pb-4 border-b border-slate-200">
               <div className="flex items-center gap-3">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleRefresh}
-                      disabled={isRefreshing}
-                      className="h-8 w-8 text-gray-500 hover:text-gray-900"
-                    >
-                      <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Refresh data</p>
-                  </TooltipContent>
-                </Tooltip>
-                
-                {selectedRun && (
-                  <Badge
-                    variant="outline"
-                    className="border-[#1F3A8A]/30 text-[#1F3A8A] bg-[#1F3A8A]/5 rounded-md px-3 py-1.5 font-medium"
-                  >
-                    <CalendarClock className="h-3.5 w-3.5 mr-1.5" />
-                    {selectedRun.payroll_month} {selectedRun.payroll_year}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
+                <div className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-slate-400" />
+                  <h1 className="text-lg font-semibold text-slate-900">
+                    Payslip Management
+                  </h1>
+                </div>
 
-        {/* Main Content Card */}
-        <Card className="rounded-sm border border-slate-300 shadow-none overflow-hidden">
-          {/* Payroll Run Selector Section */}
-          <div className="border-b border-slate-200 bg-slate-50/50 p-5">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-              <div className="flex-1 max-w-md">
-                <label className="text-sm font-medium text-gray-700 block mb-2">
-                  Select Payroll Run
-                </label>
+                {/* Payroll Run Selector */}
                 <Popover open={open} onOpenChange={setOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       role="combobox"
-                      aria-expanded={open}
-                      className="w-full justify-between shadow-none bg-white border-gray-300 hover:border-gray-400 rounded-sm h-10"
+                      className="h-8 w-78 justify-between text-sm border-slate-300 rounded-sm font-normal"
                     >
                       {selectedRun ? (
                         <span className="flex items-center gap-2">
-                          <CalendarClock className="h-4 w-4 text-gray-400" />
+                          <CalendarClock className="h-3.5 w-3.5 text-slate-400" />
                           <span>
-                            {selectedRun.payroll_number} ({selectedRun.payroll_month}{" "}
+                            {selectedRun.payroll_number} (
+                            {selectedRun.payroll_month}{" "}
                             {selectedRun.payroll_year})
                           </span>
                         </span>
                       ) : (
                         "Select a payroll run..."
                       )}
-                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      <ChevronDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-75 p-0 rounded-sm border border-slate-300 shadow-lg">
+                  <PopoverContent className="w-80 p-0 rounded-md border-slate-200 shadow-lg">
                     <Command>
                       <CommandInput placeholder="Search payroll run..." />
                       <CommandEmpty>No payroll run found.</CommandEmpty>
@@ -574,10 +547,10 @@ export default function SendPayslip() {
                             className="cursor-pointer"
                           >
                             <div className="flex flex-col">
-                              <span className="font-medium">
+                              <span className="font-medium text-sm">
                                 {run.payroll_number}
                               </span>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-slate-500">
                                 {run.payroll_month} {run.payroll_year}
                               </span>
                             </div>
@@ -589,138 +562,199 @@ export default function SendPayslip() {
                 </Popover>
               </div>
 
-              {payrollRuns.length === 0 && (
-                <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 p-3 rounded-sm flex-1">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>
-                    No completed payroll runs found. Complete a payroll run to
-                    send payslips.
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Table Section */}
-          {selectedRun && payrollRuns.length > 0 ? (
-            <div className="p-5">
-              {/* Bulk Actions Bar */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  {selectedItems.length > 0 && (
-                    <Button
-                      onClick={() => handleEmailBulkPayslips(selectedItems)}
-                      disabled={isBulkSending}
-                      className="bg-[#1F3A8A] text-white hover:bg-[#1F3A8A]/90 shadow-none"
-                      size="sm"
-                    >
-                      {isBulkSending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Mail className="mr-2 h-4 w-4" />
-                      )}
-                      Send to {selectedItems.length} Selected
-                    </Button>
+              <div className="flex items-center gap-1">
+                {/* Search with toggle */}
+                <div className="relative">
+                  {showSearch ? (
+                    <div className="relative animate-in slide-in-from-left-2 fade-in duration-200">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <Input
+                        placeholder="Search by name, department, email..."
+                        value={globalFilter}
+                        onChange={(e) => setGlobalFilter(e.target.value)}
+                        onBlur={() => {
+                          if (!globalFilter) setShowSearch(false);
+                        }}
+                        className="pl-8 h-8 w-64 text-sm bg-white border-slate-200 rounded-sm focus-visible:ring-1 focus-visible:ring-[#7F5EFD]"
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowSearch(true)}
+                          className="h-8 w-8 p-0 cursor-pointer"
+                        >
+                          <Search className="h-4 w-4 text-slate-500" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        Search employees
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
-                
-                <div className="text-sm text-gray-500">
-                  {data.length} employee{data.length !== 1 ? 's' : ''} eligible for payslips
-                </div>
-              </div>
 
-              {/* Table */}
-              {tableLoading ? (
-                <div className="flex items-center justify-center py-20 bg-white border border-slate-200 rounded-sm">
-                  <Loader2 className="h-8 w-8 animate-spin text-[#1F3A8A]" />
-                  <span className="ml-3 text-gray-600">Loading payslip data...</span>
+                {/* Refresh Button */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRefresh}
+                      disabled={isRefreshing}
+                      className="h-8 w-8 p-0 cursor-pointer"
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 text-slate-500 ${isRefreshing ? "animate-spin" : ""}`}
+                      />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Refresh data</TooltipContent>
+                </Tooltip>
+
+                {/* Bulk Send Button */}
+                {selectedItems.length > 0 && (
+                  <Button
+                    onClick={() => handleEmailBulkPayslips(selectedItems)}
+                    disabled={isBulkSending}
+                    size="sm"
+                    className="ml-2 h-8 text-xs rounded-md cursor-pointer bg-[#7F5EFD] hover:bg-[#6a4ad3] shadow-none"
+                  >
+                    {isBulkSending ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Mail className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Send to {selectedItems.length}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Counter */}
+            <div className="shrink-0 py-2">
+              <p className="text-xs text-slate-400">
+                {filteredDataLength} employee
+                {filteredDataLength !== 1 ? "s" : ""} found
+                {globalFilter && ` (filtered from ${data.length})`}
+              </p>
+            </div>
+
+            {/* Table Section */}
+            <div className="flex-1 overflow-hidden mt-2">
+              {!selectedRun ? (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                    <CalendarClock className="h-8 w-8 text-slate-400" />
+                  </div>
+                  <p className="text-slate-900 font-medium mb-1">
+                    No Payroll Run Selected
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    Select a completed payroll run from the dropdown above
+                  </p>
                 </div>
-              ) : data.length > 0 ? (
-                <div className="border border-slate-200 px-2  rounded-sm overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-slate-50">
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id} className="hover:bg-slate-50 border-slate-200">
-                          {headerGroup.headers.map((header) => (
-                            <TableHead key={header.id} className="font-semibold text-slate-700">
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext()
-                                  )}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows.map((row) => (
-                        <TableRow
-                          key={row.id}
-                          data-state={row.getIsSelected() && "selected"}
-                          className="hover:bg-slate-50/50 border-slate-200"
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+              ) : payrollRuns.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                    <AlertCircle className="h-8 w-8 text-slate-400" />
+                  </div>
+                  <p className="text-slate-900 font-medium mb-1">
+                    No Payroll Runs Found
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    Complete a payroll run to send payslips
+                  </p>
+                </div>
+              ) : tableLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                </div>
+              ) : data.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                    <Mail className="h-8 w-8 text-slate-400" />
+                  </div>
+                  <p className="text-slate-900 font-medium mb-1">
+                    No eligible employees
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    No employees with approved status for this payroll run
+                  </p>
                 </div>
               ) : (
-                <div className="text-center py-16 bg-white border border-slate-200 rounded-sm">
-                  <div className="flex flex-col items-center">
-                    <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                      <Mail className="h-6 w-6 text-slate-400" />
-                    </div>
-                    <p className="text-gray-900 font-medium mb-1">No eligible employees</p>
-                    <p className="text-sm text-gray-500 max-w-sm">
-                      There are no employees with approved status for this payroll run.
-                    </p>
+                <div className="h-full flex flex-col space-y-2">
+                  {/* Table Container */}
+                  <div className="flex-1 overflow-auto min-h-0 rounded-sm border border-slate-200 px-1">
+                    <Table className="relative">
+                      <TableHeader className="sticky top-0 bg-slate-50 z-10 shadow-sm">
+                        {table.getHeaderGroups().map((headerGroup) => (
+                          <TableRow
+                            key={headerGroup.id}
+                            className="hover:bg-transparent"
+                          >
+                            {headerGroup.headers.map((header) => (
+                              <TableHead
+                                key={header.id}
+                                className="h-8 text-xs font-medium text-slate-500"
+                              >
+                                {header.isPlaceholder
+                                  ? null
+                                  : flexRender(
+                                      header.column.columnDef.header,
+                                      header.getContext(),
+                                    )}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableHeader>
+                      <TableBody>
+                        {table.getRowModel().rows.length ? (
+                          table.getRowModel().rows.map((row) => (
+                            <TableRow
+                              key={row.id}
+                              data-state={row.getIsSelected() && "selected"}
+                              className="hover:bg-slate-50/80 transition-colors group"
+                            >
+                              {row.getVisibleCells().map((cell) => (
+                                <TableCell key={cell.id} className="py-3">
+                                  {flexRender(
+                                    cell.column.columnDef.cell,
+                                    cell.getContext(),
+                                  )}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell
+                              colSpan={columns.length}
+                              className="h-32 text-center"
+                            >
+                              <div className="flex flex-col items-center justify-center text-slate-400">
+                                <Search className="h-8 w-8 mb-2 opacity-20" />
+                                <p className="text-sm">
+                                  No matching employees found
+                                </p>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               )}
             </div>
-          ) : payrollRuns.length > 0 ? (
-            <div className="text-center py-20 bg-white">
-              <div className="flex flex-col items-center">
-                <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-                  <CalendarClock className="h-8 w-8 text-slate-400" />
-                </div>
-                <p className="text-gray-900 font-medium text-lg mb-2">No Payroll Run Selected</p>
-                <p className="text-sm text-gray-500 max-w-md">
-                  Please select a completed payroll run from the dropdown above to view and send payslips.
-                </p>
-              </div>
-            </div>
-          ) : null}
-        </Card>
-
-        {/* Footer with Summary (optional) */}
-        {selectedRun && data.length > 0 && (
-          <Card className="rounded-sm border border-slate-300 shadow-none bg-slate-50/50">
-            <CardContent className="py-3">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-4">
-                  <span className="text-gray-600">Total eligible employees:</span>
-                  <span className="font-semibold text-[#1F3A8A]">{data.length}</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-gray-600">Selected for sending:</span>
-                  <span className="font-semibold text-emerald-600">{selectedItems.length}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </TooltipProvider>
   );
 }

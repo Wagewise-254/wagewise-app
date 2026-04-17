@@ -30,15 +30,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -54,6 +45,10 @@ import {
   Users,
   Briefcase,
   Calendar,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
@@ -61,7 +56,6 @@ import {
   getFormattedStartDate,
   getFormattedEndDate,
 } from "@/types/deduction";
-import { cn } from "@/lib/utils";
 
 // Helper function to get recipient display as string (for filtering/search)
 const getRecipientDisplayString = (deduction: AssignedDeduction): string => {
@@ -198,7 +192,7 @@ const DeductionAssignTable: React.FC<Props> = ({
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
-          className="shadow-none cursor-pointer data-[state=checked]:bg-[#1F3A8A] data-[state=checked]:border-[#1F3A8A]"
+          className="shadow-none  border-[#7F5EFD] cursor-pointer data-[state=checked]:bg-[#7F5EFD] data-[state=checked]:border-[#7F5EFD]"
         />
       ),
       cell: ({ row }) => (
@@ -206,7 +200,7 @@ const DeductionAssignTable: React.FC<Props> = ({
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"
-          className="shadow-none cursor-pointer data-[state=checked]:bg-[#1F3A8A] data-[state=checked]:border-[#1F3A8A]"
+          className="shadow-none border-[#7F5EFD] cursor-pointer data-[state=checked]:bg-[#7F5EFD] data-[state=checked]:border-[#7F5EFD]"
           onClick={(e) => e.stopPropagation()}
         />
       ),
@@ -399,80 +393,6 @@ const DeductionAssignTable: React.FC<Props> = ({
 
   const selectedCount = Object.keys(rowSelection).length;
 
-  const renderPaginationItems = () => {
-    const pageCount = table.getPageCount();
-    const currentPage = table.getState().pagination.pageIndex;
-    const items = [];
-
-    if (pageCount <= 5) {
-      for (let i = 0; i < pageCount; i++) {
-        items.push(
-          <PaginationItem key={i}>
-            <PaginationLink
-              isActive={currentPage === i}
-              onClick={() => table.setPageIndex(i)}
-              className="cursor-pointer h-7 w-7"
-            >
-              {i + 1}
-            </PaginationLink>
-          </PaginationItem>,
-        );
-      }
-    } else {
-      items.push(
-        <PaginationItem key={0}>
-          <PaginationLink
-            isActive={currentPage === 0}
-            onClick={() => table.setPageIndex(0)}
-            className="cursor-pointer h-7 w-7"
-          >
-            1
-          </PaginationLink>
-        </PaginationItem>,
-      );
-
-      if (currentPage > 2) {
-        items.push(<PaginationEllipsis key="ellipsis-1" />);
-      }
-
-      const start = Math.max(1, currentPage - 1);
-      const end = Math.min(pageCount - 2, currentPage + 1);
-
-      for (let i = start; i <= end; i++) {
-        if (i > 0 && i < pageCount - 1) {
-          items.push(
-            <PaginationItem key={i}>
-              <PaginationLink
-                isActive={currentPage === i}
-                onClick={() => table.setPageIndex(i)}
-                className="cursor-pointer h-7 w-7"
-              >
-                {i + 1}
-              </PaginationLink>
-            </PaginationItem>,
-          );
-        }
-      }
-
-      if (currentPage < pageCount - 3) {
-        items.push(<PaginationEllipsis key="ellipsis-2" />);
-      }
-
-      items.push(
-        <PaginationItem key={pageCount - 1}>
-          <PaginationLink
-            isActive={currentPage === pageCount - 1}
-            onClick={() => table.setPageIndex(pageCount - 1)}
-            className="cursor-pointer h-7 w-7"
-          >
-            {pageCount}
-          </PaginationLink>
-        </PaginationItem>,
-      );
-    }
-
-    return items;
-  };
 
   return (
     <div className="h-full flex flex-col space-y-2">
@@ -558,57 +478,72 @@ const DeductionAssignTable: React.FC<Props> = ({
         </Table>
       </div>
 
-      {/* Pagination */}
+       {/* Pagination */}
       {table.getPageCount() > 1 && (
-        <div className="shrink-0 flex items-center justify-between pt-1">
+        <div className="shrink-0 flex items-center justify-between pt-2">
           <p className="text-xs text-slate-400">
-            Showing {table.getRowModel().rows.length} of {data.length}
+            Showing {table.getRowModel().rows.length} of {data.length} results
           </p>
           <div className="flex items-center space-x-2">
             <Select
-              value={`${table.getState().pagination.pageSize}`}
+              value={table.getState().pagination.pageSize.toString()}
               onValueChange={(value) => {
                 table.setPageSize(Number(value));
               }}
             >
-              <SelectTrigger className="h-7 w-16 text-xs">
+              <SelectTrigger className="h-7 w-16 text-xs border-slate-200 rounded-md">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[10, 20, 30, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
+                {[10, 25, 50, 100].map((pageSize) => (
+                  <SelectItem key={pageSize} value={pageSize.toString()}>
                     {pageSize}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Pagination className="w-auto">
-              <PaginationContent className="gap-0.5">
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => table.previousPage()}
-                    className={cn(
-                      "h-7 w-7 p-0",
-                      !table.getCanPreviousPage() &&
-                        "pointer-events-none opacity-50",
-                    )}
-                  />
-                </PaginationItem>
-
-                {renderPaginationItems()}
-
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => table.nextPage()}
-                    className={cn(
-                      "h-7 w-7 p-0",
-                      !table.getCanNextPage() &&
-                        "pointer-events-none opacity-50",
-                    )}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+                className="h-7 w-7 p-0"
+              >
+                <ChevronsLeft className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="h-7 w-7 p-0"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <span className="text-xs text-slate-600 px-2">
+                Page {table.getState().pagination.pageIndex + 1} of{" "}
+                {table.getPageCount()}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="h-7 w-7 p-0"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+                className="h-7 w-7 p-0"
+              >
+                <ChevronsRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </div>
       )}

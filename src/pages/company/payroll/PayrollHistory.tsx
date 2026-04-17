@@ -15,13 +15,13 @@ import {
   FileText,
   DollarSign,
   X,
-  Filter,
   Calendar,
   Loader2,
   Lock,
   RefreshCw,
   Unlock,
-  Edit2
+  Edit2,
+  History,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -59,15 +59,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuthStore } from "@/stores/authStore";
 import { API_BASE_URL } from "@/config";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ReviewProgress } from "@/components/payroll/runs/ReviewProgress";
 
-// Types - Update to include all possible statuses
+// Types
 type PayrollStatus =
   | "DRAFT"
   | "UNDER_REVIEW"
@@ -111,7 +116,6 @@ interface RevertDialogState {
   runId: string | null;
 }
 
-// Add new interface for status actions
 interface StatusAction {
   label: string;
   targetStatus: PayrollStatus;
@@ -120,7 +124,6 @@ interface StatusAction {
   requireReason?: boolean;
 }
 
-// Define available actions based on current status
 const getAvailableActions = (status: PayrollStatus): StatusAction[] => {
   const actions: Record<PayrollStatus, StatusAction[]> = {
     DRAFT: [
@@ -213,7 +216,6 @@ const getAvailableActions = (status: PayrollStatus): StatusAction[] => {
   return actions[status] || [];
 };
 
-// Add revert dialog component
 const RevertDialog = ({
   open,
   onOpenChange,
@@ -233,7 +235,7 @@ const RevertDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="rounded-lg">
         <DialogHeader>
           <DialogTitle>Revert Payroll Status</DialogTitle>
           <DialogDescription>
@@ -250,7 +252,7 @@ const RevertDialog = ({
               placeholder="Explain why you're reverting this payroll..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="min-h-25"
+              className="min-h-24 rounded-md"
             />
           </div>
         </div>
@@ -273,7 +275,6 @@ const RevertDialog = ({
   );
 };
 
-// Constants
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 const STATUS_OPTIONS: { value: PayrollStatus | "all"; label: string }[] = [
@@ -287,7 +288,6 @@ const STATUS_OPTIONS: { value: PayrollStatus | "all"; label: string }[] = [
   { value: "CANCELLED", label: "Cancelled" },
 ];
 
-// Utility functions
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat("en-KE", {
     style: "currency",
@@ -341,10 +341,9 @@ const getStatusBadgeVariant = (status: PayrollStatus) => {
   return variants[status] || variants.DRAFT;
 };
 
-// Components
 const EmptyState = () => (
   <TableRow>
-    <TableCell colSpan={6} className="h-64 text-center">
+    <TableCell colSpan={7} className="h-64 text-center">
       <div className="flex flex-col items-center justify-center gap-3">
         <div className="bg-slate-100 p-3 rounded-full">
           <FileText className="h-6 w-6 text-slate-400" />
@@ -366,7 +365,7 @@ const LoadingState = () => (
   <>
     {[...Array(5)].map((_, i) => (
       <TableRow key={i} className="border-b border-slate-100">
-        <TableCell colSpan={6} className="py-4">
+        <TableCell colSpan={7} className="py-4">
           <div className="flex items-center gap-4">
             <Skeleton className="h-12 w-12 rounded-lg" />
             <div className="space-y-2 flex-1">
@@ -385,7 +384,6 @@ export default function PayrollHistory() {
   const { companyId } = useParams<{ companyId: string }>();
   const session = useAuthStore((state) => state.session);
   const token = session?.access_token;
-  // Add a ref to track if we've already fetched reviews
   const hasFetchedReviews = useRef(false);
 
   // State
@@ -393,6 +391,8 @@ export default function PayrollHistory() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
   const [filters, setFilters] = useState<PayrollFilters>({
     status: "all",
     year: "all",
@@ -404,8 +404,6 @@ export default function PayrollHistory() {
     totalPages: 0,
     totalItems: 0,
   });
-  const [searchInput, setSearchInput] = useState("");
-  const [isFiltering, setIsFiltering] = useState(false);
   const [revertDialog, setRevertDialog] = useState<RevertDialogState>({
     open: false,
     targetStatus: null,
@@ -414,12 +412,10 @@ export default function PayrollHistory() {
   });
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
-  // API calls
   const fetchPayrolls = useCallback(async () => {
     if (!companyId || !token) return;
 
     setLoading(true);
-    setIsFiltering(true);
 
     try {
       const params = new URLSearchParams({
@@ -443,7 +439,6 @@ export default function PayrollHistory() {
 
       const data = await response.json();
 
-      // Handle both array response and paginated response
       let payrollData: PayrollRun[] = [];
       let totalItems = 0;
       let totalPages = 1;
@@ -470,7 +465,6 @@ export default function PayrollHistory() {
         totalItems,
       }));
 
-      // Reset the review fetch flag when new payroll data comes in
       hasFetchedReviews.current = false;
     } catch (error) {
       console.error("Failed to fetch payrolls:", error);
@@ -478,25 +472,16 @@ export default function PayrollHistory() {
       setPayrolls([]);
     } finally {
       setLoading(false);
-      setIsFiltering(false);
     }
   }, [companyId, token, pagination.currentPage, pagination.pageSize, filters]);
 
-  // Update the fetchReviewSummaries function
   const fetchReviewSummaries = useCallback(
     async (runIds: string[], forceRefresh = false) => {
-      // Skip if no runIds
       if (!companyId || !token || runIds.length === 0) return;
-
-      // Skip if we've already fetched reviews and this isn't a force refresh
-      if (hasFetchedReviews.current && !forceRefresh) {
-        console.log("Skipping review fetch - already fetched");
-        return;
-      }
+      if (hasFetchedReviews.current && !forceRefresh) return;
 
       setReviewLoading(true);
 
-      // Define the expected response type
       interface ReviewSummariesResponse {
         summaries: {
           [key: string]: {
@@ -539,14 +524,13 @@ export default function PayrollHistory() {
             console.warn(
               `Failed to fetch batch: ${errorData.error || "Unknown error"}`,
             );
-            continue; // Continue with other batches instead of throwing
+            continue;
           }
 
           const data = (await response.json()) as ReviewSummariesResponse;
           Object.assign(allSummaries, data.summaries);
         }
 
-        // Update payrolls with review stats
         setPayrolls((prev) =>
           prev.map((run) => ({
             ...run,
@@ -562,7 +546,6 @@ export default function PayrollHistory() {
           })),
         );
 
-        // Mark as fetched
         hasFetchedReviews.current = true;
       } catch (error) {
         console.error("Error fetching review summaries:", error);
@@ -576,34 +559,28 @@ export default function PayrollHistory() {
     [companyId, token],
   );
 
-  // Manual refresh function
   const handleRefreshReviews = useCallback(() => {
     if (payrolls.length > 0) {
-      hasFetchedReviews.current = false; // Reset the flag
+      hasFetchedReviews.current = false;
       fetchReviewSummaries(
         payrolls.map((r) => r.id),
         true,
-      ); // Force refresh
+      );
     }
   }, [payrolls, fetchReviewSummaries]);
 
-  // Create a stable reference for run IDs
   const runIds = useMemo(() => {
     return payrolls.map((r) => r.id);
   }, [payrolls]);
 
-  // Call it ONCE after fetching payrolls, with proper dependencies
   useEffect(() => {
-    // Only fetch if we have payrolls and haven't fetched before
     if (payrolls.length > 0 && !hasFetchedReviews.current) {
-      // Add a small delay to prevent race conditions
       const timer = setTimeout(() => {
         fetchReviewSummaries(runIds);
       }, 100);
-
       return () => clearTimeout(timer);
     }
-  }, [runIds, fetchReviewSummaries, payrolls.length]); // Remove payrolls from dependencies
+  }, [runIds, fetchReviewSummaries, payrolls.length]);
 
   useEffect(() => {
     fetchPayrolls();
@@ -612,14 +589,14 @@ export default function PayrollHistory() {
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchInput !== filters.search) {
-        setFilters((prev) => ({ ...prev, search: searchInput }));
+      if (searchValue !== filters.search) {
+        setFilters((prev) => ({ ...prev, search: searchValue }));
         setPagination((prev) => ({ ...prev, currentPage: 1 }));
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchInput, filters.search]);
+  }, [searchValue, filters.search]);
 
   const handleStatusUpdate = async (
     runId: string,
@@ -640,7 +617,7 @@ export default function PayrollHistory() {
           },
           body: JSON.stringify({
             status: newStatus,
-            reason, // Include reason for audit
+            reason,
           }),
         },
       );
@@ -654,17 +631,7 @@ export default function PayrollHistory() {
         `Payroll ${newStatus.toLowerCase().replace("_", " ")} successfully`,
       );
 
-      // Log the action
-      console.log("Audit:", {
-        runId,
-        newStatus,
-        reason,
-        timestamp: new Date(),
-      });
-
-      // Refresh data after status update
       await fetchPayrolls();
-      // Reset review flag so reviews will be fetched again
       hasFetchedReviews.current = false;
 
       setRevertDialog({
@@ -691,7 +658,6 @@ export default function PayrollHistory() {
     const run = payrolls.find((r) => r.id === runId);
     if (!run) return;
 
-    // Check if sync is allowed
     const blockedStatuses = ["APPROVED", "LOCKED", "PAID"];
     if (blockedStatuses.includes(run.status)) {
       toast.error(`Cannot resync payroll with status: ${run.status}`);
@@ -721,7 +687,6 @@ export default function PayrollHistory() {
 
       toast.success("Payroll resynchronized successfully");
       await fetchPayrolls();
-      // Reset review flag so reviews will be fetched again
       hasFetchedReviews.current = false;
     } catch (error) {
       console.error("Sync error:", error);
@@ -742,16 +707,10 @@ export default function PayrollHistory() {
     );
   };
 
-  // Event handlers
-  const clearSearch = () => {
-    setSearchInput("");
-    setFilters((prev) => ({ ...prev, search: "" }));
-    setPagination((prev) => ({ ...prev, currentPage: 1 }));
-  };
-
   const clearFilters = () => {
     setFilters({ status: "all", year: "all", search: "" });
-    setSearchInput("");
+    setSearchValue("");
+    setShowSearch(false);
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
@@ -773,13 +732,12 @@ export default function PayrollHistory() {
     setPagination((prev) => ({
       ...prev,
       pageSize: newSize,
-      currentPage: 1, // Reset to first page when changing page size
+      currentPage: 1,
     }));
   };
 
   const handlePageChange = (newPage: number) => {
     setPagination((prev) => ({ ...prev, currentPage: newPage }));
-    // Scroll to top of table
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -796,7 +754,6 @@ export default function PayrollHistory() {
     navigate(`/company/${companyId}/payroll/run`);
   };
 
-  // Count active filters
   const activeFilterCount = [
     filters.status !== "all" ? 1 : 0,
     filters.year !== "all" ? 1 : 0,
@@ -810,7 +767,7 @@ export default function PayrollHistory() {
   );
 
   return (
-    <div className="space-y-6">
+    <>
       {/* Revert Dialog */}
       <RevertDialog
         open={revertDialog.open}
@@ -820,470 +777,473 @@ export default function PayrollHistory() {
         targetStatus={revertDialog.targetStatus}
         loading={actionLoading}
       />
+      {/* Main Card Container */}
+      <Card className="rounded-sm shadow-none border-slate-200 overflow-hidden">
+        <CardContent className="p-0">
+          <div className="h-full flex flex-col p-6 ">
+            {/* Header with minimalist toolbar */}
+            <div className="shrink-0 flex items-center justify-between gap-4 pb-4 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <History className="h-5 w-5 text-slate-400" />
+                  <h1 className="text-lg font-semibold text-slate-900">
+                    Payroll History
+                  </h1>
+                </div>
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-2">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              Payroll History
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              View and manage all payroll runs
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {/* Add Refresh Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefreshReviews}
-            disabled={reviewLoading || payrolls.length === 0}
-            className="h-10 px-3 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-          >
-            {reviewLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Refresh Reviews
-          </Button>
-          <Button
-            onClick={handleRunNewPayroll}
-            className="bg-[#1F3A8A] hover:bg-[#162a63] cursor-pointer rounded-md h-10 px-4 text-sm font-medium transition-all hover:-translate-y-0.5"
-          >
-            <DollarSign className="mr-2 h-4 w-4" />
-            Run New Payroll
-          </Button>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <Card className="border-slate-300 rounded-sm shadow-none overflow-hidden">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search by payroll number or period..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-9 pr-10 h-10 bg-white border-slate-300 rounded-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#1F3A8A] focus-visible:border-[#1F3A8A]"
-                aria-label="Search payrolls"
-              />
-              {searchInput && (
-                <button
-                  onClick={clearSearch}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                {/* Status Filter */}
+                <Select
+                  value={filters.status}
+                  onValueChange={handleStatusFilter}
                 >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
+                  <SelectTrigger className="h-8 w-36 text-sm border-slate-200 rounded-sm">
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Year Filter */}
+                <Select
+                  value={filters.year.toString()}
+                  onValueChange={handleYearFilter}
+                >
+                  <SelectTrigger className="h-8 w-28 text-sm border-slate-200 rounded-sm">
+                    <Calendar className="h-3.5 w-3.5 mr-2 text-slate-400" />
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Years</SelectItem>
+                    {availableYears.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Clear Filters Button */}
+                {activeFilterCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="h-8 px-2 text-xs text-slate-500 hover:text-slate-700"
+                  >
+                    <X className="h-3.5 w-3.5 mr-1" />
+                    Clear ({activeFilterCount})
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1">
+                {/* Search with toggle */}
+                <div className="relative">
+                  {showSearch ? (
+                    <div className="relative animate-in slide-in-from-left-2 fade-in duration-200">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <Input
+                        placeholder="Search by payroll # or period..."
+                        value={searchValue}
+                        onChange={(e) => setSearchValue(e.target.value)}
+                        onBlur={() => {
+                          if (!searchValue) setShowSearch(false);
+                        }}
+                        className="pl-8 h-8 w-64 text-sm bg-white border-slate-200 rounded-sm focus-visible:ring-1 focus-visible:ring-[#7F5EFD]"
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowSearch(true)}
+                          className="h-8 w-8 p-0 cursor-pointer"
+                        >
+                          <Search className="h-4 w-4 text-slate-500" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        Search payrolls
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+
+                {/* Refresh Reviews Button */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRefreshReviews}
+                      disabled={reviewLoading || payrolls.length === 0}
+                      className="h-8 w-8 p-0 cursor-pointer"
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 text-slate-500 ${
+                          reviewLoading ? "animate-spin" : ""
+                        }`}
+                      />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    Refresh review progress
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* Run New Payroll Button */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleRunNewPayroll}
+                      size="sm"
+                      className="ml-2 h-8 text-xs rounded-sm cursor-pointer bg-[#7F5EFD] hover:bg-[#6a4ad3] shadow-none"
+                    >
+                      <DollarSign className="mr-1.5 h-3.5 w-3.5" /> Run Payroll
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    Create new payroll run
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value={filters.status} onValueChange={handleStatusFilter}>
-                <SelectTrigger className="w-35 h-10 border-slate-300 rounded-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#1F3A8A]">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Counter */}
+            <div className="shrink-0 py-2">
+              <p className="text-xs text-slate-400">
+                {pagination.totalItems} payroll
+                {pagination.totalItems !== 1 ? "s" : ""} found
+              </p>
+            </div>
 
-              <Select
-                value={filters.year.toString()}
-                onValueChange={handleYearFilter}
-              >
-                <SelectTrigger className="w-30 h-10 border-slate-300 rounded-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#1F3A8A]">
-                  <Calendar className="h-4 w-4 mr-2 text-slate-400" />
-                  <SelectValue placeholder="Year" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
-                  {availableYears.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Table Section */}
+            <div className="flex-1 overflow-hidden mt-2">
+              {loading ? (
+                <div className="flex flex-col justify-center items-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                  <p className="text-slate-500 mt-2">
+                    Loading payroll history...
+                  </p>
+                </div>
+              ) : (
+                <div className="h-full flex flex-col space-y-2">
+                  {/* Table Container */}
+                  <div className="flex-1 overflow-auto min-h-0 rounded-md border border-slate-200">
+                    <Table className="relative">
+                      <TableHeader className="sticky top-0 bg-slate-50 z-10 shadow-sm">
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="h-8 text-xs font-medium text-slate-500 pl-6">
+                            Period
+                          </TableHead>
+                          <TableHead className="h-8 text-xs font-medium text-slate-500">
+                            Payroll #
+                          </TableHead>
+                          <TableHead className="h-8 text-xs font-medium text-slate-500 text-right">
+                            Gross Pay
+                          </TableHead>
+                          <TableHead className="h-8 text-xs font-medium text-slate-500 text-right">
+                            Net Pay
+                          </TableHead>
+                          <TableHead className="h-8 text-xs font-medium text-slate-500">
+                            Status
+                          </TableHead>
+                          <TableHead className="h-8 text-xs font-medium text-slate-500 min-w-40">
+                            Review Progress
+                          </TableHead>
+                          <TableHead className="h-8 text-xs font-medium text-slate-500 text-center pr-6">
+                            Actions
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {loading ? (
+                          <LoadingState />
+                        ) : payrolls.length > 0 ? (
+                          payrolls.map((run) => {
+                            const statusStyle = getStatusBadgeVariant(
+                              run.status,
+                            );
+                            return (
+                              <TableRow
+                                key={run.id}
+                                className="cursor-pointer hover:bg-slate-50/80 transition-colors group"
+                                onClick={() => handleRowClick(run.id)}
+                              >
+                                <TableCell className="py-3 pl-6">
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium text-slate-900">
+                                      {run.payroll_month} {run.payroll_year}
+                                    </span>
+                                    <span className="text-xs text-slate-400">
+                                      {new Date(
+                                        run.created_at,
+                                      ).toLocaleDateString("en-KE", {
+                                        year: "numeric",
+                                        month: "short",
+                                        day: "numeric",
+                                      })}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <span className="font-mono text-xs bg-slate-50 px-2 py-1 rounded text-slate-600 border border-slate-200">
+                                    {run.payroll_number}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-sm text-slate-600">
+                                  {formatCurrency(run.total_gross_pay)}
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-sm font-semibold text-slate-900">
+                                  {formatCurrency(run.total_net_pay)}
+                                </TableCell>
+                                <TableCell>
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border",
+                                      statusStyle.bg,
+                                      statusStyle.text,
+                                      statusStyle.border,
+                                    )}
+                                  >
+                                    {run.status.replace("_", " ")}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <ReviewProgress
+                                    stats={
+                                      run.review_stats || {
+                                        total_employees: 0,
+                                        approved: 0,
+                                        pending: 0,
+                                        rejected: 0,
+                                        completion_percentage: 0,
+                                      }
+                                    }
+                                  />
+                                </TableCell>
+                                <TableCell
+                                  className="text-center pr-6"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        <MoreVertical className="h-3.5 w-3.5 text-slate-500" />
+                                        <span className="sr-only">
+                                          Open menu
+                                        </span>
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align="end"
+                                      className="w-56 rounded-md border-slate-200"
+                                    >
+                                      <DropdownMenuLabel className="text-xs font-medium text-slate-500">
+                                        Actions
+                                      </DropdownMenuLabel>
+                                      <DropdownMenuItem
+                                        onClick={(e) =>
+                                          handleViewDetails(e, run.id)
+                                        }
+                                        className="cursor-pointer text-sm"
+                                      >
+                                        <Eye className="mr-2 h-3.5 w-3.5" />
+                                        View Details
+                                      </DropdownMenuItem>
 
-              {activeFilterCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="h-10 px-3 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                >
-                  <Filter className="h-4 w-4 mr-2" />
-                  Clear ({activeFilterCount})
-                </Button>
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          navigate(
+                                            `/company/${companyId}/payroll/eligibility?month=${run.payroll_month}&year=${run.payroll_year}&editMode=true`,
+                                          );
+                                        }}
+                                        className="cursor-pointer text-sm"
+                                        disabled={[
+                                          "APPROVED",
+                                          "LOCKED",
+                                          "PAID",
+                                        ].includes(run.status)}
+                                      >
+                                        <Edit2 className="mr-2 h-3.5 w-3.5" />
+                                        Edit Eligibility
+                                        {[
+                                          "APPROVED",
+                                          "LOCKED",
+                                          "PAID",
+                                        ].includes(run.status) && (
+                                          <span className="ml-auto text-xs text-rose-500">
+                                            Locked
+                                          </span>
+                                        )}
+                                      </DropdownMenuItem>
+
+                                      {run.status !== "PAID" && (
+                                        <DropdownMenuItem
+                                          onClick={(e) =>
+                                            handleSyncRun(e, run.id)
+                                          }
+                                          className="cursor-pointer text-sm"
+                                          disabled={[
+                                            "APPROVED",
+                                            "LOCKED",
+                                            "PAID",
+                                          ].includes(run.status)}
+                                        >
+                                          <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                                          Resync Payroll
+                                          {[
+                                            "APPROVED",
+                                            "LOCKED",
+                                            "PAID",
+                                          ].includes(run.status) && (
+                                            <span className="ml-auto text-xs text-rose-500">
+                                              Locked
+                                            </span>
+                                          )}
+                                        </DropdownMenuItem>
+                                      )}
+
+                                      <DropdownMenuSeparator />
+
+                                      {getAvailableActions(run.status).map(
+                                        (action) => (
+                                          <DropdownMenuItem
+                                            key={action.targetStatus}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (action.requireReason) {
+                                                setRevertDialog({
+                                                  open: true,
+                                                  targetStatus:
+                                                    action.targetStatus,
+                                                  currentStatus: run.status,
+                                                  runId: run.id,
+                                                });
+                                              } else {
+                                                handleStatusUpdate(
+                                                  run.id,
+                                                  action.targetStatus,
+                                                );
+                                              }
+                                            }}
+                                            className={`cursor-pointer text-sm ${action.color}`}
+                                          >
+                                            <action.icon className="mr-2 h-3.5 w-3.5" />
+                                            {action.label}
+                                          </DropdownMenuItem>
+                                        ),
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        ) : (
+                          <EmptyState />
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Pagination */}
+                  {pagination.totalPages > 0 && (
+                    <div className="shrink-0 flex items-center justify-between pt-2">
+                      <p className="text-xs text-slate-400">
+                        Showing {startItem} to {endItem} of{" "}
+                        {pagination.totalItems} results
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        <Select
+                          value={pagination.pageSize.toString()}
+                          onValueChange={handlePageSizeChange}
+                        >
+                          <SelectTrigger className="h-7 w-16 text-xs border-slate-200 rounded-md">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PAGE_SIZE_OPTIONS.map((size) => (
+                              <SelectItem key={size} value={size.toString()}>
+                                {size}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex items-center gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handlePageChange(1)}
+                            disabled={pagination.currentPage === 1}
+                            className="h-7 w-7 p-0"
+                          >
+                            <ChevronsLeft className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              handlePageChange(pagination.currentPage - 1)
+                            }
+                            disabled={pagination.currentPage === 1}
+                            className="h-7 w-7 p-0"
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                          </Button>
+                          <span className="text-xs text-slate-600 px-2">
+                            Page {pagination.currentPage} of{" "}
+                            {pagination.totalPages}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              handlePageChange(pagination.currentPage + 1)
+                            }
+                            disabled={
+                              pagination.currentPage === pagination.totalPages
+                            }
+                            className="h-7 w-7 p-0"
+                          >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              handlePageChange(pagination.totalPages)
+                            }
+                            disabled={
+                              pagination.currentPage === pagination.totalPages
+                            }
+                            className="h-7 w-7 p-0"
+                          >
+                            <ChevronsRight className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Table Header with Page Size Selector */}
-      <div className="flex items-center justify-between px-4">
-        <div className="flex items-center gap-4">
-          {isFiltering && (
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span>Updating...</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">Show</span>
-          <Select
-            value={pagination.pageSize.toString()}
-            onValueChange={handlePageSizeChange}
-          >
-            <SelectTrigger className="h-8 w-16 text-xs border-slate-200 bg-slate-50/50 rounded-sm shadow-none">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <SelectItem
-                  key={size}
-                  value={size.toString()}
-                  className="text-xs"
-                >
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="text-xs text-slate-500">entries</span>
-        </div>
-      </div>
-
-      {/* Main Table */}
-      <Card className="border-slate-300 rounded-sm shadow-none overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow className="hover:bg-transparent border-b border-slate-200">
-                <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider py-4 pl-6">
-                  Period
-                </TableHead>
-                <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Payroll #
-                </TableHead>
-                <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right">
-                  Gross Pay
-                </TableHead>
-                <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right">
-                  Net Pay
-                </TableHead>
-                <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Status
-                </TableHead>
-                {/* New Review Status Column */}
-                <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-40">
-                  Review Progress
-                </TableHead>
-                <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-center pr-6">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <LoadingState />
-              ) : payrolls.length > 0 ? (
-                payrolls.map((run) => {
-                  const statusStyle = getStatusBadgeVariant(run.status);
-                  return (
-                    <TableRow
-                      key={run.id}
-                      className="cursor-pointer hover:bg-slate-50/80 transition-colors border-b border-slate-100 group"
-                      onClick={() => handleRowClick(run.id)}
-                    >
-                      <TableCell className="py-4 pl-6">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-slate-900">
-                            {run.payroll_month} {run.payroll_year}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            {new Date(run.created_at).toLocaleDateString(
-                              "en-KE",
-                              {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              },
-                            )}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded-md text-slate-700">
-                          {run.payroll_number}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm text-slate-700">
-                        {formatCurrency(run.total_gross_pay)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm font-semibold text-slate-900">
-                        {formatCurrency(run.total_net_pay)}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={cn(
-                            "inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border",
-                            statusStyle.bg,
-                            statusStyle.text,
-                            statusStyle.border,
-                          )}
-                        >
-                          {run.status.replace("_", " ")}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <ReviewProgress
-                          stats={
-                            run.review_stats || {
-                              total_employees: 0,
-                              approved: 0,
-                              pending: 0,
-                              rejected: 0,
-                              completion_percentage: 0,
-                            }
-                          }
-                        />
-                      </TableCell>
-                      <TableCell
-                        className="text-center pr-6"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 opacity-70 group-hover:opacity-100 hover:bg-slate-100"
-                            >
-                              <MoreVertical className="h-4 w-4 text-slate-600" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            className="w-56 rounded-lg border-slate-200"
-                          >
-                            <DropdownMenuLabel className="text-xs font-medium text-slate-500">
-                              Actions
-                            </DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={(e) => handleViewDetails(e, run.id)}
-                              className="cursor-pointer"
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(
-                                  `/company/${companyId}/payroll/eligibility?month=${run.payroll_month}&year=${run.payroll_year}&editMode=true`,
-                                );
-                              }}
-                              className="cursor-pointer"
-                              disabled={["APPROVED", "LOCKED", "PAID"].includes(
-                                run.status,
-                              )}
-                            >
-                              <Edit2 className="mr-2 h-4 w-4" />
-                              Edit Eligibility
-                              {["APPROVED", "LOCKED", "PAID"].includes(
-                                run.status,
-                              ) && (
-                                <span className="ml-auto text-xs text-red-500">
-                                  Locked
-                                </span>
-                              )}
-                            </DropdownMenuItem>
-
-                            {run.status !== "PAID" && (
-                              <DropdownMenuItem
-                                onClick={(e) => handleSyncRun(e, run.id)}
-                                className="cursor-pointer"
-                                disabled={[
-                                  "APPROVED",
-                                  "LOCKED",
-                                  "PAID",
-                                ].includes(run.status)}
-                              >
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                Resync Payroll
-                                {["APPROVED", "LOCKED", "PAID"].includes(
-                                  run.status,
-                                ) && (
-                                  <span className="ml-auto text-xs text-red-500">
-                                    Locked
-                                  </span>
-                                )}
-                              </DropdownMenuItem>
-                            )}
-
-                            <DropdownMenuSeparator />
-
-                            {/* Dynamic status actions */}
-                            {getAvailableActions(run.status).map((action) => (
-                              <DropdownMenuItem
-                                key={action.targetStatus}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (action.requireReason) {
-                                    setRevertDialog({
-                                      open: true,
-                                      targetStatus: action.targetStatus,
-                                      currentStatus: run.status,
-                                      runId: run.id,
-                                    });
-                                  } else {
-                                    handleStatusUpdate(
-                                      run.id,
-                                      action.targetStatus,
-                                    );
-                                  }
-                                }}
-                                className={`cursor-pointer ${action.color}`}
-                              >
-                                <action.icon className="mr-2 h-4 w-4" />
-                                {action.label}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
-                <EmptyState />
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Enhanced Pagination */}
-        {pagination.totalPages > 0 && (
-          <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 bg-slate-50/50">
-            <p className="text-sm text-slate-600 order-2 sm:order-1">
-              Showing <span className="font-medium">{startItem}</span> to{" "}
-              <span className="font-medium">{endItem}</span> of{" "}
-              <span className="font-medium">{pagination.totalItems}</span>{" "}
-              results
-            </p>
-
-            <div className="flex items-center gap-1 order-1 sm:order-2">
-              {/* First page button */}
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handlePageChange(1)}
-                disabled={pagination.currentPage === 1}
-                className="h-8 w-8 p-0 border-slate-200 hover:bg-slate-100"
-              >
-                <ChevronsLeft className="h-4 w-4" />
-                <span className="sr-only">First page</span>
-              </Button>
-
-              {/* Previous page button */}
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handlePageChange(pagination.currentPage - 1)}
-                disabled={pagination.currentPage === 1}
-                className="h-8 w-8 p-0 border-slate-200 hover:bg-slate-100"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                <span className="sr-only">Previous page</span>
-              </Button>
-
-              {/* Page numbers */}
-              <div className="flex items-center gap-1 mx-2">
-                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-                  .filter((page) => {
-                    const current = pagination.currentPage;
-                    return (
-                      page === 1 ||
-                      page === pagination.totalPages ||
-                      Math.abs(page - current) <= 1
-                    );
-                  })
-                  .map((page, index, array) => {
-                    if (index > 0 && array[index - 1] !== page - 1) {
-                      return (
-                        <span
-                          key={`ellipsis-${page}`}
-                          className="px-2 text-xs text-slate-400"
-                        >
-                          ...
-                        </span>
-                      );
-                    }
-                    return (
-                      <Button
-                        key={page}
-                        variant={
-                          pagination.currentPage === page
-                            ? "default"
-                            : "outline"
-                        }
-                        size="icon"
-                        onClick={() => handlePageChange(page)}
-                        className={cn(
-                          "h-8 w-8 p-0 text-xs font-medium",
-                          pagination.currentPage === page
-                            ? "bg-[#1F3A8A] hover:bg-[#162a63] text-white border-[#1F3A8A]"
-                            : "border-slate-200 hover:bg-slate-100 text-slate-700",
-                        )}
-                      >
-                        {page}
-                      </Button>
-                    );
-                  })}
-              </div>
-
-              {/* Next page button */}
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handlePageChange(pagination.currentPage + 1)}
-                disabled={pagination.currentPage === pagination.totalPages}
-                className="h-8 w-8 p-0 border-slate-200 hover:bg-slate-100"
-              >
-                <ChevronRight className="h-4 w-4" />
-                <span className="sr-only">Next page</span>
-              </Button>
-
-              {/* Last page button */}
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handlePageChange(pagination.totalPages)}
-                disabled={pagination.currentPage === pagination.totalPages}
-                className="h-8 w-8 p-0 border-slate-200 hover:bg-slate-100"
-              >
-                <ChevronsRight className="h-4 w-4" />
-                <span className="sr-only">Last page</span>
-              </Button>
-            </div>
-          </div>
-        )}
-      </Card>
-    </div>
+    </>
   );
 }

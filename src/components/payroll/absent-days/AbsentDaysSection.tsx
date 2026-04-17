@@ -148,7 +148,7 @@ export default function AbsentDaysSection() {
           <Button
             size="sm"
             onClick={() => setIsAddDialogOpen(true)}
-            className="bg-[#1F3A8A] hover:bg-[#162a63] text-white flex items-center gap-2"
+            className="bg-[#7F5EFD] hover:bg-[#6a4ce0] text-white flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
             Add Absent Days

@@ -281,7 +281,7 @@ export function OtherDeductionsTable({ companyId }: Props) {
             setEditingItem(null);
             setOpenDialog(true);
           }}
-          className="bg-[#1F3A8A] hover:bg-[#162a63] h-10 rounded-sm shadow-none px-4 text-sm font-medium transition-all hover:-translate-y-0.5 cursor-pointer"
+          className="bg-[#7F5EFD] hover:bg-[#162a63] h-10 rounded-sm shadow-none px-4 text-sm font-medium transition-all hover:-translate-y-0.5 cursor-pointer"
         >
           <Plus className="mr-2 h-4 w-4" />
           Add Deduction

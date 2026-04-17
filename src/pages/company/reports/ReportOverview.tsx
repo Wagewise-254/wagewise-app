@@ -231,7 +231,7 @@ const ReportOverview = () => {
     return (
       <Card className="rounded-sm h-screen flex items-center justify-center border border-gray-200 shadow-none">
         <CardContent className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-[#1F3A8A]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#7F5EFD]" />
           <span className="ml-3 text-gray-600">Loading payroll runs...</span>
         </CardContent>
       </Card>
@@ -257,7 +257,7 @@ const ReportOverview = () => {
             {selectedRun && (
               <Badge
                 variant="outline"
-                className="border-[#1F3A8A]/30 text-[#1F3A8A] bg-[#1F3A8A]/5 rounded-md px-3 py-1 font-medium"
+                className="border-[#7F5EFD]/30 text-[#7F5EFD] bg-[#7F5EFD]/5 rounded-md px-3 py-1 font-medium"
               >
                 <CalendarClock className="h-3.5 w-3.5 mr-1.5" />
                 {selectedRun.payroll_month} {selectedRun.payroll_year}
@@ -343,19 +343,19 @@ const ReportOverview = () => {
               <TabsList className="grid grid-cols-3 w-full max-w-md border border-gray-200 bg-gray-50 p-0 rounded-sm">
                 <TabsTrigger
                   value="statutory"
-                  className="rounded-sm data-[state=active]:bg-[#1F3A8A] data-[state=active]:text-white py-2.5"
+                  className="rounded-sm data-[state=active]:bg-[#7F5EFD] data-[state=active]:text-white py-2.5"
                 >
                   Statutory
                 </TabsTrigger>
                 <TabsTrigger
                   value="payments"
-                  className="rounded-sm data-[state=active]:bg-[#1F3A8A] data-[state=active]:text-white py-2.5"
+                  className="rounded-sm data-[state=active]:bg-[#7F5EFD] data-[state=active]:text-white py-2.5"
                 >
                   Payments
                 </TabsTrigger>
                 <TabsTrigger
                   value="internal"
-                  className="rounded-sm data-[state=active]:bg-[#1F3A8A] data-[state=active]:text-white py-2.5"
+                  className="rounded-sm data-[state=active]:bg-[#7F5EFD] data-[state=active]:text-white py-2.5"
                 >
                   Internal
                 </TabsTrigger>
