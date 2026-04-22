@@ -4,7 +4,7 @@
   "description": "An application for simplifiying payroll processes.",
   "author": "WageWise Team",
   "license": "MIT",
-  "version": "3.3.3",
+  "version": "3.3.4",
   "type": "module",
  "scripts": {
     "dev": "vite",

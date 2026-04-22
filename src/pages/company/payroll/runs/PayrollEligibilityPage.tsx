@@ -184,7 +184,14 @@ export default function PayrollEligibilityPage() {
           }
 
           setCanEdit(data.existing_run.can_edit || editMode);
-        }
+        } else {
+        // NEW: For first-time payroll run (no existing run)
+        // Allow editing by default
+        setPayrollRunId(null);
+        setRunStatus("");
+        setIsConfirmed(false);
+        setCanEdit(true); // This enables the Confirm & Process button
+      }
 
         const overrideMap = new Map();
         if (data.overrides && Array.isArray(data.overrides)) {
@@ -966,10 +973,10 @@ export default function PayrollEligibilityPage() {
                   <TableHead className="text-xs font-medium text-slate-600">
                     Status
                   </TableHead>
-                  <TableHead className="text-xs font-medium text-slate-600">
+                  <TableHead className="text-xs font-medium text-slate-600 w-50 min-w-37.5 max-w-62.5">
                     Reason
                   </TableHead>
-                  <TableHead className="w-10"></TableHead>
+                  <TableHead className="w-16 text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1032,7 +1039,7 @@ export default function PayrollEligibilityPage() {
                           {employee.employee_status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="max-w-xs">
+                      <TableCell className="max-w-62.5 w-50">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1055,8 +1062,8 @@ export default function PayrollEligibilityPage() {
                           </Tooltip>
                         </TooltipProvider>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
+                      <TableCell className="w-16 text-center">
+                        <div className="flex items-center justify-center gap-1">
                           {canEditRun && (
                             <>
                               <Button
