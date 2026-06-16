@@ -8,7 +8,15 @@ function App() {
 
   return (
     <>
-    <Toaster position="top-center" richColors />
+    <Toaster
+        position="top-center"
+        richColors
+        toastOptions={{
+          style: {
+            background: "white",
+          },
+        }}
+      />
     <TooltipProvider><AppRouterWrapper /></TooltipProvider>
       
     </>

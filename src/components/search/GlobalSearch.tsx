@@ -14,13 +14,12 @@ interface GlobalSearchProps {
   onSearch?: (query: string) => void;
 }
 
-type SearchCategory = "all" | "employees" | "payroll" | "reports";
+type SearchCategory = "employees" | "payroll" | "reports";
 
 const categoryConfig = {
-  all: { label: "All", icon: Search },
-  employees: { label: "Employees", icon: Users },
-  payroll: { label: "Payroll Runs", icon: Calendar },
-  reports: { label: "Reports", icon: FileText },
+  employees: { label: "Employees", icon: Users, placeholder: "Search employees by name, employee number" },
+  payroll: { label: "Payroll Runs", icon: Calendar, placeholder: "Search payroll runs by month, year, or status..." },
+  reports: { label: "Reports", icon: FileText, placeholder: "Search reports by name or type..." },
 };
 
 const getBadgeColorClass = (color: string) => {
@@ -41,7 +40,7 @@ export default function GlobalSearch({ isOpen, onClose, onSearch }: GlobalSearch
   const { companyId } = useParams();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<SearchCategory>("all");
+  const [category, setCategory] = useState<SearchCategory>("employees");
   const [results, setResults] = useState<{
     employees: SearchResult[];
     payrollRuns: SearchResult[];
@@ -54,22 +53,21 @@ export default function GlobalSearch({ isOpen, onClose, onSearch }: GlobalSearch
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Flatten results based on category
-  const flatResults = React.useMemo(() => {
-    const all = [];
-    if (category === "all" || category === "employees") {
-      all.push(...results.employees.map(r => ({ ...r, section: "Employees" })));
+  // Get results based on selected category
+  const categoryResults = React.useMemo(() => {
+    switch(category) {
+      case "employees":
+        return results.employees.map(r => ({ ...r, section: "Employees" }));
+      case "payroll":
+        return results.payrollRuns.map(r => ({ ...r, section: "Payroll Runs" }));
+      case "reports":
+        return results.reports.map(r => ({ ...r, section: "Reports" }));
+      default:
+        return [];
     }
-    if (category === "all" || category === "payroll") {
-      all.push(...results.payrollRuns.map(r => ({ ...r, section: "Payroll Runs" })));
-    }
-    if (category === "all" || category === "reports") {
-      all.push(...results.reports.map(r => ({ ...r, section: "Reports" })));
-    }
-    return all;
   }, [results, category]);
 
-  const hasResults = flatResults.length > 0;
+  const hasResults = categoryResults.length > 0;
 
   useEffect(() => {
     if (isOpen) {
@@ -77,7 +75,7 @@ export default function GlobalSearch({ isOpen, onClose, onSearch }: GlobalSearch
     } else {
       setQuery("");
       setResults({ employees: [], payrollRuns: [], reports: [] });
-      setCategory("all");
+      setCategory("employees");
       searchService.cancel();
     }
   }, [isOpen]);
@@ -111,7 +109,10 @@ export default function GlobalSearch({ isOpen, onClose, onSearch }: GlobalSearch
     onClose();
   }, [navigate, onClose, query, onSearch]);
 
-  const totalResults = results.employees.length + results.payrollRuns.length + results.reports.length;
+  // Calculate total results count (for display only)
+  //const totalResults = results.employees.length + results.payrollRuns.length + results.reports.length;
+
+  const activeCategory = categoryConfig[category];
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -124,7 +125,7 @@ export default function GlobalSearch({ isOpen, onClose, onSearch }: GlobalSearch
           <Input
             ref={inputRef}
             type="text"
-            placeholder="Search employees, payroll runs, reports..."
+            placeholder={activeCategory.placeholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-0 text-sm shadow-none placeholder:text-slate-400"
@@ -139,14 +140,20 @@ export default function GlobalSearch({ isOpen, onClose, onSearch }: GlobalSearch
           )}
         </div>
 
-        {/* Category Tabs - Minimalist with border-bottom active state */}
+        {/* Category Tabs - No "All" option */}
         <div className="flex gap-0 px-5 border-b border-slate-100">
-          {(Object.entries(categoryConfig) as [SearchCategory, typeof categoryConfig.all][]).map(([key, config]) => {
+          {(Object.entries(categoryConfig) as [SearchCategory, typeof categoryConfig.employees][]).map(([key, config]) => {
             const isActive = category === key;
+            const Icon = config.icon;
             return (
               <button
                 key={key}
-                onClick={() => setCategory(key)}
+                onClick={() => {
+                  setCategory(key);
+                  // Clear results when switching categories to show fresh results
+                  setResults({ employees: [], payrollRuns: [], reports: [] });
+                  // Keep the query but it will trigger a new search
+                }}
                 className={cn(
                   "flex items-center gap-2 px-3 pb-2.5 pt-1 text-sm font-medium transition-all relative",
                   isActive
@@ -154,6 +161,7 @@ export default function GlobalSearch({ isOpen, onClose, onSearch }: GlobalSearch
                     : "text-slate-500 hover:text-slate-700"
                 )}
               >
+                <Icon className="h-3.5 w-3.5" />
                 {config.label}
                 {isActive && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#7F5EFD] rounded-full" />
@@ -172,7 +180,7 @@ export default function GlobalSearch({ isOpen, onClose, onSearch }: GlobalSearch
           ) : query.length >= 2 ? (
             hasResults ? (
               <div className="divide-y divide-slate-50">
-                {flatResults.map((item) => (
+                {categoryResults.map((item) => (
                   <button
                     key={`${item.type}-${item.id}`}
                     onClick={() => handleSelect(item)}
@@ -229,9 +237,9 @@ export default function GlobalSearch({ isOpen, onClose, onSearch }: GlobalSearch
                 <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
                   <Search className="h-4 w-4 text-slate-400" />
                 </div>
-                <p className="text-sm text-slate-500">No results found for "{query}"</p>
+                <p className="text-sm text-slate-500">No {activeCategory.label.toLowerCase()} found for "{query}"</p>
                 <p className="text-xs text-slate-400 mt-1">
-                  Try searching by name, employee number, or month/year
+                  Try adjusting your search terms
                 </p>
               </div>
             )
@@ -244,19 +252,22 @@ export default function GlobalSearch({ isOpen, onClose, onSearch }: GlobalSearch
               <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
                 <Search className="h-4 w-4 text-slate-400" />
               </div>
-              <p className="text-sm text-slate-500">Search for anything</p>
+              <p className="text-sm text-slate-500">Search for {activeCategory.label.toLowerCase()}</p>
               <p className="text-xs text-slate-400 mt-1">
-                Employees • Payroll Runs • Reports
+                {activeCategory.placeholder}
               </p>
             </div>
           )}
         </div>
 
-        {/* Footer - Simple result count */}
-        {hasResults && !isLoading && query.length >= 2 && (
-          <div className="border-t border-slate-100 px-5 py-2.5 flex justify-end">
+        {/* Footer - Show category and result count */}
+        {(hasResults || (query.length >= 2 && !isLoading)) && (
+          <div className="border-t border-slate-100 px-5 py-2.5 flex justify-between items-center">
             <span className="text-xs text-slate-400">
-              {totalResults} result{totalResults !== 1 ? 's' : ''}
+              {activeCategory.label}
+            </span>
+            <span className="text-xs text-slate-400">
+              {hasResults ? `${categoryResults.length} result${categoryResults.length !== 1 ? 's' : ''}` : 'No results'}
             </span>
           </div>
         )}
