@@ -11,9 +11,12 @@ import DashboardLayout from "./pages/dashboard/DashboardLayout";
 import AccountSettings from "./pages/dashboard/AccountSettings.tsx";
 import CompanySetup from "./components/dashboard/CompanySetup.tsx";
 import { supabase } from "./lib/supabaseClient.ts";
-import ModuleLayout from "./pages/company/layout/moduleLayout.tsx";
+
+import MainLayout from "./pages/company/layout/MainLayout.tsx";
+import ModuleLayout from "./pages/company/layout/ModuleLayout.tsx";
 import NotificationsPage from "./pages/company/notifications/NotificationsPage";
 import ModuleDashboard from "./pages/company/dashboard/moduleDashboard.tsx";
+
 import EmployeeSection from "./pages/company/employees/employeeSection.tsx";
 import AddEmployees from "./pages/company/employees/AddEmployee.tsx";
 import EmployeeDetailsLayout from "./components/company/employees/layouts/EmployeeDetailsLayout.tsx";
@@ -26,13 +29,16 @@ import EmployeeHistoryPage from "./pages/company/employees/details/History.tsx";
 import PersonalDetails from "./pages/company/employees/details/PersonalDetails.tsx";
 import ContractDetails from "./pages/company/employees/details/Contracts.tsx";
 import EmployeeAllowances from "./pages/company/employees/details/Allowances.tsx";
+
 import OrgLayout from "./pages/company/organization/OrgLayout.tsx";
 import DepartmentsPage from "./pages/company/organization/Departments.tsx";
 import JobTitlesPage from "./pages/company/organization/JobTitles.tsx";
 import SubDepartmentsPage from "./pages/company/organization/SubDepartments.tsx";
+
 import PayrollOverview from "./pages/company/payroll/payrollOverview.tsx";
 import RunPayroll from "./pages/company/payroll/runPayroll.tsx";
 import PayrollHistory from "./pages/company/payroll/PayrollHistory.tsx";
+import PayrollHubPage from "./pages/company/payroll/hub/PayrollHubPage.tsx";
 import BenefitSettings from "./pages/company/payroll/benefits/benefitSection.tsx";
 import BenefitLayout from "./pages/company/payroll/benefits/benefitsLayout.tsx";
 import DeductionLayout from "./pages/company/payroll/deductions/deductionsLayout.tsx";
@@ -44,17 +50,31 @@ import AssignDeductions from "./pages/company/payroll/deductions/assignDeduction
 import PayrollWizard from "./components/payroll/runs/PayrollWizard.tsx";
 import PayrollEligibilityPage from "./pages/company/payroll/runs/PayrollEligibilityPage.tsx";
 import PayrollProcessPage from "./pages/company/payroll/PayrollProcessPage.tsx";
-import PayrollReviewPage from "./pages/company/payroll/PayrollReviewPage.tsx";
+//import PayrollReviewPage from "./pages/company/payroll/PayrollReviewPage.tsx";
+import PayrollReviewPage from "./pages/company/payroll/reviews/index.tsx";
 import PayrollReviewStatus from "./components/payroll/runs/PayrollReviewStatus.tsx";
+import PayrollDetailsLayout from "./pages/company/payroll/hub/layout/PayrollDetailsLayout.tsx";
+import AllowancesDetailPage from "./pages/company/payroll/hub/details/AllowancesDetailPage.tsx";
+import DeductionsDetailPage from "@/pages/company/payroll/hub/details/DeductionsDetailPage.tsx";
 import DeductionSettings from "./pages/company/payroll/deductions/deductionSection.tsx";
+import PayrollEmployeeLayout from "./pages/company/payroll/hub/layout/PayrollEmployeeLayout.tsx";
+import IncludedEmployeesPage from "./pages/company/payroll/hub/details/IncludedEmployeesPage.tsx";
+import ExcludedEmployeesPage from "./pages/company/payroll/hub/details/ExcludedEmployeesPage.tsx";
+import PayrollRunHubReports from "./pages/company/payroll/hub/PayrollRunHubReports.tsx";
+import ReportPreviewHub from "./pages/company/payroll/hub/ReportPreviewHub.tsx";
+import PaymentMethodsDetailPage from "./pages/company/payroll/hub/details/PaymentMethodsDetailPage.tsx";
+import PayrollPayslipsHub from "./pages/company/payroll/hub/PayrollPayslipsHub.tsx";
+
 import HELBSection from "./pages/company/payroll/deductions/HELBSection.tsx";
 import SendPayslip from "./pages/company/payroll/SendPayslips.tsx";
 import PayrollSetup from "./components/payroll/settings/PayrollSetup.tsx";
+
 import ReportPreviewPage from "./pages/company/reports/ReportPreviewPage.tsx";
 import PayrollRunReports from "./pages/company/reports/PayrollRunReports.tsx";
 import AnnualReports from "./pages/company/reports/AnnualReports.tsx";
 import P9AReports from "./pages/company/reports/P9A-Reports.tsx";
 import ReportOverview from "./pages/company/reports/ReportOverview.tsx";
+
 import CompanySettingsOverviewPage from "./pages/company/settings/SettiingsOverview.tsx";
 import SettingsLayout from "./pages/company/settings/SettingsLayout.tsx";
 import ProfileSettings from "./pages/company/settings/ProfilesSettings.tsx";
@@ -116,8 +136,8 @@ const AppRouterWrapper = () => {
             <Route path="/company-setup" element={<CompanySetup />} />
           </Route>
 
-          {/* Company routes WITH sidebar + topbar (ModuleLayout) */}
-          <Route path="/company/:companyId" element={<ModuleLayout />}>
+          {/* Company routes WITH sidebar + topbar (MainLayout) */}
+          <Route path="/company/:companyId" element={<MainLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<ModuleDashboard />} />
             <Route path="payroll" element={<PayrollOverview />} />
@@ -210,10 +230,38 @@ const AppRouterWrapper = () => {
             </Route>
 
             {/* payroll */}
-            <Route path="payroll/:payrollRunId">
+            <Route path="payroll/:payrollRunId" element={<ModuleLayout />}>
               <Route path="wizard" element={<PayrollWizard />} />
-              <Route path="review-old-status" element={<PayrollReviewStatus />} />
+              <Route
+                path="review-old-status"
+                element={<PayrollReviewStatus />}
+              />
               <Route path="review-status" element={<PayrollReviewPage />} />
+              <Route path="hub" element={<PayrollHubPage />} />
+              <Route path="payment-methods" element={<PaymentMethodsDetailPage />} />
+              <Route path="reports" element={<PayrollRunHubReports />} />
+              <Route path="reports/preview" element={<ReportPreviewHub />} />
+              <Route path="payslips" element={<PayrollPayslipsHub />} />
+              <Route element={<PayrollDetailsLayout />}>
+                <Route
+                  path="hub/allowances"
+                  element={<AllowancesDetailPage />}
+                />
+                <Route
+                  path="hub/deductions"
+                  element={<DeductionsDetailPage />}
+                />
+              </Route>
+              <Route element={<PayrollEmployeeLayout />}>
+                <Route
+                  path="employees/included"
+                  element={<IncludedEmployeesPage />}
+                />
+                <Route
+                  path="employees/excluded"
+                  element={<ExcludedEmployeesPage />}
+                />
+              </Route>
             </Route>
             <Route
               path="payroll/benefits/history"

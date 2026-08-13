@@ -308,7 +308,7 @@ export default function RunPayroll() {
                   variant="outline"
                   onClick={() => {
                     navigate(
-                      `/company/${companyId}/payroll/${existingRunForPeriod.id}/review-status`
+                      `/company/${companyId}/payroll/${existingRunForPeriod.id}/hub`
                     );
                     setIsOpen(false);
                   }}
@@ -323,7 +323,7 @@ export default function RunPayroll() {
                 disabled={checkingExistingRun}
                 className="bg-[#7F5EFD] hover:bg-[#6b4de0] text-white rounded-sm"
               >
-                {existingRunForPeriod ? "View Existing" : "Prepare Payroll"}
+                {existingRunForPeriod ? "Review" : "Prepare Payroll"}
                 <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </DialogFooter>

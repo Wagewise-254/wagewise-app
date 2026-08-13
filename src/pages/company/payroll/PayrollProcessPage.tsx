@@ -12,6 +12,7 @@ import {
   FileText,
   ArrowRight,
   RefreshCw,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,7 +21,6 @@ import { Progress } from "@/components/ui/progress";
 import { API_BASE_URL } from "@/config";
 import { useAuthStore } from "@/stores/authStore";
 
-// Define specific types instead of using 'any'
 interface ProgressData {
   current?: number;
   total?: number;
@@ -45,22 +45,83 @@ interface CalculationResult {
   totalNetPay: number;
 }
 
-const STEP_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
-  STARTED: { label: "Initializing", icon: <Loader2 className="h-4 w-4 animate-spin" /> },
-  FETCHING_EMPLOYEES: { label: "Fetching Employees", icon: <Users className="h-4 w-4" /> },
-  EMPLOYEES_FETCHED: { label: "Employees Loaded", icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" /> },
-  FETCHING_ALLOWANCES: { label: "Loading Allowances", icon: <TrendingUp className="h-4 w-4" /> },
-  FETCHING_DEDUCTIONS: { label: "Loading Deductions", icon: <FileText className="h-4 w-4" /> },
-  FILTERING_PERIOD: { label: "Filtering by Period", icon: <Clock className="h-4 w-4" /> },
-  PERIOD_FILTERED: { label: "Period Filtered", icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" /> },
-  FETCHING_ABSENT_DAYS: { label: "Checking Absent Days", icon: <Clock className="h-4 w-4" /> },
-  CALCULATING: { label: "Calculating Payroll", icon: <Loader2 className="h-4 w-4 animate-spin" /> },
-  PROCESSING_EMPLOYEE: { label: "Processing Employee", icon: <Users className="h-4 w-4" /> },
-  SAVING: { label: "Saving Results", icon: <FileText className="h-4 w-4" /> },
-  UPDATING_RUN: { label: "Finalizing", icon: <RefreshCw className="h-4 w-4" /> },
-  INITIALIZING_REVIEWS: { label: "Setting Up Reviews", icon: <CheckCircle2 className="h-4 w-4" /> },
-  COMPLETED: { label: "Complete!", icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" /> },
-  ERROR: { label: "Error", icon: <XCircle className="h-4 w-4 text-red-500" /> },
+// Simplified step labels - only show major steps
+const STEP_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  STARTED: { 
+    label: "Initializing", 
+    icon: <Loader2 className="h-4 w-4 animate-spin" />,
+    color: "text-blue-500"
+  },
+  FETCHING_EMPLOYEES: { 
+    label: "Loading employees", 
+    icon: <Users className="h-4 w-4" />,
+    color: "text-blue-500"
+  },
+  EMPLOYEES_FETCHED: { 
+    label: "Employees loaded", 
+    icon: <CheckCircle2 className="h-4 w-4" />,
+    color: "text-emerald-500"
+  },
+  FETCHING_ALLOWANCES: { 
+    label: "Loading allowances", 
+    icon: <TrendingUp className="h-4 w-4" />,
+    color: "text-blue-500"
+  },
+  FETCHING_DEDUCTIONS: { 
+    label: "Loading deductions", 
+    icon: <FileText className="h-4 w-4" />,
+    color: "text-blue-500"
+  },
+  FILTERING_PERIOD: { 
+    label: "Filtering by period", 
+    icon: <Clock className="h-4 w-4" />,
+    color: "text-blue-500"
+  },
+  PERIOD_FILTERED: { 
+    label: "Period filtered", 
+    icon: <CheckCircle2 className="h-4 w-4" />,
+    color: "text-emerald-500"
+  },
+  FETCHING_ABSENT_DAYS: { 
+    label: "Checking absent days", 
+    icon: <Clock className="h-4 w-4" />,
+    color: "text-blue-500"
+  },
+  CALCULATING: { 
+    label: "Calculating payroll", 
+    icon: <Loader2 className="h-4 w-4 animate-spin" />,
+    color: "text-amber-500"
+  },
+  PROCESSING_EMPLOYEE: { 
+    label: "Processing employees", 
+    icon: <UserCheck className="h-4 w-4" />,
+    color: "text-blue-500"
+  },
+  SAVING: { 
+    label: "Saving results", 
+    icon: <FileText className="h-4 w-4" />,
+    color: "text-blue-500"
+  },
+  UPDATING_RUN: { 
+    label: "Finalizing", 
+    icon: <RefreshCw className="h-4 w-4 animate-spin" />,
+    color: "text-blue-500"
+  },
+  INITIALIZING_REVIEWS: { 
+    label: "Setting up reviews", 
+    icon: <CheckCircle2 className="h-4 w-4" />,
+    color: "text-blue-500"
+  },
+  COMPLETED: { 
+    label: "Complete!", 
+    icon: <CheckCircle2 className="h-4 w-4" />,
+    color: "text-emerald-500"
+  },
+  ERROR: { 
+    label: "Error", 
+    icon: <XCircle className="h-4 w-4" />,
+    color: "text-red-500"
+  },
 };
 
 export default function PayrollProcessPage() {
@@ -71,6 +132,8 @@ export default function PayrollProcessPage() {
 
   const month = searchParams.get("month");
   const year = searchParams.get("year");
+  const isRecalculate = searchParams.get("recalculate") === "true";
+  const runId = searchParams.get("runId");
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [logs, setLogs] = useState<ProgressLog[]>([]);
@@ -78,6 +141,7 @@ export default function PayrollProcessPage() {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [processedEmployees, setProcessedEmployees] = useState({ total: 0, eligible: 0, ineligible: 0 });
   const logsEndRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const isMounted = useRef(true);
@@ -95,10 +159,16 @@ export default function PayrollProcessPage() {
   useEffect(() => {
     if (showResult && resultRef.current) {
       setTimeout(() => {
-        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        resultRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
       }, 300);
     }
   }, [showResult]);
+
+  // Track which steps we've already logged to avoid duplicates
+  const loggedSteps = useRef<Set<string>>(new Set());
 
   const startCalculation = useCallback(async () => {
     if (!companyId || !session?.access_token || !month || !year) {
@@ -112,19 +182,22 @@ export default function PayrollProcessPage() {
     setResult(null);
     setShowResult(false);
     setError(null);
+    loggedSteps.current.clear();
+    setProcessedEmployees({ total: 0, eligible: 0, ineligible: 0 });
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/company/${companyId}/payroll/calculate`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ month, year: parseInt(year) }),
-        }
-      );
+      const endpoint = isRecalculate && runId
+        ? `${API_BASE_URL}/company/${companyId}/payroll/runs/${runId}/recalculate`
+        : `${API_BASE_URL}/company/${companyId}/payroll/calculate`;
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ month, year: parseInt(year) }),
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -156,10 +229,45 @@ export default function PayrollProcessPage() {
           if (line.startsWith("data: ")) {
             try {
               const data = JSON.parse(line.slice(6));
-              
-              // Only update state if component is still mounted
+
               if (isMounted.current) {
-                setLogs((prev) => [...prev, data]);
+                // Only add log if it's a new step or an important update
+                const stepKey = data.step;
+                const isImportantStep = [
+                  'STARTED', 'EMPLOYEES_FETCHED', 'PERIOD_FILTERED', 
+                  'CALCULATING', 'SAVING', 'UPDATING_RUN', 
+                  'INITIALIZING_REVIEWS', 'COMPLETED', 'ERROR'
+                ].includes(data.step);
+
+                // For PROCESSING_EMPLOYEE, only log every 10th employee or when total changes
+                let shouldLog = false;
+                if (data.step === 'PROCESSING_EMPLOYEE' && data.data) {
+                  const current = data.data.current || 0;
+                  const total = data.data.total || 1;
+                  
+                  // Update processed employees count
+                  setProcessedEmployees(prev => ({
+                    ...prev,
+                    total: current,
+                    eligible: data.data.eligible ? prev.eligible + 1 : prev.eligible,
+                    ineligible: !data.data.eligible ? prev.ineligible + 1 : prev.ineligible,
+                  }));
+
+                  // Log every 10th employee or the last one
+                  if (current % 10 === 0 || current === total) {
+                    shouldLog = true;
+                  }
+                }
+
+                // For other steps, log only if it's important or first time seeing this step
+                if (isImportantStep && !loggedSteps.current.has(stepKey)) {
+                  shouldLog = true;
+                  loggedSteps.current.add(stepKey);
+                }
+
+                if (shouldLog) {
+                  setLogs((prev) => [...prev, data]);
+                }
 
                 // Update progress based on step
                 const stepProgress: Record<string, number> = {
@@ -196,6 +304,15 @@ export default function PayrollProcessPage() {
                 if (data.step === "COMPLETED" && data.data) {
                   setResult(data.data);
                   setShowResult(true);
+                  // Add final status log if not already there
+                  if (!loggedSteps.current.has('COMPLETED')) {
+                    loggedSteps.current.add('COMPLETED');
+                    setLogs((prev) => [...prev, {
+                      step: 'COMPLETED',
+                      message: `✅ Payroll ${isRecalculate ? 'recalculated' : 'processed'} successfully!`,
+                      data: data.data
+                    }]);
+                  }
                 }
 
                 if (data.error) {
@@ -225,7 +342,7 @@ export default function PayrollProcessPage() {
         setIsProcessing(false);
       }
     }
-  }, [companyId, session?.access_token, month, year]);
+  }, [companyId, session?.access_token, month, year, isRecalculate, runId]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -238,22 +355,25 @@ export default function PayrollProcessPage() {
 
   const formatMessage = useCallback((log: ProgressLog) => {
     if (log.step === "PROCESSING_EMPLOYEE" && log.data) {
-      const { current, total, eligible } = log.data;
-      const status = eligible ? "✅" : "⛔";
-      return `${log.message} (${current}/${total}) ${status}`;
+      const { current, total } = log.data;
+      return `Processing employees (${current}/${total})`;
     }
     return log.message;
   }, []);
 
   const getLogIcon = useCallback((log: ProgressLog) => {
     if (log.error) return <XCircle className="h-4 w-4 text-red-500" />;
-    if (log.step === "COMPLETED") return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
-    if (log.step === "STARTED" || log.step === "CALCULATING") {
-      return <Loader2 className="h-4 w-4 animate-spin" />;
-    }
     const stepInfo = STEP_LABELS[log.step];
     if (stepInfo?.icon) return stepInfo.icon;
     return <Clock className="h-4 w-4 text-slate-400" />;
+  }, []);
+
+  const getLogColor = useCallback((log: ProgressLog) => {
+    if (log.error) return "text-red-600 bg-red-50";
+    const stepInfo = STEP_LABELS[log.step];
+    if (log.step === "COMPLETED") return "text-emerald-600 bg-emerald-50";
+    if (stepInfo?.color === "text-amber-500") return "text-amber-600 bg-amber-50";
+    return "text-slate-600 bg-slate-50";
   }, []);
 
   return (
@@ -261,74 +381,99 @@ export default function PayrollProcessPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900">
-          Processing Payroll
+          {isRecalculate ? "Recalculating Payroll" : "Processing Payroll"}
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          {month} {year}
+          {month} {year} {isRecalculate && "· Recalculating existing run"}
         </p>
       </div>
 
-      {/* Progress Bar */}
-      <div className="mb-8">
+      {/* Progress Section */}
+      <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-slate-700">
-            {isProcessing ? "Processing..." : progress === 100 ? "Complete!" : "Ready"}
+            {isProcessing
+              ? "Processing..."
+              : progress === 100
+                ? "Complete!"
+                : "Ready"}
           </span>
-          <span className="text-sm font-medium text-slate-500">{progress}%</span>
+          <span className="text-sm font-medium text-slate-500">
+            {progress}%
+          </span>
         </div>
         <Progress value={progress} className="h-2" />
       </div>
 
-      {/* Logs */}
+      {/* Stats while processing */}
+      {isProcessing && processedEmployees.total > 0 && (
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="bg-blue-50 border border-blue-100 rounded p-3 text-center">
+            <p className="text-xs text-blue-600">Processed</p>
+            <p className="text-lg font-bold text-blue-700">{processedEmployees.total}</p>
+          </div>
+          <div className="bg-emerald-50 border border-emerald-100 rounded p-3 text-center">
+            <p className="text-xs text-emerald-600">Eligible</p>
+            <p className="text-lg font-bold text-emerald-700">{processedEmployees.eligible}</p>
+          </div>
+          <div className="bg-amber-50 border border-amber-100 rounded p-3 text-center">
+            <p className="text-xs text-amber-600">Ineligible</p>
+            <p className="text-lg font-bold text-amber-700">{processedEmployees.ineligible}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Simplified Logs */}
       <Card className="border-slate-200 shadow-none rounded-sm">
         <CardContent className="p-0">
           <div className="bg-slate-50 border-b border-slate-200 px-6 py-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-slate-700">Progress Log</span>
+              <span className="text-sm font-medium text-slate-700">Progress</span>
               <Badge variant="outline" className="bg-white">
                 {logs.length} steps
               </Badge>
             </div>
           </div>
-          <div className="p-6 max-h-100 overflow-y-auto font-mono text-sm">
+          <div className="p-6 max-h-100 overflow-y-auto">
             {logs.length === 0 ? (
-              <div className="flex items-center justify-center py-12 text-slate-400">
-                <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                Initializing...
+              <div className="flex items-center justify-center py-8 text-slate-400">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                <span className="text-sm">Initializing...</span>
               </div>
             ) : (
-              <div className="space-y-2">
-                {logs.map((log, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-start gap-3 p-2 rounded ${
-                      log.error
-                        ? "bg-red-50 text-red-700"
-                        : log.step === "COMPLETED"
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "hover:bg-slate-100/50"
-                    }`}
-                  >
-                    <div className="mt-0.5">{getLogIcon(log)}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-xs text-slate-400">
-                          [{log.step}]
-                        </span>
-                        <span className="text-sm">{formatMessage(log)}</span>
-                      </div>
-                      {log.data && log.step === "PROCESSING_EMPLOYEE" && (
-                        <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
-                          <span>Employee ID: {log.data.employeeId}</span>
-                          <span>•</span>
-                          <span>
-                            {log.data.eligible ? "Eligible ✅" : "Ineligible ⛔"}
+              <div className="space-y-1.5">
+                {logs.map((log, index) => {
+                  const isLast = index === logs.length - 1;
+                  const stepInfo = STEP_LABELS[log.step];
+                  
+                  return (
+                    <div
+                      key={index}
+                      className={`flex items-center gap-3 p-2 rounded transition-colors ${
+                        getLogColor(log)
+                      } ${isLast && !log.error ? 'border-l-4 border-[#7F5EFD]' : ''}`}
+                    >
+                      <div className="shrink-0">{getLogIcon(log)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {stepInfo && (
+                            <span className="text-xs font-medium text-slate-400">
+                              {stepInfo.label}
+                            </span>
+                          )}
+                          <span className="text-sm truncate">
+                            {formatMessage(log)}
                           </span>
                         </div>
+                      </div>
+                      {log.data?.current && log.data?.total && (
+                        <Badge variant="outline" className="shrink-0 bg-white/50 text-xs">
+                          {log.data.current}/{log.data.total}
+                        </Badge>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={logsEndRef} />
               </div>
             )}
@@ -347,10 +492,10 @@ export default function PayrollProcessPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-emerald-900">
-                    Payroll Calculation Complete!
+                    Payroll {isRecalculate ? 'Recalculated' : 'Processed'} Successfully!
                   </h3>
                   <p className="text-sm text-emerald-700 mt-1">
-                    Successfully processed {result.totalEmployees} employees
+                    {result.totalEmployees} employees processed
                   </p>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
@@ -389,7 +534,7 @@ export default function PayrollProcessPage() {
                       }
                       className="bg-[#7F5EFD] hover:bg-[#6b4de0] text-white rounded-sm"
                     >
-                      Review Payroll
+                      {isRecalculate ? "Back to Review" : "Review Payroll"}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                     <Button
@@ -418,7 +563,9 @@ export default function PayrollProcessPage() {
                 <XCircle className="h-6 w-6 text-red-600" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-red-900">Calculation Failed</h3>
+                <h3 className="text-lg font-bold text-red-900">
+                  Calculation Failed
+                </h3>
                 <p className="text-sm text-red-700 mt-1">{error}</p>
                 <Button
                   variant="outline"

@@ -9,13 +9,17 @@ import {
   Eye,
   Filter,
   Search,
-  Download,
   Send,
   RefreshCw,
   AlertCircle,
   CreditCard,
   Receipt,
   Award,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon,
+  ChevronsLeft,
+  ChevronsRight,
+  Check,
   UserCheck,
   UserX,
   ChevronRight,
@@ -27,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import {
   Table,
@@ -54,12 +59,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+import { cn } from "@/lib/utils";
 
 // -----------------------------------------------------------------------------
 // Mock data
@@ -102,7 +110,7 @@ const mockEmployees = [
     basicSalary: 85000,
     grossPay: 97500,
     netPay: 72340,
-    status: "approved",
+    status: "approved" as const,
     allowances: [
       { name: "Housing Allowance", value: 15000, type: "cash", taxable: true },
       { name: "Transport Allowance", value: 5000, type: "cash", taxable: true },
@@ -131,10 +139,15 @@ const mockEmployees = [
     basicSalary: 95000,
     grossPay: 110000,
     netPay: 81200,
-    status: "pending",
+    status: "pending" as const,
     allowances: [
       { name: "Housing Allowance", value: 18000, type: "cash", taxable: true },
-      { name: "Communication Allowance", value: 8000, type: "cash", taxable: true },
+      {
+        name: "Communication Allowance",
+        value: 8000,
+        type: "cash",
+        taxable: true,
+      },
       { name: "Car Allowance", value: 12000, type: "non-cash", taxable: true },
     ],
     deductions: [
@@ -161,10 +174,15 @@ const mockEmployees = [
     basicSalary: 70000,
     grossPay: 82500,
     netPay: 61200,
-    status: "rejected",
+    status: "rejected" as const,
     allowances: [
       { name: "Housing Allowance", value: 12000, type: "cash", taxable: true },
-      { name: "Professional Allowance", value: 5000, type: "cash", taxable: true },
+      {
+        name: "Professional Allowance",
+        value: 5000,
+        type: "cash",
+        taxable: true,
+      },
     ],
     deductions: [
       { name: "PAYE", value: 13200, type: "statutory" },
@@ -189,7 +207,7 @@ const mockEmployees = [
     basicSalary: 65000,
     grossPay: 72000,
     netPay: 53800,
-    status: "pending",
+    status: "pending" as const,
     allowances: [
       { name: "Housing Allowance", value: 10000, type: "cash", taxable: true },
       { name: "Transport Allowance", value: 4000, type: "cash", taxable: true },
@@ -217,11 +235,16 @@ const mockEmployees = [
     basicSalary: 90000,
     grossPay: 105000,
     netPay: 77500,
-    status: "approved",
+    status: "approved" as const,
     allowances: [
       { name: "Housing Allowance", value: 16000, type: "cash", taxable: true },
       { name: "Internet Allowance", value: 7000, type: "cash", taxable: true },
-      { name: "Certification Allowance", value: 5000, type: "cash", taxable: false },
+      {
+        name: "Certification Allowance",
+        value: 5000,
+        type: "cash",
+        taxable: false,
+      },
     ],
     deductions: [
       { name: "PAYE", value: 16200, type: "statutory" },
@@ -257,38 +280,44 @@ const statusIcons: Record<StatusType, React.ReactNode> = {
 // -----------------------------------------------------------------------------
 
 export default function PayrollReviewPage() {
-  const [selectedEmployee, setSelectedEmployee] =
-    useState<typeof mockEmployees[0] | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<
+    (typeof mockEmployees)[0] | null
+  >(null);
 
+  const [showSearch, setShowSearch] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
+
+  // Selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Mock loading state
+  const [loading] = useState(false);
 
   const totalEmployees = mockEmployees.length;
 
   const approvedCount = mockEmployees.filter(
-    (e) => e.status === "approved"
+    (e) => e.status === "approved",
   ).length;
 
   const pendingCount = mockEmployees.filter(
-    (e) => e.status === "pending"
+    (e) => e.status === "pending",
   ).length;
 
   const rejectedCount = mockEmployees.filter(
-    (e) => e.status === "rejected"
+    (e) => e.status === "rejected",
   ).length;
 
-  const totalGross = mockEmployees.reduce(
-    (sum, e) => sum + e.grossPay,
-    0
-  );
+  const totalGross = mockEmployees.reduce((sum, e) => sum + e.grossPay, 0);
 
-  const totalNet = mockEmployees.reduce(
-    (sum, e) => sum + e.netPay,
-    0
-  );
+  const totalNet = mockEmployees.reduce((sum, e) => sum + e.netPay, 0);
 
   const completionPercentage = Math.round(
-    (approvedCount / totalEmployees) * 100
+    (approvedCount / totalEmployees) * 100,
   );
 
   const totalAllowances = mockEmployees.reduce(
@@ -296,9 +325,9 @@ export default function PayrollReviewPage() {
       sum +
       employee.allowances.reduce(
         (allowanceSum, allowance) => allowanceSum + allowance.value,
-        0
+        0,
       ),
-    0
+    0,
   );
 
   const totalDeductions = mockEmployees.reduce(
@@ -306,11 +335,12 @@ export default function PayrollReviewPage() {
       sum +
       employee.deductions.reduce(
         (deductionSum, deduction) => deductionSum + deduction.value,
-        0
+        0,
       ),
-    0
+    0,
   );
 
+  // Filter and paginate
   const filteredEmployees = mockEmployees.filter((employee) => {
     const matchesStatus =
       filterStatus === "all" || employee.status === filterStatus;
@@ -325,6 +355,14 @@ export default function PayrollReviewPage() {
     return matchesStatus && matchesSearch;
   });
 
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(
+    startIndex + itemsPerPage,
+    filteredEmployees.length,
+  );
+  const currentEmployees = filteredEmployees.slice(startIndex, endIndex);
+
   const statusCounts = {
     all: totalEmployees,
     approved: approvedCount,
@@ -332,12 +370,51 @@ export default function PayrollReviewPage() {
     rejected: rejectedCount,
   };
 
+  // Selection handlers
+  const handleSelectAll = () => {
+    if (selectedIds.size === currentEmployees.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(currentEmployees.map((e) => e.id)));
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  const handleApproveSelected = () => {
+    // In real app, this would call an API
+    console.log("Approving:", Array.from(selectedIds));
+    setSelectedIds(new Set());
+  };
+
+  const handleApproveAll = () => {
+    const pendingEmployees = filteredEmployees.filter(
+      (e) => e.status === "pending",
+    );
+    console.log(
+      "Approving all pending:",
+      pendingEmployees.map((e) => e.id),
+    );
+  };
+
+  const isAllSelected =
+    currentEmployees.length > 0 && selectedIds.size === currentEmployees.length;
+
+  const hasPendingSelected = Array.from(selectedIds).some(
+    (id) => mockEmployees.find((e) => e.id === id)?.status === "pending",
+  );
+
   return (
     <div className="max-w-375 mx-auto py-6 px-4">
-      {/* ------------------------------------------------------------------ */}
-      {/* Header                                                             */}
-      {/* ------------------------------------------------------------------ */}
-
+      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <div className="flex items-center gap-3">
@@ -356,89 +433,133 @@ export default function PayrollReviewPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-sm border-slate-200"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-sm border-slate-200"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
+          {" "}
+          {/* A link to the payroll hub */}
         </div>
       </div>
 
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Main layout                                                        */}
-      {/* ------------------------------------------------------------------ */}
-
+      {/* Main layout */}
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_290px] gap-5">
-        {/* ---------------------------------------------------------------- */}
-        {/* Employee workspace                                               */}
-        {/* ---------------------------------------------------------------- */}
-
+        {/* Employee workspace */}
         <div className="min-w-0">
-          {/* Filters */}
-
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex-1">
+          {/* Header with search, filters, and actions */}
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2">
+              {/* Search Toggle */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                {showSearch ? (
+                  <div className="relative animate-in slide-in-from-left-2 fade-in duration-200">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Search employees..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onBlur={() => {
+                        if (!searchQuery) setShowSearch(false);
+                      }}
+                      className="pl-8 h-8 w-64 text-sm bg-white border-slate-200 rounded-md focus-visible:ring-1 focus-visible:ring-[#7F5EFD]"
+                      autoFocus
+                    />
+                  </div>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowSearch(true)}
+                        className="h-8 w-8 p-0 cursor-pointer"
+                      >
+                        <Search className="h-4 w-4 text-slate-500" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      Search employees
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
 
-                <Input
-                  placeholder="Search employees..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 rounded-sm border-slate-200 h-10"
-                />
+              {/* Refresh Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 cursor-pointer"
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 text-slate-500 ${loading ? "animate-spin" : ""}`}
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Refresh</TooltipContent>
+              </Tooltip>
+
+              {/* Filter */}
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-slate-400 hidden sm:block" />
+
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-36 rounded-sm border-slate-200 h-8 text-xs">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    <SelectItem value="all">
+                      All ({statusCounts.all})
+                    </SelectItem>
+                    <SelectItem value="approved">
+                      Approved ({statusCounts.approved})
+                    </SelectItem>
+                    <SelectItem value="pending">
+                      Pending ({statusCounts.pending})
+                    </SelectItem>
+                    <SelectItem value="rejected">
+                      Rejected ({statusCounts.rejected})
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
+            {/* Bulk actions */}
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-slate-400 hidden sm:block" />
+              {selectedIds.size > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs rounded-sm border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                  onClick={handleApproveSelected}
+                  disabled={!hasPendingSelected}
+                >
+                  <Check className="h-3.5 w-3.5 mr-1.5" />
+                  Approve ({selectedIds.size})
+                </Button>
+              )}
 
-              <Select
-                value={filterStatus}
-                onValueChange={setFilterStatus}
-              >
-                <SelectTrigger className="w-36 rounded-sm border-slate-200 h-10">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-
-                <SelectContent>
-                  <SelectItem value="all">
-                    All ({statusCounts.all})
-                  </SelectItem>
-
-                  <SelectItem value="approved">
-                    Approved ({statusCounts.approved})
-                  </SelectItem>
-
-                  <SelectItem value="pending">
-                    Pending ({statusCounts.pending})
-                  </SelectItem>
-
-                  <SelectItem value="rejected">
-                    Rejected ({statusCounts.rejected})
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs rounded-sm border-[#7F5EFD] text-[#7F5EFD] hover:bg-[#7F5EFD]/10"
+                    onClick={handleApproveAll}
+                  >
+                    <Send className="h-3.5 w-3.5 mr-1.5" />
+                    Approve All
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  Approve all pending employees
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
 
           {/* Table */}
-
           <Card className="border-slate-200 shadow-none rounded-sm overflow-hidden">
-            <CardHeader className="px-5 py-4 border-b border-slate-200">
+            <CardHeader className="px-5 py-3 border-b border-slate-200">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-sm font-semibold text-slate-900">
@@ -457,416 +578,376 @@ export default function PayrollReviewPage() {
             </CardHeader>
 
             <CardContent className="p-0">
-              <Table>
-                <TableHeader className="bg-slate-50">
-                  <TableRow className="hover:bg-slate-50 border-slate-200">
-                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider pl-5">
-                      Employee
-                    </TableHead>
+              <div className="overflow-auto">
+                <Table>
+                  <TableHeader className="bg-slate-50">
+                    <TableRow className="hover:bg-slate-50 border-slate-200">
+                      <TableHead className="w-10 pl-5">
+                        <Checkbox
+                          checked={isAllSelected}
+                          onCheckedChange={handleSelectAll}
+                          className="border-slate-300"
+                        />
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                        Employee
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right">
+                        Gross
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right">
+                        Deductions
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right">
+                        Net
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right pr-5">
+                        Review
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
 
-                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right">
-                      Gross Pay
-                    </TableHead>
+                  <TableBody>
+                    {currentEmployees.map((employee) => {
+                      const deductionTotal = employee.deductions.reduce(
+                        (sum, deduction) => sum + deduction.value,
+                        0,
+                      );
 
-                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right">
-                      Deductions
-                    </TableHead>
+                      return (
+                        <TableRow
+                          key={employee.id}
+                          className="hover:bg-slate-50/70 border-slate-100"
+                        >
+                          <TableCell className="pl-5">
+                            <Checkbox
+                              checked={selectedIds.has(employee.id)}
+                              onCheckedChange={() =>
+                                handleSelectOne(employee.id)
+                              }
+                              disabled={employee.status === "approved"}
+                              className="border-slate-300"
+                            />
+                          </TableCell>
+                          <TableCell className="py-3">
+                            <div>
+                              <p className="font-medium text-slate-900 text-sm">
+                                {employee.name}
+                              </p>
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                {employee.employeeNumber} · {employee.jobTitle}
+                              </p>
+                            </div>
+                          </TableCell>
 
-                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right">
-                      Net Pay
-                    </TableHead>
+                          <TableCell className="text-right">
+                            <span className="font-medium text-slate-900 text-sm">
+                              KES {employee.grossPay.toLocaleString()}
+                            </span>
+                          </TableCell>
 
-                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                      Status
-                    </TableHead>
+                          <TableCell className="text-right">
+                            <div>
+                              <p className="font-medium text-slate-700 text-sm">
+                                KES {deductionTotal.toLocaleString()}
+                              </p>
+                              <p className="text-xs text-slate-400">
+                                {employee.deductions.length}
+                              </p>
+                            </div>
+                          </TableCell>
 
-                    <TableHead className="text-xs font-semibold text-slate-600 uppercase tracking-wider text-right pr-5">
-                      Review
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
+                          <TableCell className="text-right">
+                            <span className="font-semibold text-slate-900 text-sm">
+                              KES {employee.netPay.toLocaleString()}
+                            </span>
+                          </TableCell>
 
-                <TableBody>
-                  {filteredEmployees.map((employee) => {
-                    const deductionTotal = employee.deductions.reduce(
-                      (sum, deduction) => sum + deduction.value,
-                      0
-                    );
-
-                    return (
-                      <TableRow
-                        key={employee.id}
-                        className="hover:bg-slate-50/70 border-slate-100"
-                      >
-                        <TableCell className="pl-5 py-4">
-                          <div>
-                            <p className="font-medium text-slate-900">
-                              {employee.name}
-                            </p>
-
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              {employee.employeeNumber} ·{" "}
-                              {employee.jobTitle}
-                            </p>
-                          </div>
-                        </TableCell>
-
-                        <TableCell className="text-right">
-                          <span className="font-medium text-slate-900">
-                            KES {employee.grossPay.toLocaleString()}
-                          </span>
-                        </TableCell>
-
-                        <TableCell className="text-right">
-                          <div>
-                            <p className="font-medium text-slate-700">
-                              KES {deductionTotal.toLocaleString()}
-                            </p>
-
-                            <p className="text-xs text-slate-400">
-                              {employee.deductions.length} deductions
-                            </p>
-                          </div>
-                        </TableCell>
-
-                        <TableCell className="text-right">
-                          <span className="font-semibold text-slate-900">
-                            KES {employee.netPay.toLocaleString()}
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={`${statusColors[
-                              employee.status as StatusType
-                            ]} border capitalize flex items-center gap-1.5 w-fit rounded-sm`}
-                          >
-                            {statusIcons[employee.status as StatusType]}
-                            {employee.status}
-                          </Badge>
-                        </TableCell>
-
-                        <TableCell className="text-right pr-5">
-                          <Sheet>
-                            <SheetTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-[#7F5EFD] hover:text-[#6b4de0] hover:bg-[#7F5EFD]/10 rounded-sm"
-                                onClick={() =>
-                                  setSelectedEmployee(employee)
-                                }
-                              >
-                                <Eye className="h-4 w-4 mr-1.5" />
-                                Review
-                              </Button>
-                            </SheetTrigger>
-
-                            <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-                              <SheetHeader>
-                                <div className="flex items-center gap-3">
-                                  <SheetTitle className="text-xl">
-                                    {selectedEmployee?.name}
-                                  </SheetTitle>
-
-                                  {selectedEmployee && (
-                                    <Badge
-                                      variant="outline"
-                                      className={`${statusColors[
-                                        selectedEmployee.status as StatusType
-                                      ]} border capitalize rounded-sm`}
-                                    >
-                                      {
-                                        selectedEmployee.status
-                                      }
-                                    </Badge>
-                                  )}
-                                </div>
-
-                                <SheetDescription>
-                                  {selectedEmployee?.employeeNumber} ·{" "}
-                                  {selectedEmployee?.jobTitle}
-                                </SheetDescription>
-                              </SheetHeader>
-
-                              {selectedEmployee && (
-                                <div className="mt-6 space-y-6">
-                                  {/* Payroll summary */}
-
-                                  <div className="grid grid-cols-3 gap-2">
-                                    <div className="bg-slate-50 border border-slate-100 rounded-sm p-3">
-                                      <p className="text-xs text-slate-500">
-                                        Basic Salary
-                                      </p>
-
-                                      <p className="font-semibold text-slate-900 mt-1">
-                                        KES{" "}
-                                        {selectedEmployee.basicSalary.toLocaleString()}
-                                      </p>
-                                    </div>
-
-                                    <div className="bg-slate-50 border border-slate-100 rounded-sm p-3">
-                                      <p className="text-xs text-slate-500">
-                                        Gross Pay
-                                      </p>
-
-                                      <p className="font-semibold text-slate-900 mt-1">
-                                        KES{" "}
-                                        {selectedEmployee.grossPay.toLocaleString()}
-                                      </p>
-                                    </div>
-
-                                    <div className="bg-emerald-50/60 border border-emerald-100 rounded-sm p-3">
-                                      <p className="text-xs text-emerald-700">
-                                        Net Pay
-                                      </p>
-
-                                      <p className="font-semibold text-emerald-700 mt-1">
-                                        KES{" "}
-                                        {selectedEmployee.netPay.toLocaleString()}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  {/* Review alert */}
-
-                                  {selectedEmployee.status ===
-                                    "pending" && (
-                                    <div className="flex gap-3 p-3 bg-amber-50 border border-amber-200 rounded-sm">
-                                      <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-
-                                      <div>
-                                        <p className="text-sm font-medium text-amber-900">
-                                          Employee requires review
-                                        </p>
-
-                                        <p className="text-xs text-amber-700 mt-0.5">
-                                          Verify payroll details before
-                                          approving this employee.
-                                        </p>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Detail tabs */}
-
-                                  <Tabs
-                                    defaultValue="allowances"
-                                    className="w-full"
-                                  >
-                                    <TabsList className="grid w-full grid-cols-3 rounded-sm">
-                                      <TabsTrigger
-                                        value="allowances"
-                                        className="rounded-sm"
-                                      >
-                                        <Award className="h-4 w-4 mr-2" />
-                                        Allowances
-                                      </TabsTrigger>
-
-                                      <TabsTrigger
-                                        value="deductions"
-                                        className="rounded-sm"
-                                      >
-                                        <Receipt className="h-4 w-4 mr-2" />
-                                        Deductions
-                                      </TabsTrigger>
-
-                                      <TabsTrigger
-                                        value="payment"
-                                        className="rounded-sm"
-                                      >
-                                        <CreditCard className="h-4 w-4 mr-2" />
-                                        Payment
-                                      </TabsTrigger>
-                                    </TabsList>
-
-                                    <TabsContent
-                                      value="allowances"
-                                      className="mt-4"
-                                    >
-                                      <div className="space-y-2">
-                                        {selectedEmployee.allowances.map(
-                                          (allowance, idx) => (
-                                            <div
-                                              key={idx}
-                                              className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-sm"
-                                            >
-                                              <div>
-                                                <p className="font-medium text-sm text-slate-900">
-                                                  {allowance.name}
-                                                </p>
-
-                                                <p className="text-xs text-slate-500">
-                                                  {allowance.type} ·{" "}
-                                                  {allowance.taxable
-                                                    ? "Taxable"
-                                                    : "Non-taxable"}
-                                                </p>
-                                              </div>
-
-                                              <p className="font-medium text-sm text-slate-900">
-                                                KES{" "}
-                                                {allowance.value.toLocaleString()}
-                                              </p>
-                                            </div>
-                                          )
-                                        )}
-
-                                        <div className="flex items-center justify-between p-3 bg-[#7F5EFD]/5 rounded-sm border border-[#7F5EFD]/20">
-                                          <p className="font-semibold text-sm text-slate-900">
-                                            Total Allowances
-                                          </p>
-
-                                          <p className="font-bold text-[#7F5EFD]">
-                                            KES{" "}
-                                            {selectedEmployee.allowances
-                                              .reduce(
-                                                (sum, allowance) =>
-                                                  sum + allowance.value,
-                                                0
-                                              )
-                                              .toLocaleString()}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </TabsContent>
-
-                                    <TabsContent
-                                      value="deductions"
-                                      className="mt-4"
-                                    >
-                                      <div className="space-y-2">
-                                        {selectedEmployee.deductions.map(
-                                          (deduction, idx) => (
-                                            <div
-                                              key={idx}
-                                              className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-sm"
-                                            >
-                                              <div>
-                                                <p className="font-medium text-sm text-slate-900">
-                                                  {deduction.name}
-                                                </p>
-
-                                                <p className="text-xs text-slate-500 capitalize">
-                                                  {deduction.type}
-                                                </p>
-                                              </div>
-
-                                              <p className="font-medium text-sm text-red-600">
-                                                -KES{" "}
-                                                {deduction.value.toLocaleString()}
-                                              </p>
-                                            </div>
-                                          )
-                                        )}
-
-                                        <div className="flex items-center justify-between p-3 bg-red-50/50 rounded-sm border border-red-200">
-                                          <p className="font-semibold text-sm text-slate-900">
-                                            Total Deductions
-                                          </p>
-
-                                          <p className="font-bold text-red-600">
-                                            -KES{" "}
-                                            {selectedEmployee.deductions
-                                              .reduce(
-                                                (sum, deduction) =>
-                                                  sum + deduction.value,
-                                                0
-                                              )
-                                              .toLocaleString()}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </TabsContent>
-
-                                    <TabsContent
-                                      value="payment"
-                                      className="mt-4"
-                                    >
-                                      <div className="space-y-2">
-                                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-sm">
-                                          <p className="text-xs text-slate-500">
-                                            Payment Method
-                                          </p>
-
-                                          <p className="font-medium text-slate-900 mt-1">
-                                            {
-                                              selectedEmployee.paymentMethod
-                                            }
-                                          </p>
-                                        </div>
-
-                                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-sm">
-                                          <p className="text-xs text-slate-500">
-                                            Bank
-                                          </p>
-
-                                          <p className="font-medium text-slate-900 mt-1">
-                                            {
-                                              selectedEmployee.bankDetails
-                                                .bank
-                                            }
-                                          </p>
-                                        </div>
-
-                                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-sm">
-                                          <p className="text-xs text-slate-500">
-                                            Account
-                                          </p>
-
-                                          <p className="font-medium text-slate-900 mt-1">
-                                            {
-                                              selectedEmployee.bankDetails
-                                                .account
-                                            }
-                                          </p>
-                                        </div>
-
-                                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-sm">
-                                          <p className="text-xs text-slate-500">
-                                            Branch
-                                          </p>
-
-                                          <p className="font-medium text-slate-900 mt-1">
-                                            {
-                                              selectedEmployee.bankDetails
-                                                .branch
-                                            }
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </TabsContent>
-                                  </Tabs>
-
-                                  <Separator />
-
-                                  {/* Employee actions */}
-
-                                  <div className="space-y-2">
-                                    <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-sm">
-                                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                                      Approve Employee
-                                    </Button>
-
-                                    <Button
-                                      variant="outline"
-                                      className="w-full border-red-200 text-red-600 hover:bg-red-50 rounded-sm"
-                                    >
-                                      <XCircle className="h-4 w-4 mr-2" />
-                                      Reject / Request Changes
-                                    </Button>
-                                  </div>
-                                </div>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                statusColors[employee.status],
+                                "border capitalize flex items-center gap-1.5 w-fit rounded-sm text-xs",
                               )}
-                            </SheetContent>
-                          </Sheet>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                            >
+                              {statusIcons[employee.status]}
+                              {employee.status}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell className="text-right pr-5">
+                            <Sheet>
+                              <SheetTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-[#7F5EFD] hover:text-[#6b4de0] hover:bg-[#7F5EFD]/10 rounded-sm h-8"
+                                  onClick={() => setSelectedEmployee(employee)}
+                                >
+                                  <Eye className="h-3.5 w-3.5 mr-1.5" />
+                                  Review
+                                </Button>
+                              </SheetTrigger>
+
+                              <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-6">
+                                {/* Sheet content - same as before */}
+                                <SheetHeader>
+                                  <div className="flex items-center gap-3">
+                                    <SheetTitle className="text-xl">
+                                      {selectedEmployee?.name}
+                                    </SheetTitle>
+                                    {selectedEmployee && (
+                                      <Badge
+                                        variant="outline"
+                                        className={cn(
+                                          statusColors[selectedEmployee.status],
+                                          "border capitalize rounded-sm",
+                                        )}
+                                      >
+                                        {selectedEmployee.status}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <SheetDescription>
+                                    {selectedEmployee?.employeeNumber} ·{" "}
+                                    {selectedEmployee?.jobTitle}
+                                  </SheetDescription>
+                                </SheetHeader>
+
+                                {selectedEmployee && (
+                                  <div className="mt-6 space-y-6">
+                                    {/* Payroll summary */}
+                                    <div className="grid grid-cols-3 gap-2">
+                                      <div className="bg-slate-50 border border-slate-100 rounded-sm p-3">
+                                        <p className="text-xs text-slate-500">
+                                          Basic
+                                        </p>
+                                        <p className="font-semibold text-slate-900 mt-1">
+                                          KES{" "}
+                                          {selectedEmployee.basicSalary.toLocaleString()}
+                                        </p>
+                                      </div>
+                                      <div className="bg-slate-50 border border-slate-100 rounded-sm p-3">
+                                        <p className="text-xs text-slate-500">
+                                          Gross
+                                        </p>
+                                        <p className="font-semibold text-slate-900 mt-1">
+                                          KES{" "}
+                                          {selectedEmployee.grossPay.toLocaleString()}
+                                        </p>
+                                      </div>
+                                      <div className="bg-emerald-50/60 border border-emerald-100 rounded-sm p-3">
+                                        <p className="text-xs text-emerald-700">
+                                          Net
+                                        </p>
+                                        <p className="font-semibold text-emerald-700 mt-1">
+                                          KES{" "}
+                                          {selectedEmployee.netPay.toLocaleString()}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {selectedEmployee.status === "pending" && (
+                                      <div className="flex gap-3 p-3 bg-amber-50 border border-amber-200 rounded-sm">
+                                        <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                                        <div>
+                                          <p className="text-sm font-medium text-amber-900">
+                                            Requires review
+                                          </p>
+                                          <p className="text-xs text-amber-700 mt-0.5">
+                                            Verify payroll details before
+                                            approving
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    <Tabs
+                                      defaultValue="allowances"
+                                      className="w-full"
+                                    >
+                                      <TabsList className="grid w-full grid-cols-3 rounded-sm">
+                                        <TabsTrigger
+                                          value="allowances"
+                                          className="rounded-sm text-xs"
+                                        >
+                                          <Award className="h-3.5 w-3.5 mr-1.5" />
+                                          Allowances
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                          value="deductions"
+                                          className="rounded-sm text-xs"
+                                        >
+                                          <Receipt className="h-3.5 w-3.5 mr-1.5" />
+                                          Deductions
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                          value="payment"
+                                          className="rounded-sm text-xs"
+                                        >
+                                          <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+                                          Payment
+                                        </TabsTrigger>
+                                      </TabsList>
+
+                                      <TabsContent
+                                        value="allowances"
+                                        className="mt-3"
+                                      >
+                                        <div className="space-y-2">
+                                          {selectedEmployee.allowances.map(
+                                            (allowance, idx) => (
+                                              <div
+                                                key={idx}
+                                                className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-sm"
+                                              >
+                                                <div>
+                                                  <p className="font-medium text-sm text-slate-900">
+                                                    {allowance.name}
+                                                  </p>
+                                                  <p className="text-xs text-slate-500">
+                                                    {allowance.type} ·{" "}
+                                                    {allowance.taxable
+                                                      ? "Taxable"
+                                                      : "Non-taxable"}
+                                                  </p>
+                                                </div>
+                                                <p className="font-medium text-sm text-slate-900">
+                                                  KES{" "}
+                                                  {allowance.value.toLocaleString()}
+                                                </p>
+                                              </div>
+                                            ),
+                                          )}
+                                          <div className="flex items-center justify-between p-2.5 bg-[#7F5EFD]/5 rounded-sm border border-[#7F5EFD]/20">
+                                            <p className="font-semibold text-sm text-slate-900">
+                                              Total
+                                            </p>
+                                            <p className="font-bold text-[#7F5EFD]">
+                                              KES{" "}
+                                              {selectedEmployee.allowances
+                                                .reduce(
+                                                  (sum, a) => sum + a.value,
+                                                  0,
+                                                )
+                                                .toLocaleString()}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </TabsContent>
+
+                                      <TabsContent
+                                        value="deductions"
+                                        className="mt-3"
+                                      >
+                                        <div className="space-y-2">
+                                          {selectedEmployee.deductions.map(
+                                            (deduction, idx) => (
+                                              <div
+                                                key={idx}
+                                                className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-sm"
+                                              >
+                                                <div>
+                                                  <p className="font-medium text-sm text-slate-900">
+                                                    {deduction.name}
+                                                  </p>
+                                                  <p className="text-xs text-slate-500 capitalize">
+                                                    {deduction.type}
+                                                  </p>
+                                                </div>
+                                                <p className="font-medium text-sm text-red-600">
+                                                  -KES{" "}
+                                                  {deduction.value.toLocaleString()}
+                                                </p>
+                                              </div>
+                                            ),
+                                          )}
+                                          <div className="flex items-center justify-between p-2.5 bg-red-50/50 rounded-sm border border-red-200">
+                                            <p className="font-semibold text-sm text-slate-900">
+                                              Total
+                                            </p>
+                                            <p className="font-bold text-red-600">
+                                              -KES{" "}
+                                              {selectedEmployee.deductions
+                                                .reduce(
+                                                  (sum, d) => sum + d.value,
+                                                  0,
+                                                )
+                                                .toLocaleString()}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </TabsContent>
+
+                                      <TabsContent
+                                        value="payment"
+                                        className="mt-3"
+                                      >
+                                        <div className="space-y-2">
+                                          <div className="p-3 bg-slate-50 border border-slate-100 rounded-sm">
+                                            <p className="text-xs text-slate-500">
+                                              Payment Method
+                                            </p>
+                                            <p className="font-medium text-slate-900 mt-0.5">
+                                              {selectedEmployee.paymentMethod}
+                                            </p>
+                                          </div>
+                                          <div className="p-3 bg-slate-50 border border-slate-100 rounded-sm">
+                                            <p className="text-xs text-slate-500">
+                                              Bank
+                                            </p>
+                                            <p className="font-medium text-slate-900 mt-0.5">
+                                              {
+                                                selectedEmployee.bankDetails
+                                                  .bank
+                                              }
+                                            </p>
+                                          </div>
+                                          <div className="p-3 bg-slate-50 border border-slate-100 rounded-sm">
+                                            <p className="text-xs text-slate-500">
+                                              Account
+                                            </p>
+                                            <p className="font-medium text-slate-900 mt-0.5">
+                                              {
+                                                selectedEmployee.bankDetails
+                                                  .account
+                                              }
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </TabsContent>
+                                    </Tabs>
+
+                                    <Separator />
+
+                                    <div className="space-y-2">
+                                      <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-sm">
+                                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                                        Approve Employee
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        className="w-full border-red-200 text-red-600 hover:bg-red-50 rounded-sm"
+                                      >
+                                        <XCircle className="h-4 w-4 mr-2" />
+                                        Reject / Request Changes
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </SheetContent>
+                            </Sheet>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
 
               {filteredEmployees.length === 0 && (
                 <div className="text-center py-12">
@@ -876,69 +957,104 @@ export default function PayrollReviewPage() {
                   </p>
                 </div>
               )}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200">
+                  <p className="text-xs text-slate-400">
+                    Showing {startIndex + 1} to {endIndex} of{" "}
+                    {filteredEmployees.length}
+                  </p>
+                  <div className="flex items-center gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      className="h-7 w-7 p-0"
+                    >
+                      <ChevronsLeft className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="h-7 w-7 p-0"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </Button>
+                    <span className="text-xs text-slate-600 px-2">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="h-7 w-7 p-0"
+                    >
+                      <ChevronRightIcon className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="h-7 w-7 p-0"
+                    >
+                      <ChevronsRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* ---------------------------------------------------------------- */}
-        {/* Review control panel                                             */}
-        {/* ---------------------------------------------------------------- */}
-
+        {/* Right sidebar - same as before but reduced */}
         <aside className="space-y-4">
           {/* Review */}
-
           <Card className="border-slate-200 shadow-none rounded-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-slate-900">
                   Review
                 </CardTitle>
-
                 <span className="text-sm font-bold text-slate-900">
                   {completionPercentage}%
                 </span>
               </div>
             </CardHeader>
-
             <CardContent className="space-y-4">
-              <Progress
-                value={completionPercentage}
-                className="h-2"
-              />
-
+              <Progress value={completionPercentage} className="h-2" />
               <p className="text-xs text-slate-500">
-                {approvedCount} of {totalEmployees} employees approved
+                {approvedCount} of {totalEmployees} approved
               </p>
-
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                     <span className="text-slate-600">Approved</span>
                   </div>
-
                   <span className="font-semibold text-slate-900">
                     {approvedCount}
                   </span>
                 </div>
-
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-amber-600" />
                     <span className="text-slate-600">Pending</span>
                   </div>
-
                   <span className="font-semibold text-slate-900">
                     {pendingCount}
                   </span>
                 </div>
-
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <XCircle className="h-4 w-4 text-red-600" />
                     <span className="text-slate-600">Rejected</span>
                   </div>
-
                   <span className="font-semibold text-slate-900">
                     {rejectedCount}
                   </span>
@@ -948,42 +1064,28 @@ export default function PayrollReviewPage() {
           </Card>
 
           {/* Payroll totals */}
-
           <Card className="border-slate-200 shadow-none rounded-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold text-slate-900">
                 Payroll Total
               </CardTitle>
             </CardHeader>
-
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-500">
-                  Gross payroll
-                </span>
-
+                <span className="text-sm text-slate-500">Gross</span>
                 <span className="font-semibold text-slate-900">
                   KES {totalGross.toLocaleString()}
                 </span>
               </div>
-
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-500">
-                  Deductions
-                </span>
-
+                <span className="text-sm text-slate-500">Deductions</span>
                 <span className="font-semibold text-red-600">
                   -KES {totalDeductions.toLocaleString()}
                 </span>
               </div>
-
               <Separator />
-
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">
-                  Net payroll
-                </span>
-
+                <span className="text-sm font-medium text-slate-700">Net</span>
                 <span className="font-bold text-slate-900">
                   KES {totalNet.toLocaleString()}
                 </span>
@@ -992,7 +1094,6 @@ export default function PayrollReviewPage() {
           </Card>
 
           {/* Secondary payroll details */}
-
           <Card className="border-slate-200 shadow-none rounded-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold text-slate-900">
@@ -1017,12 +1118,10 @@ export default function PayrollReviewPage() {
 
                     <p className="text-xs text-slate-500">
                       {mockEmployees.reduce(
-                        (sum, employee) =>
-                          sum + employee.allowances.length,
-                        0
+                        (sum, employee) => sum + employee.allowances.length,
+                        0,
                       )}{" "}
-                      records · KES{" "}
-                      {totalAllowances.toLocaleString()}
+                      records · KES {totalAllowances.toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -1046,12 +1145,10 @@ export default function PayrollReviewPage() {
 
                     <p className="text-xs text-slate-500">
                       {mockEmployees.reduce(
-                        (sum, employee) =>
-                          sum + employee.deductions.length,
-                        0
+                        (sum, employee) => sum + employee.deductions.length,
+                        0,
                       )}{" "}
-                      records · KES{" "}
-                      {totalDeductions.toLocaleString()}
+                      records · KES {totalDeductions.toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -1108,20 +1205,15 @@ export default function PayrollReviewPage() {
           </Card>
 
           {/* Reviewers */}
-
           <Card className="border-slate-200 shadow-none rounded-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-slate-900">
                   Reviewers
                 </CardTitle>
-
-                <span className="text-xs text-slate-400">
-                  3 assigned
-                </span>
+                <span className="text-xs text-slate-400">3 assigned</span>
               </div>
             </CardHeader>
-
             <CardContent className="space-y-3">
               {mockReviewers.map((reviewer) => (
                 <div key={reviewer.id}>
@@ -1130,21 +1222,16 @@ export default function PayrollReviewPage() {
                       <p className="text-sm font-medium text-slate-900">
                         {reviewer.name}
                       </p>
-
                       <p className="text-xs text-slate-500">
                         Level {reviewer.level}
                       </p>
                     </div>
-
                     <span className="text-xs font-medium text-slate-500">
                       {reviewer.approved}/{reviewer.total}
                     </span>
                   </div>
-
                   <Progress
-                    value={
-                      (reviewer.approved / reviewer.total) * 100
-                    }
+                    value={(reviewer.approved / reviewer.total) * 100}
                     className="h-1.5"
                   />
                 </div>
@@ -1153,16 +1240,12 @@ export default function PayrollReviewPage() {
           </Card>
 
           {/* Final actions */}
-
           <Card className="border-slate-200 shadow-none rounded-sm">
             <CardContent className="p-4 space-y-2">
-              <Button
-                className="w-full bg-[#7F5EFD] hover:bg-[#6b4de0] text-white rounded-sm"
-              >
+              <Button className="w-full bg-[#7F5EFD] hover:bg-[#6b4de0] text-white rounded-sm">
                 <Send className="h-4 w-4 mr-2" />
                 Approve Payroll
               </Button>
-
               <Button
                 variant="outline"
                 className="w-full rounded-sm border-slate-200"
@@ -1170,7 +1253,6 @@ export default function PayrollReviewPage() {
                 <AlertCircle className="h-4 w-4 mr-2" />
                 Request Changes
               </Button>
-
               <p className="text-[11px] text-center text-slate-400 pt-1">
                 All employees must be reviewed before final approval.
               </p>

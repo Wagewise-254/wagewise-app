@@ -102,7 +102,7 @@ const LoginPage = () => {
           </div>
             <Button
               type="submit"
-              className="w-full cursor-pointer bg-[#1F3A8A] hover:bg-[#1F3A7D] rounded-sm shadow-none"
+              className="w-full cursor-pointer bg-[#7F5EFD] hover:bg-[#1F3A7D] rounded-sm shadow-none"
               disabled={loading}
             >
               {loading ? (

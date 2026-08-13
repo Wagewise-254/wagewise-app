@@ -2,7 +2,7 @@
 -[x] Improv the audit section
 -[x] Improve the global search function
 -[ ] Improve the helb section
--[ ] Add bulk payslip send in the payslip section with tabs of who has received
+-[x] Add bulk payslip send in the payslip section with tabs of who has received
 -[ ] Implemet assigning allowance and deduction to individual employee
 -[ ] Implement the customized edit for the deduction and allowance
 -[x] Improve the payroll history

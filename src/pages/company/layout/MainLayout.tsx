@@ -1,13 +1,13 @@
-// src/pages/company/layout/moduleLayout.tsx (Updated)
-
+// src/pages/company/layout/moduleLayout.tsx
 import { Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import ModuleTopBar from '@/components/layout/ModuleTopBar';
+import MainSidebar from '@/components/layout/MainSidebar';
+import MainTopBar from '@/components/layout/MainTopBar';
 import OfflineBanner from '@/components/common/OfflineBanner';
 
-const ModuleLayout = () => {
+const MainLayout = () => {
   const { companyId } = useParams();
   const [companyName, setCompanyName] = useState<string>();
   const [companyLogo, setCompanyLogo] = useState<string>();
@@ -22,26 +22,32 @@ const ModuleLayout = () => {
   }, [companyId, companyMemberships]);
 
   const handleGlobalSearch = (query: string) => {
+    // Implement global search functionality
     console.log('Searching for:', query);
-    console.log(`Company name: ${companyName}, Company logo: ${companyLogo}`);
+    // You can navigate to a search results page or filter data
   };
 
-  return (
-    <div className="flex flex-col h-scre">
-      {/* Top Bar - Full Width */}
-      <ModuleTopBar onSearch={handleGlobalSearch} />
+ return (
+  <div className="flex h-screen overflow-hidden bg-slate-50">
+    {/* Sidebar full height */}
+    <MainSidebar
+      companyName={companyName}
+      companyLogo={companyLogo}
+    />
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
-        <OfflineBanner />
-        <main className="h-full overflow-y-auto">
-          <div className="p-4">
-            <Outlet />
-          </div>
-        </main>
-      </div>
+    {/* Right Side */}
+    <div className="flex flex-col flex-1 overflow-hidden">
+      <OfflineBanner />
+      <MainTopBar onSearch={handleGlobalSearch} />
+
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-4">
+          <Outlet />
+        </div>
+      </main>
     </div>
-  );
+  </div>
+);
 };
 
-export default ModuleLayout;
+export default MainLayout;

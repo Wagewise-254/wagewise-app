@@ -89,7 +89,7 @@ export function FloatingField({ label, ...props }: FloatingFieldProps) {
         bg-white dark:bg-background
         peer-placeholder-shown:top-3 peer-placeholder-shown:text-sm 
         peer-focus:-top-2.5 peer-focus:left-2 peer-focus:text-xs peer-focus:font-semibold peer-focus:text-[#1F3A8A]
-        peer-[:not(:placeholder-shown)]:-top-2.5 peer-[:not(:placeholder-shown)]:left-2 peer-[:not(:placeholder-shown)]:text-xs"
+        peer-not-placeholder-shown:-top-2.5 ppeer-not-placeholder-shown:left-2 peer-not-placeholder-shown:text-xs"
       >
         {label}
       </Label>

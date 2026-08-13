@@ -9,25 +9,24 @@ import {
   ChevronsRight,
   Search,
   MoreVertical,
-  Eye,
-  Download,
-  CheckCircle,
   FileText,
   DollarSign,
   X,
   Calendar,
   Loader2,
-  Lock,
   RefreshCw,
-  Unlock,
-  Edit2,
   History,
+  LayoutDashboard,
+  FileCheck,
+  Receipt,
+  Archive,
+  CheckCircle2,
+  Clock,
+  XCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -44,14 +43,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogDescription,
-  DialogFooter,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -70,7 +61,6 @@ import { useAuthStore } from "@/stores/authStore";
 import { API_BASE_URL } from "@/config";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { ReviewProgress } from "@/components/payroll/runs/ReviewProgress";
 
 // Types
 type PayrollStatus =
@@ -94,6 +84,7 @@ interface PayrollRun {
   updated_at: string;
   review_stats?: {
     total_employees: number;
+    eligible_employees: number;
     approved: number;
     pending: number;
     rejected: number;
@@ -108,172 +99,6 @@ interface PayrollFilters {
   year: number | "all";
   search: string;
 }
-
-interface RevertDialogState {
-  open: boolean;
-  targetStatus: PayrollStatus | null;
-  currentStatus: PayrollStatus | null;
-  runId: string | null;
-}
-
-interface StatusAction {
-  label: string;
-  targetStatus: PayrollStatus;
-  icon: React.ElementType;
-  color: string;
-  requireReason?: boolean;
-}
-
-const getAvailableActions = (status: PayrollStatus): StatusAction[] => {
-  const actions: Record<PayrollStatus, StatusAction[]> = {
-    DRAFT: [
-      {
-        label: "Submit for Review",
-        targetStatus: "UNDER_REVIEW",
-        icon: CheckCircle,
-        color: "text-amber-600",
-      },
-    ],
-    UNDER_REVIEW: [
-      {
-        label: "Approve",
-        targetStatus: "APPROVED",
-        icon: CheckCircle,
-        color: "text-emerald-600",
-      },
-      {
-        label: "Reject",
-        targetStatus: "REJECTED",
-        icon: X,
-        color: "text-red-600",
-        requireReason: true,
-      },
-      {
-        label: "Revert to Draft",
-        targetStatus: "DRAFT",
-        icon: RefreshCw,
-        color: "text-slate-600",
-        requireReason: true,
-      },
-    ],
-    APPROVED: [
-      {
-        label: "Lock Payroll",
-        targetStatus: "LOCKED",
-        icon: Lock,
-        color: "text-blue-600",
-      },
-      {
-        label: "Revert to Draft",
-        targetStatus: "DRAFT",
-        icon: RefreshCw,
-        color: "text-slate-600",
-        requireReason: true,
-      },
-      {
-        label: "Revert to Review",
-        targetStatus: "UNDER_REVIEW",
-        icon: RefreshCw,
-        color: "text-amber-600",
-        requireReason: true,
-      },
-    ],
-    LOCKED: [
-      {
-        label: "Mark as Paid",
-        targetStatus: "PAID",
-        icon: DollarSign,
-        color: "text-green-600",
-      },
-      {
-        label: "Unlock",
-        targetStatus: "APPROVED",
-        icon: Unlock,
-        color: "text-orange-600",
-        requireReason: true,
-      },
-    ],
-    PAID: [
-      {
-        label: "View Payslips",
-        targetStatus: "PAID",
-        icon: Download,
-        color: "text-slate-600",
-      },
-    ],
-    REJECTED: [
-      {
-        label: "Revert to Draft",
-        targetStatus: "DRAFT",
-        icon: RefreshCw,
-        color: "text-slate-600",
-        requireReason: true,
-      },
-    ],
-    CANCELLED: [],
-  };
-
-  return actions[status] || [];
-};
-
-const RevertDialog = ({
-  open,
-  onOpenChange,
-  onConfirm,
-  currentStatus,
-  targetStatus,
-  loading,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onConfirm: (reason: string) => void;
-  currentStatus: string | null;
-  targetStatus: string | null;
-  loading: boolean;
-}) => {
-  const [reason, setReason] = useState("");
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-lg">
-        <DialogHeader>
-          <DialogTitle>Revert Payroll Status</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to revert from {currentStatus} to{" "}
-            {targetStatus}? This action will be recorded in audit logs.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="reason">Reason for revert (required)</Label>
-            <Textarea
-              id="reason"
-              placeholder="Explain why you're reverting this payroll..."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="min-h-24 rounded-md"
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() => onConfirm(reason)}
-            disabled={!reason.trim() || loading}
-            className="bg-amber-600 hover:bg-amber-700"
-          >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Confirm Revert
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
@@ -389,7 +214,6 @@ export default function PayrollHistory() {
   // State
   const [payrolls, setPayrolls] = useState<PayrollRun[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -403,12 +227,6 @@ export default function PayrollHistory() {
     pageSize: 10,
     totalPages: 0,
     totalItems: 0,
-  });
-  const [revertDialog, setRevertDialog] = useState<RevertDialogState>({
-    open: false,
-    targetStatus: null,
-    currentStatus: null,
-    runId: null,
   });
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
@@ -486,6 +304,7 @@ export default function PayrollHistory() {
         summaries: {
           [key: string]: {
             total_employees: number;
+            eligible_employees: number;
             approved: number;
             pending: number;
             rejected: number;
@@ -536,6 +355,7 @@ export default function PayrollHistory() {
             ...run,
             review_stats: allSummaries[run.id] || {
               total_employees: 0,
+              eligible_employees: 0,
               approved: 0,
               pending: 0,
               rejected: 0,
@@ -598,115 +418,6 @@ export default function PayrollHistory() {
     return () => clearTimeout(timer);
   }, [searchValue, filters.search]);
 
-  const handleStatusUpdate = async (
-    runId: string,
-    newStatus: PayrollStatus,
-    reason?: string,
-  ) => {
-    if (!companyId || !token) return;
-    setActionLoading(true);
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/company/${companyId}/payroll/${runId}/status`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            status: newStatus,
-            reason,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Update failed");
-      }
-
-      toast.success(
-        `Payroll ${newStatus.toLowerCase().replace("_", " ")} successfully`,
-      );
-
-      await fetchPayrolls();
-      hasFetchedReviews.current = false;
-
-      setRevertDialog({
-        open: false,
-        targetStatus: null,
-        currentStatus: null,
-        runId: null,
-      });
-    } catch (error) {
-      console.error("Failed to update status:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to update payroll status",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleSyncRun = async (e: React.MouseEvent, runId: string) => {
-    e.stopPropagation();
-
-    const run = payrolls.find((r) => r.id === runId);
-    if (!run) return;
-
-    const blockedStatuses = ["APPROVED", "LOCKED", "PAID"];
-    if (blockedStatuses.includes(run.status)) {
-      toast.error(`Cannot resync payroll with status: ${run.status}`);
-      return;
-    }
-
-    try {
-      setActionLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/company/${companyId}/payroll/sync`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            month: run.payroll_month,
-            year: run.payroll_year,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to resync payroll");
-      }
-
-      toast.success("Payroll resynchronized successfully");
-      await fetchPayrolls();
-      hasFetchedReviews.current = false;
-    } catch (error) {
-      console.error("Sync error:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to resync payroll",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleRevertConfirm = async (reason: string) => {
-    if (!revertDialog.runId || !revertDialog.targetStatus) return;
-    await handleStatusUpdate(
-      revertDialog.runId,
-      revertDialog.targetStatus,
-      reason,
-    );
-  };
-
   const clearFilters = () => {
     setFilters({ status: "all", year: "all", search: "" });
     setSearchValue("");
@@ -741,15 +452,6 @@ export default function PayrollHistory() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleRowClick = (payrollId: string) => {
-    navigate(`/company/${companyId}/payroll/${payrollId}/review-status`);
-  };
-
-  const handleViewDetails = (e: React.MouseEvent, payrollId: string) => {
-    e.stopPropagation();
-    navigate(`/company/${companyId}/payroll/${payrollId}/review-status`);
-  };
-
   const handleRunNewPayroll = () => {
     navigate(`/company/${companyId}/payroll/run`);
   };
@@ -767,483 +469,497 @@ export default function PayrollHistory() {
   );
 
   return (
-    <>
-      {/* Revert Dialog */}
-      <RevertDialog
-        open={revertDialog.open}
-        onOpenChange={(open) => setRevertDialog({ ...revertDialog, open })}
-        onConfirm={handleRevertConfirm}
-        currentStatus={revertDialog.currentStatus}
-        targetStatus={revertDialog.targetStatus}
-        loading={actionLoading}
-      />
-      {/* Main Card Container */}
-      <Card className="rounded-sm shadow-none border-slate-200 overflow-hidden">
-        <CardContent className="p-0">
-          <div className="h-full flex flex-col p-6 ">
-            {/* Header with minimalist toolbar */}
-            <div className="shrink-0 flex items-center justify-between gap-4 pb-4 border-b border-slate-200">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <History className="h-5 w-5 text-slate-400" />
-                  <h1 className="text-lg font-semibold text-slate-900">
-                    Payroll History
-                  </h1>
-                </div>
+    <Card className="rounded-sm shadow-none border-slate-200 overflow-hidden">
+      <CardContent className="p-0">
+        <div className="h-full flex flex-col p-6">
+          {/* Header with minimalist toolbar */}
+          <div className="shrink-0 flex items-center justify-between gap-4 pb-4 border-b border-slate-200">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <History className="h-5 w-5 text-slate-400" />
+                <h1 className="text-lg font-semibold text-slate-900">
+                  Payroll History
+                </h1>
+              </div>
 
-                {/* Status Filter */}
-                <Select
-                  value={filters.status}
-                  onValueChange={handleStatusFilter}
+              {/* Status Filter */}
+              <Select value={filters.status} onValueChange={handleStatusFilter}>
+                <SelectTrigger className="h-8 w-36 text-sm border-slate-200 rounded-sm">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Year Filter */}
+              <Select
+                value={filters.year.toString()}
+                onValueChange={handleYearFilter}
+              >
+                <SelectTrigger className="h-8 w-28 text-sm border-slate-200 rounded-sm">
+                  <Calendar className="h-3.5 w-3.5 mr-2 text-slate-400" />
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {availableYears.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Clear Filters Button */}
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-8 px-2 text-xs text-slate-500 hover:text-slate-700"
                 >
-                  <SelectTrigger className="h-8 w-36 text-sm border-slate-200 rounded-sm">
-                    <SelectValue placeholder="All Statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Clear ({activeFilterCount})
+                </Button>
+              )}
+            </div>
 
-                {/* Year Filter */}
-                <Select
-                  value={filters.year.toString()}
-                  onValueChange={handleYearFilter}
-                >
-                  <SelectTrigger className="h-8 w-28 text-sm border-slate-200 rounded-sm">
-                    <Calendar className="h-3.5 w-3.5 mr-2 text-slate-400" />
-                    <SelectValue placeholder="Year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Years</SelectItem>
-                    {availableYears.map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Clear Filters Button */}
-                {activeFilterCount > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearFilters}
-                    className="h-8 px-2 text-xs text-slate-500 hover:text-slate-700"
-                  >
-                    <X className="h-3.5 w-3.5 mr-1" />
-                    Clear ({activeFilterCount})
-                  </Button>
+            <div className="flex items-center gap-1">
+              {/* Search with toggle */}
+              <div className="relative">
+                {showSearch ? (
+                  <div className="relative animate-in slide-in-from-left-2 fade-in duration-200">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <Input
+                      placeholder="Search by payroll # or period..."
+                      value={searchValue}
+                      onChange={(e) => setSearchValue(e.target.value)}
+                      onBlur={() => {
+                        if (!searchValue) setShowSearch(false);
+                      }}
+                      className="pl-8 h-8 w-64 text-sm bg-white border-slate-200 rounded-sm focus-visible:ring-1 focus-visible:ring-[#7F5EFD]"
+                      autoFocus
+                    />
+                  </div>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowSearch(true)}
+                        className="h-8 w-8 p-0 cursor-pointer"
+                      >
+                        <Search className="h-4 w-4 text-slate-500" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      Search payrolls
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
 
-              <div className="flex items-center gap-1">
-                {/* Search with toggle */}
-                <div className="relative">
-                  {showSearch ? (
-                    <div className="relative animate-in slide-in-from-left-2 fade-in duration-200">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                      <Input
-                        placeholder="Search by payroll # or period..."
-                        value={searchValue}
-                        onChange={(e) => setSearchValue(e.target.value)}
-                        onBlur={() => {
-                          if (!searchValue) setShowSearch(false);
-                        }}
-                        className="pl-8 h-8 w-64 text-sm bg-white border-slate-200 rounded-sm focus-visible:ring-1 focus-visible:ring-[#7F5EFD]"
-                        autoFocus
-                      />
-                    </div>
-                  ) : (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowSearch(true)}
-                          className="h-8 w-8 p-0 cursor-pointer"
-                        >
-                          <Search className="h-4 w-4 text-slate-500" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        Search payrolls
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
+              {/* Refresh Reviews Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRefreshReviews}
+                    disabled={reviewLoading || payrolls.length === 0}
+                    className="h-8 w-8 p-0 cursor-pointer"
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 text-slate-500 ${
+                        reviewLoading ? "animate-spin" : ""
+                      }`}
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  Refresh review progress
+                </TooltipContent>
+              </Tooltip>
 
-                {/* Refresh Reviews Button */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleRefreshReviews}
-                      disabled={reviewLoading || payrolls.length === 0}
-                      className="h-8 w-8 p-0 cursor-pointer"
-                    >
-                      <RefreshCw
-                        className={`h-4 w-4 text-slate-500 ${
-                          reviewLoading ? "animate-spin" : ""
-                        }`}
-                      />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    Refresh review progress
-                  </TooltipContent>
-                </Tooltip>
-
-                {/* Run New Payroll Button */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={handleRunNewPayroll}
-                      size="sm"
-                      className="ml-2 h-8 text-xs rounded-sm cursor-pointer bg-[#7F5EFD] hover:bg-[#6a4ad3] shadow-none"
-                    >
-                      <DollarSign className="mr-1.5 h-3.5 w-3.5" /> Run Payroll
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    Create new payroll run
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </div>
-
-            {/* Counter */}
-            <div className="shrink-0 py-2">
-              <p className="text-xs text-slate-400">
-                {pagination.totalItems} payroll
-                {pagination.totalItems !== 1 ? "s" : ""} found
-              </p>
-            </div>
-
-            {/* Table Section */}
-            <div className="flex-1 overflow-hidden mt-2">
-              {loading ? (
-                <div className="flex flex-col justify-center items-center h-full">
-                  <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-                  <p className="text-slate-500 mt-2">
-                    Loading payroll history...
-                  </p>
-                </div>
-              ) : (
-                <div className="h-full flex flex-col space-y-2">
-                  {/* Table Container */}
-                  <div className="flex-1 overflow-auto min-h-0 rounded-md border border-slate-200">
-                    <Table className="relative">
-                      <TableHeader className="sticky top-0 bg-slate-50 z-10 shadow-sm">
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead className="h-8 text-xs font-medium text-slate-500 pl-6">
-                            Period
-                          </TableHead>
-                          <TableHead className="h-8 text-xs font-medium text-slate-500">
-                            Payroll #
-                          </TableHead>
-                          <TableHead className="h-8 text-xs font-medium text-slate-500 text-right">
-                            Gross Pay
-                          </TableHead>
-                          <TableHead className="h-8 text-xs font-medium text-slate-500 text-right">
-                            Net Pay
-                          </TableHead>
-                          <TableHead className="h-8 text-xs font-medium text-slate-500">
-                            Status
-                          </TableHead>
-                          <TableHead className="h-8 text-xs font-medium text-slate-500 min-w-40">
-                            Review Progress
-                          </TableHead>
-                          <TableHead className="h-8 text-xs font-medium text-slate-500 text-center pr-6">
-                            Actions
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {loading ? (
-                          <LoadingState />
-                        ) : payrolls.length > 0 ? (
-                          payrolls.map((run) => {
-                            const statusStyle = getStatusBadgeVariant(
-                              run.status,
-                            );
-                            return (
-                              <TableRow
-                                key={run.id}
-                                className="cursor-pointer hover:bg-slate-50/80 transition-colors group"
-                                onClick={() => handleRowClick(run.id)}
-                              >
-                                <TableCell className="py-3 pl-6">
-                                  <div className="flex flex-col">
-                                    <span className="text-sm font-medium text-slate-900">
-                                      {run.payroll_month} {run.payroll_year}
-                                    </span>
-                                    <span className="text-xs text-slate-400">
-                                      {new Date(
-                                        run.created_at,
-                                      ).toLocaleDateString("en-KE", {
-                                        year: "numeric",
-                                        month: "short",
-                                        day: "numeric",
-                                      })}
-                                    </span>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <span className="font-mono text-xs bg-slate-50 px-2 py-1 rounded text-slate-600 border border-slate-200">
-                                    {run.payroll_number}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="text-right font-mono text-sm text-slate-600">
-                                  {formatCurrency(run.total_gross_pay)}
-                                </TableCell>
-                                <TableCell className="text-right font-mono text-sm font-semibold text-slate-900">
-                                  {formatCurrency(run.total_net_pay)}
-                                </TableCell>
-                                <TableCell>
-                                  <span
-                                    className={cn(
-                                      "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border",
-                                      statusStyle.bg,
-                                      statusStyle.text,
-                                      statusStyle.border,
-                                    )}
-                                  >
-                                    {run.status.replace("_", " ")}
-                                  </span>
-                                </TableCell>
-                                <TableCell>
-                                  <ReviewProgress
-                                    stats={
-                                      run.review_stats || {
-                                        total_employees: 0,
-                                        approved: 0,
-                                        pending: 0,
-                                        rejected: 0,
-                                        completion_percentage: 0,
-                                      }
-                                    }
-                                  />
-                                </TableCell>
-                                <TableCell
-                                  className="text-center pr-6"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      >
-                                        <MoreVertical className="h-3.5 w-3.5 text-slate-500" />
-                                        <span className="sr-only">
-                                          Open menu
-                                        </span>
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                      align="end"
-                                      className="w-56 rounded-md border-slate-200"
-                                    >
-                                      <DropdownMenuLabel className="text-xs font-medium text-slate-500">
-                                        Actions
-                                      </DropdownMenuLabel>
-                                      <DropdownMenuItem
-                                        onClick={(e) =>
-                                          handleViewDetails(e, run.id)
-                                        }
-                                        className="cursor-pointer text-sm"
-                                      >
-                                        <Eye className="mr-2 h-3.5 w-3.5" />
-                                        View Details
-                                      </DropdownMenuItem>
-
-                                      <DropdownMenuItem
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          navigate(
-                                            `/company/${companyId}/payroll/eligibility?month=${run.payroll_month}&year=${run.payroll_year}&editMode=true`,
-                                          );
-                                        }}
-                                        className="cursor-pointer text-sm"
-                                        disabled={[
-                                          "APPROVED",
-                                          "LOCKED",
-                                          "PAID",
-                                        ].includes(run.status)}
-                                      >
-                                        <Edit2 className="mr-2 h-3.5 w-3.5" />
-                                        Edit Eligibility
-                                        {[
-                                          "APPROVED",
-                                          "LOCKED",
-                                          "PAID",
-                                        ].includes(run.status) && (
-                                          <span className="ml-auto text-xs text-rose-500">
-                                            Locked
-                                          </span>
-                                        )}
-                                      </DropdownMenuItem>
-
-                                      {run.status !== "PAID" && (
-                                        <DropdownMenuItem
-                                          onClick={(e) =>
-                                            handleSyncRun(e, run.id)
-                                          }
-                                          className="cursor-pointer text-sm"
-                                          disabled={[
-                                            "APPROVED",
-                                            "LOCKED",
-                                            "PAID",
-                                          ].includes(run.status)}
-                                        >
-                                          <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                                          Resync Payroll
-                                          {[
-                                            "APPROVED",
-                                            "LOCKED",
-                                            "PAID",
-                                          ].includes(run.status) && (
-                                            <span className="ml-auto text-xs text-rose-500">
-                                              Locked
-                                            </span>
-                                          )}
-                                        </DropdownMenuItem>
-                                      )}
-
-                                      <DropdownMenuSeparator />
-
-                                      {getAvailableActions(run.status).map(
-                                        (action) => (
-                                          <DropdownMenuItem
-                                            key={action.targetStatus}
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              if (action.requireReason) {
-                                                setRevertDialog({
-                                                  open: true,
-                                                  targetStatus:
-                                                    action.targetStatus,
-                                                  currentStatus: run.status,
-                                                  runId: run.id,
-                                                });
-                                              } else {
-                                                handleStatusUpdate(
-                                                  run.id,
-                                                  action.targetStatus,
-                                                );
-                                              }
-                                            }}
-                                            className={`cursor-pointer text-sm ${action.color}`}
-                                          >
-                                            <action.icon className="mr-2 h-3.5 w-3.5" />
-                                            {action.label}
-                                          </DropdownMenuItem>
-                                        ),
-                                      )}
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })
-                        ) : (
-                          <EmptyState />
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Pagination */}
-                  {pagination.totalPages > 0 && (
-                    <div className="shrink-0 flex items-center justify-between pt-2">
-                      <p className="text-xs text-slate-400">
-                        Showing {startItem} to {endItem} of{" "}
-                        {pagination.totalItems} results
-                      </p>
-                      <div className="flex items-center space-x-2">
-                        <Select
-                          value={pagination.pageSize.toString()}
-                          onValueChange={handlePageSizeChange}
-                        >
-                          <SelectTrigger className="h-7 w-16 text-xs border-slate-200 rounded-md">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PAGE_SIZE_OPTIONS.map((size) => (
-                              <SelectItem key={size} value={size.toString()}>
-                                {size}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <div className="flex items-center gap-0.5">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handlePageChange(1)}
-                            disabled={pagination.currentPage === 1}
-                            className="h-7 w-7 p-0"
-                          >
-                            <ChevronsLeft className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              handlePageChange(pagination.currentPage - 1)
-                            }
-                            disabled={pagination.currentPage === 1}
-                            className="h-7 w-7 p-0"
-                          >
-                            <ChevronLeft className="h-3.5 w-3.5" />
-                          </Button>
-                          <span className="text-xs text-slate-600 px-2">
-                            Page {pagination.currentPage} of{" "}
-                            {pagination.totalPages}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              handlePageChange(pagination.currentPage + 1)
-                            }
-                            disabled={
-                              pagination.currentPage === pagination.totalPages
-                            }
-                            className="h-7 w-7 p-0"
-                          >
-                            <ChevronRight className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              handlePageChange(pagination.totalPages)
-                            }
-                            disabled={
-                              pagination.currentPage === pagination.totalPages
-                            }
-                            className="h-7 w-7 p-0"
-                          >
-                            <ChevronsRight className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Run New Payroll Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={handleRunNewPayroll}
+                    size="sm"
+                    className="ml-2 h-8 text-xs rounded-sm cursor-pointer bg-[#7F5EFD] hover:bg-[#6a4ad3] shadow-none"
+                  >
+                    <DollarSign className="mr-1.5 h-3.5 w-3.5" /> Run Payroll
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  Create new payroll run
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </>
+
+          {/* Counter */}
+          <div className="shrink-0 py-2">
+            <p className="text-xs text-slate-400">
+              {pagination.totalItems} payroll
+              {pagination.totalItems !== 1 ? "s" : ""} found
+            </p>
+          </div>
+
+          {/* Table Section */}
+          <div className="flex-1 overflow-hidden mt-2">
+            {loading ? (
+              <div className="flex flex-col justify-center items-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                <p className="text-slate-500 mt-2">
+                  Loading payroll history...
+                </p>
+              </div>
+            ) : (
+              <div className="h-full flex flex-col space-y-2">
+                {/* Table Container */}
+                <div className="flex-1 overflow-auto min-h-0 rounded-md border border-slate-200">
+                  <Table className="relative">
+                    <TableHeader className="sticky top-0 bg-slate-50 z-10 shadow-sm">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="h-8 text-xs font-medium text-slate-500 pl-6">
+                          Period
+                        </TableHead>
+                        <TableHead className="h-8 text-xs font-medium text-slate-500">
+                          Payroll #
+                        </TableHead>
+                        <TableHead className="h-8 text-xs font-medium text-slate-500 text-right">
+                          Gross Pay
+                        </TableHead>
+                        <TableHead className="h-8 text-xs font-medium text-slate-500 text-right">
+                          Net Pay
+                        </TableHead>
+                        <TableHead className="h-8 text-xs font-medium text-slate-500">
+                          Status
+                        </TableHead>
+                        <TableHead className="h-8 text-xs font-medium text-slate-500 text-center">
+                          Review Progress
+                        </TableHead>
+                        <TableHead className="h-8 text-xs font-medium text-slate-500 text-center pr-6">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loading ? (
+                        <LoadingState />
+                      ) : payrolls.length > 0 ? (
+                        payrolls.map((run) => {
+                          const statusStyle = getStatusBadgeVariant(run.status);
+                          const stats = run.review_stats;
+                          const eligibleCount = stats?.eligible_employees || 0;
+                          const completionPercentage =
+                            stats?.completion_percentage || 0;
+                          const allApproved = stats?.all_approved || false;
+                          const anyRejected = stats?.any_rejected || false;
+                          const hasPending = (stats?.pending || 0) > 0;
+
+                          // Determine status icon
+                          const getStatusIcon = () => {
+                            if (allApproved) {
+                              return (
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                              );
+                            }
+                            if (anyRejected) {
+                              return (
+                                <XCircle className="h-4 w-4 text-red-600" />
+                              );
+                            }
+                            if (hasPending) {
+                              return (
+                                <Clock className="h-4 w-4 text-amber-600" />
+                              );
+                            }
+                            return null;
+                          };
+
+                          return (
+                            <TableRow
+                              key={run.id}
+                              className="hover:bg-slate-50/80 transition-colors group"
+                            >
+                              <TableCell className="py-3 pl-6">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-slate-900">
+                                    {run.payroll_month} {run.payroll_year}
+                                  </span>
+                                  <span className="text-xs text-slate-400">
+                                    {new Date(
+                                      run.created_at,
+                                    ).toLocaleDateString("en-KE", {
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                    })}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-mono text-xs bg-slate-50 px-2 py-1 rounded text-slate-600 border border-slate-200">
+                                  {run.payroll_number}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm text-slate-600">
+                                {formatCurrency(run.total_gross_pay)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm font-semibold text-slate-900">
+                                {formatCurrency(run.total_net_pay)}
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border",
+                                    statusStyle.bg,
+                                    statusStyle.text,
+                                    statusStyle.border,
+                                  )}
+                                >
+                                  {run.status.replace("_", " ")}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {eligibleCount > 0 ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex items-center justify-center gap-2 cursor-help">
+                                        {getStatusIcon()}
+                                        <span className="text-xs font-medium text-slate-600">
+                                          {completionPercentage}%
+                                        </span>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="bottom"
+                                      className="p-3"
+                                    >
+                                      <div className="space-y-2">
+                                        <p className="text-xs font-medium text-slate-700">
+                                          Review Progress
+                                        </p>
+                                        <div className="space-y-1">
+                                          <div className="flex justify-between text-xs">
+                                            <span>Eligible</span>
+                                            <span className="font-medium">
+                                              {eligibleCount}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between text-xs">
+                                            <span>Approved</span>
+                                            <span className="font-medium text-emerald-600">
+                                              {stats?.approved || 0}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between text-xs">
+                                            <span>Pending</span>
+                                            <span className="font-medium text-amber-600">
+                                              {stats?.pending || 0}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between text-xs">
+                                            <span>Rejected</span>
+                                            <span className="font-medium text-red-600">
+                                              {stats?.rejected || 0}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <span className="text-xs text-slate-400">
+                                    —
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center pr-6">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                    >
+                                      <MoreVertical className="h-3.5 w-3.5 text-slate-500" />
+                                      <span className="sr-only">Open menu</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent
+                                    align="end"
+                                    className="w-56 rounded-md border-slate-200"
+                                  >
+                                    <DropdownMenuLabel className="text-xs font-medium text-slate-500">
+                                      Navigate to
+                                    </DropdownMenuLabel>
+
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        navigate(
+                                          `/company/${companyId}/payroll/${run.id}/hub`,
+                                        )
+                                      }
+                                      className="cursor-pointer text-sm"
+                                    >
+                                      <LayoutDashboard className="mr-2 h-3.5 w-3.5" />
+                                      Payroll Hub
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        navigate(
+                                          `/company/${companyId}/payroll/${run.id}/review`,
+                                        )
+                                      }
+                                      className="cursor-pointer text-sm"
+                                    >
+                                      <FileCheck className="mr-2 h-3.5 w-3.5" />
+                                      Review & Approval
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        navigate(
+                                          `/company/${companyId}/payroll/${run.id}/reports`,
+                                        )
+                                      }
+                                      className="cursor-pointer text-sm"
+                                    >
+                                      <FileText className="mr-2 h-3.5 w-3.5" />
+                                      Payroll Reports
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        navigate(
+                                          `/company/${companyId}/payroll/${run.id}/payslips`,
+                                        )
+                                      }
+                                      className="cursor-pointer text-sm"
+                                    >
+                                      <Receipt className="mr-2 h-3.5 w-3.5" />
+                                      Payslips
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuSeparator />
+
+                                    <DropdownMenuItem
+                                      disabled
+                                      className="cursor-not-allowed text-sm text-slate-400"
+                                    >
+                                      <Archive className="mr-2 h-3.5 w-3.5" />
+                                      Archive
+                                      <span className="ml-auto text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">
+                                        Coming Soon
+                                      </span>
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      ) : (
+                        <EmptyState />
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Pagination */}
+                {pagination.totalPages > 0 && (
+                  <div className="shrink-0 flex items-center justify-between pt-2">
+                    <p className="text-xs text-slate-400">
+                      Showing {startItem} to {endItem} of{" "}
+                      {pagination.totalItems} results
+                    </p>
+                    <div className="flex items-center space-x-2">
+                      <Select
+                        value={pagination.pageSize.toString()}
+                        onValueChange={handlePageSizeChange}
+                      >
+                        <SelectTrigger className="h-7 w-16 text-xs border-slate-200 rounded-md">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAGE_SIZE_OPTIONS.map((size) => (
+                            <SelectItem key={size} value={size.toString()}>
+                              {size}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handlePageChange(1)}
+                          disabled={pagination.currentPage === 1}
+                          className="h-7 w-7 p-0"
+                        >
+                          <ChevronsLeft className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            handlePageChange(pagination.currentPage - 1)
+                          }
+                          disabled={pagination.currentPage === 1}
+                          className="h-7 w-7 p-0"
+                        >
+                          <ChevronLeft className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="text-xs text-slate-600 px-2">
+                          Page {pagination.currentPage} of{" "}
+                          {pagination.totalPages}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            handlePageChange(pagination.currentPage + 1)
+                          }
+                          disabled={
+                            pagination.currentPage === pagination.totalPages
+                          }
+                          className="h-7 w-7 p-0"
+                        >
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            handlePageChange(pagination.totalPages)
+                          }
+                          disabled={
+                            pagination.currentPage === pagination.totalPages
+                          }
+                          className="h-7 w-7 p-0"
+                        >
+                          <ChevronsRight className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
